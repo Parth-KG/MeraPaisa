@@ -1,4 +1,4 @@
-package com.merapaisa.ui.theme
+package com.kg.merapaisa.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

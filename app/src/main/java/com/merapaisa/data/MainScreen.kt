@@ -1,4 +1,4 @@
-package com.merapaisa
+package com.kg.merapaisa
 
 import android.net.Uri
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -24,7 +24,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.foundation.clickable
-import com.merapaisa.data.Transaction
+import com.kg.merapaisa.data.Transaction
 import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -57,7 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.merapaisa.data.Person
+import com.kg.merapaisa.data.Person
 
 
 fun formatAmount(balance: Double, currency: String = "₹"): String {

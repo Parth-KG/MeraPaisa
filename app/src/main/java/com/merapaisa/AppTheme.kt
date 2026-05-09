@@ -1,4 +1,4 @@
-package com.merapaisa
+package com.kg.merapaisa
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.compositionLocalOf

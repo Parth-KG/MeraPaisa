@@ -1,4 +1,4 @@
-package com.merapaisa.widget
+package com.kg.merapaisa.widget
 
 import android.content.Context
 import androidx.glance.action.clickable
@@ -14,9 +14,9 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.*
 import androidx.glance.text.*
 import androidx.glance.color.ColorProvider
-import com.merapaisa.MainActivity
-import com.merapaisa.data.AppDatabase
-import com.merapaisa.data.Person
+import com.kg.merapaisa.MainActivity
+import com.kg.merapaisa.data.AppDatabase
+import com.kg.merapaisa.data.Person
 import kotlinx.coroutines.flow.first
 
 class DebtWidget : GlanceAppWidget() {

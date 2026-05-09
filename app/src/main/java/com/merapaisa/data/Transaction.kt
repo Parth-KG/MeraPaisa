@@ -1,4 +1,4 @@
-package com.merapaisa.data
+package com.kg.merapaisa.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
