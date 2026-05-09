@@ -10,10 +10,10 @@
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="screenshots/main.png" width="220" alt="Main screen" />
-  <img src="screenshots/numpad.png" width="220" alt="Numpad" />
-  <img src="screenshots/split.png" width="220" alt="Split flow" />
-  <img src="screenshots/history.png" width="220" alt="Transaction history" />
+  <img src="screenshots/main.png.jpeg" width="220" alt="Main screen" />
+  <img src="screenshots/numpad.png.jpeg" width="220" alt="Numpad" />
+  <img src="screenshots/split.png.jpeg" width="220" alt="Split flow" />
+  <img src="screenshots/TransactionHistory.png.jpeg" width="220" alt="Transaction history" />
 </p>
 
 ## ✨ Features
