@@ -1,4 +1,4 @@
-package com.merapaisa.data
+package com.kg.merapaisa.data
 
 import android.content.Context
 import androidx.room.Database

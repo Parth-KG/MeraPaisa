@@ -1,4 +1,4 @@
-package com.merapaisa
+package com.kg.merapaisa
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit

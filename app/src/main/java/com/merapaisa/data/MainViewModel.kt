@@ -1,12 +1,12 @@
-package com.merapaisa
+package com.kg.merapaisa
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.first
-import com.merapaisa.data.Transaction
-import com.merapaisa.data.AppDatabase
-import com.merapaisa.data.Person
+import com.kg.merapaisa.data.Transaction
+import com.kg.merapaisa.data.AppDatabase
+import com.kg.merapaisa.data.Person
 import android.content.Context
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -78,10 +78,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun triggerWidgetUpdate(context: android.content.Context) {
         val widgetManager = android.appwidget.AppWidgetManager.getInstance(context)
-        val widgetComponent = android.content.ComponentName(context, com.merapaisa.widget.DebtWidgetReceiver::class.java)
+        val widgetComponent = android.content.ComponentName(context, com.kg.merapaisa.widget.DebtWidgetReceiver::class.java)
         val widgetIds = widgetManager.getAppWidgetIds(widgetComponent)
         if (widgetIds.isNotEmpty()) {
-            val intent = android.content.Intent(context, com.merapaisa.widget.DebtWidgetReceiver::class.java).apply {
+            val intent = android.content.Intent(context, com.kg.merapaisa.widget.DebtWidgetReceiver::class.java).apply {
                 action = android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE
                 putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, widgetIds)
             }
@@ -91,7 +91,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun addTransaction(personId: Long, amount: Double, note: String = "") {
         viewModelScope.launch {
             dao.insertTransaction(
-                com.merapaisa.data.Transaction(
+                com.kg.merapaisa.data.Transaction(
                     personId = personId,
                     amount = amount,
                     note = note

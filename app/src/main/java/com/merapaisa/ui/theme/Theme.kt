@@ -1,4 +1,4 @@
-package com.merapaisa.ui.theme
+package com.kg.merapaisa.ui.theme
 
 import android.app.Activity
 import android.os.Build

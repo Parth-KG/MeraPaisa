@@ -1,4 +1,4 @@
-package com.merapaisa.data
+package com.kg.merapaisa.data
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow

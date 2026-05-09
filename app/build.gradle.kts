@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.merapaisa"
+    namespace = "com.kg.merapaisa"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.merapaisa"
+        applicationId = "com.kg.merapaisa"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
