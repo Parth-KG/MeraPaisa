@@ -22,6 +22,9 @@ class PersonRepository(
 
     fun transactionCount(personId: Long): Flow<Int> = dao.getTransactionCount(personId)
 
+    suspend fun transactionsNow(personId: Long): List<Transaction> =
+        dao.getTransactionsForPersonNow(personId)
+
     /** Everyone and everything they have, read together, for an export. */
     suspend fun ledgerSnapshot(): List<PersonLedger> {
         val byPerson = dao.getAllTransactionsNow().groupBy { it.personId }
