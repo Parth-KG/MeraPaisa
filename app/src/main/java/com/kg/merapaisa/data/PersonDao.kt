@@ -41,6 +41,9 @@ interface PersonDao {
     @Query("SELECT * FROM transactions ORDER BY personId ASC, timestamp ASC")
     suspend fun getAllTransactionsNow(): List<Transaction>
 
+    @Query("SELECT * FROM transactions WHERE personId = :personId ORDER BY timestamp ASC")
+    suspend fun getTransactionsForPersonNow(personId: Long): List<Transaction>
+
     @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM transactions WHERE personId = :personId")
     fun getBalance(personId: Long): Flow<Long>
 

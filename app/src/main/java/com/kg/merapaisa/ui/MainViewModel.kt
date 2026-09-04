@@ -10,6 +10,7 @@ import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
 import com.kg.merapaisa.data.appendAmountKey
 import com.kg.merapaisa.data.buildLedgerCsv
+import com.kg.merapaisa.data.buildPersonSummary
 import com.kg.merapaisa.deleteProfilePhoto
 import com.kg.merapaisa.network.ExchangeRateApi
 import com.kg.merapaisa.repository.PersonRepository
@@ -215,6 +216,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun exportLedgerCsv(onReady: (String) -> Unit) {
         viewModelScope.launch { onReady(buildLedgerCsv(repository.ledgerSnapshot())) }
+    }
+
+    /** Plain text for one person, ready to paste into a chat with them. */
+    fun personSummary(person: PersonWithBalance, onReady: (String) -> Unit) {
+        viewModelScope.launch {
+            onReady(buildPersonSummary(person, repository.transactionsNow(person.id)))
+        }
     }
 
     fun dismissConversionError() {

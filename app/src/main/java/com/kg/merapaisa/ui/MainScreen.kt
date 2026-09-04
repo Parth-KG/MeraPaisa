@@ -160,6 +160,11 @@ fun MainScreen(viewModel: MainViewModel) {
                         onHistoryClick = { viewModel.showHistory(person.id) },
                         onSettleToggle = {
                             if (person.isSettled) viewModel.reopenPerson(person) else viewModel.settlePerson(person)
+                        },
+                        onShareSummary = {
+                            viewModel.personSummary(person) { text ->
+                                shareText(context, text, "Share summary via")
+                            }
                         }
                     )
                 }

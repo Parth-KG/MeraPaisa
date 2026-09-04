@@ -11,6 +11,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/** Hands plain text — a reminder, a summary — straight to the share sheet. */
+fun shareText(context: Context, text: String, chooserTitle: String) {
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    context.startActivity(Intent.createChooser(intent, chooserTitle))
+}
+
 /**
  * Writes an export into the cache directory and hands it to the share sheet. Sharing needs a
  * content:// URI — a file:// one throws FileUriExposedException — so it goes through the
