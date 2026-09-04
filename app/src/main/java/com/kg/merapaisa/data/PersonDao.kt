@@ -26,6 +26,21 @@ interface PersonDao {
     )
     fun getPersonsWithBalances(): Flow<List<PersonWithBalance>>
 
+    /** One-shot version of the same query, for a snapshot such as an export. */
+    @Query(
+        """
+        SELECT persons.*, COALESCE(SUM(transactions.amountMinor), 0) AS balanceMinor
+        FROM persons
+        LEFT JOIN transactions ON transactions.personId = persons.id
+        GROUP BY persons.id
+        ORDER BY persons.sortOrder ASC
+        """
+    )
+    suspend fun getPersonsWithBalancesNow(): List<PersonWithBalance>
+
+    @Query("SELECT * FROM transactions ORDER BY personId ASC, timestamp ASC")
+    suspend fun getAllTransactionsNow(): List<Transaction>
+
     @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM transactions WHERE personId = :personId")
     fun getBalance(personId: Long): Flow<Long>
 

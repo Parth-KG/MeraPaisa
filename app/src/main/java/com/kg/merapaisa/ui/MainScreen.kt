@@ -36,6 +36,7 @@ import com.kg.merapaisa.ui.dialogs.TransactionHistoryDialog
 import kotlinx.coroutines.launch
 import com.kg.merapaisa.ThemeStore
 import com.kg.merapaisa.data.netTotalsByCurrency
+import androidx.compose.material.icons.filled.Share
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
@@ -85,18 +86,39 @@ fun MainScreen(viewModel: MainViewModel) {
                     }
                 }
 
-                IconButton(
-                    onClick = { viewModel.showThemeDialog(true) },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(theme.fill, CircleShape)
-                ) {
-                    Icon(
-                        Icons.Default.Palette,
-                        contentDescription = "Theme",
-                        tint = theme.textSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    IconButton(
+                        onClick = {
+                            viewModel.exportLedgerCsv { csv ->
+                                scope.launch { shareCsv(context, writeExportToCache(context, csv)) }
+                            }
+                        },
+                        enabled = persons.isNotEmpty(),
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(theme.fill, CircleShape)
+                    ) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = "Export ledger as CSV",
+                            tint = theme.textSecondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { viewModel.showThemeDialog(true) },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(theme.fill, CircleShape)
+                    ) {
+                        Icon(
+                            Icons.Default.Palette,
+                            contentDescription = "Theme",
+                            tint = theme.textSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
 
