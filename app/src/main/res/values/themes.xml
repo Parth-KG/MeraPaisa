@@ -2,4 +2,11 @@
 <resources>
 
     <style name="Theme.MeraPaisa" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Shown by the system while the app starts, then handed over to Theme.MeraPaisa. -->
+    <style name="Theme.MeraPaisa.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.MeraPaisa</item>
+    </style>
 </resources>

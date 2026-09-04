@@ -100,3 +100,40 @@ fun formatMinorPlain(amountMinor: Long, currencyCode: String): String {
     }
     return "$sign$body"
 }
+
+/** Most digits allowed before the decimal point, which also bounds what [parseAmountToMinor] sees. */
+private const val MAX_WHOLE_DIGITS = 9
+
+/**
+ * Applies one numpad key to the current entry. Enforces a single decimal point, at most two
+ * decimal places and one leading zero, so the field cannot reach a state like "00000000" or
+ * "." that no longer parses.
+ */
+fun appendAmountKey(current: String, key: String): String = when {
+    key == "⌫" -> current.dropLast(1)
+
+    key == "." -> when {
+        current.contains('.') -> current
+        current.isEmpty() -> "0."
+        else -> "$current."
+    }
+
+    key.length == 1 && key[0].isDigit() -> {
+        val dot = current.indexOf('.')
+        when {
+            // A lone leading zero is replaced rather than extended.
+            current == "0" -> key
+            dot < 0 && current.length >= MAX_WHOLE_DIGITS -> current
+            dot >= 0 && current.length - dot > 2 -> current
+            else -> current + key
+        }
+    }
+
+    else -> current
+}
+
+/** True when the entry is a usable, non-zero amount the +/- buttons can act on. */
+fun isUsableAmount(text: String): Boolean {
+    val minor = parseAmountToMinor(text)
+    return minor != null && minor != 0L
+}

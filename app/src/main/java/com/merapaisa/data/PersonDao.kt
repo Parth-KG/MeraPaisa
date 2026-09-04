@@ -51,6 +51,9 @@ interface PersonDao {
     @Query("SELECT * FROM transactions WHERE personId = :personId ORDER BY timestamp DESC")
     fun getTransactionsForPerson(personId: Long): Flow<List<Transaction>>
 
+    @Query("SELECT COUNT(*) FROM transactions WHERE personId = :personId")
+    fun getTransactionCount(personId: Long): Flow<Int>
+
     @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM transactions WHERE personId = :personId AND timestamp >= :since")
     suspend fun sumTransactionsSince(personId: Long, since: Long): Long
 
