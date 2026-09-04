@@ -9,6 +9,7 @@ import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
 import com.kg.merapaisa.data.appendAmountKey
+import com.kg.merapaisa.data.buildLedgerCsv
 import com.kg.merapaisa.deleteProfilePhoto
 import com.kg.merapaisa.network.ExchangeRateApi
 import com.kg.merapaisa.repository.PersonRepository
@@ -206,6 +207,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             CurrencyStore.setLastCurrency(getApplication(), currency)
             onSaved()
         }
+    }
+
+    /**
+     * Builds a CSV of the whole ledger. The file itself is written and shared by the UI, which
+     * is the only layer that should be holding a Context.
+     */
+    fun exportLedgerCsv(onReady: (String) -> Unit) {
+        viewModelScope.launch { onReady(buildLedgerCsv(repository.ledgerSnapshot())) }
     }
 
     fun dismissConversionError() {
