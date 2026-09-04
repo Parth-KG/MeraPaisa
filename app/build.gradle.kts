@@ -13,12 +13,19 @@ android {
         applicationId = "com.kg.merapaisa"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            // Debug builds install alongside the real app rather than colliding with it.
+            // Same package name with a different signing key would force an uninstall to
+            // resolve, and uninstalling is what deletes the ledger.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             // Shrink and obfuscate: the icon and Compose libraries pull in far more than
             // this app uses, and nothing here relies on reflection over its own classes.
