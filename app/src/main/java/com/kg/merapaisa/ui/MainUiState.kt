@@ -1,4 +1,4 @@
-package com.kg.merapaisa
+package com.kg.merapaisa.ui
 
 /** Which of the two lists is on screen. */
 enum class Tab { Active, Settled }
