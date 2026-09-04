@@ -46,7 +46,17 @@ fun MainScreen(viewModel: MainViewModel) {
     val persons by viewModel.persons.collectAsState()
     val ui by viewModel.uiState.collectAsState()
 
-    BackHandler(enabled = ui.selectedId != null) { viewModel.clearSelection() }
+    // The split flow is part of this tree rather than a Dialog, so back has to be handled
+    // here — otherwise it would fall through and close the app mid-split.
+    BackHandler(enabled = ui.split != null) {
+        val split = ui.split
+        if (split != null && split.step > 0) {
+            viewModel.updateSplit { it.copy(step = it.step - 1) }
+        } else {
+            viewModel.cancelSplit()
+        }
+    }
+    BackHandler(enabled = ui.split == null && ui.selectedId != null) { viewModel.clearSelection() }
 
     // A settled debt is one you have marked settled, not merely one that nets to zero —
     // otherwise everyone you add lands in Settled the moment they are created.
@@ -59,6 +69,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val pendingDelete = persons.find { it.id == ui.pendingDeleteId }
     val pendingReminder = persons.find { it.id == ui.pendingReminderId }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Box(modifier = Modifier.fillMaxSize().background(theme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Tabs
@@ -309,6 +320,8 @@ fun MainScreen(viewModel: MainViewModel) {
         when (split.step) {
             0 -> SplitAmountScreen(
                 amount = split.amount,
+                currency = split.currency,
+                onCurrencyChange = { code -> viewModel.updateSplit { it.copy(currency = code) } },
                 onAmountChange = { entry -> viewModel.updateSplit { it.copy(amount = entry) } },
                 onCancel = viewModel::cancelSplit,
                 onNext = { viewModel.updateSplit { it.copy(step = 1) } }
@@ -332,7 +345,7 @@ fun MainScreen(viewModel: MainViewModel) {
             else -> SplitAdjustmentsScreen(
                 viewModel = viewModel,
                 amountMinor = parseAmountToMinor(split.amount) ?: 0L,
-                sourceCurrency = "INR",
+                sourceCurrency = split.currency,
                 selectedPersons = persons.filter { it.id in split.selectedIds },
                 includeMe = split.includeMe,
                 note = split.note,
@@ -347,6 +360,8 @@ fun MainScreen(viewModel: MainViewModel) {
             )
         }
     }
+    }
+
     pendingReminder?.let { target ->
         ReminderDialog(
             person = target,

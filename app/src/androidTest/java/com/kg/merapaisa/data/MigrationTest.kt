@@ -104,6 +104,53 @@ class MigrationTest {
         }
     }
 
+    /**
+     * The 4 -> 5 migration adds a foreign key, which SQLite will not apply while rows point at
+     * a person who no longer exists. Those rows are invisible anyway — counted by no balance,
+     * shown in no history — so the migration clears them, and must not touch anything real.
+     */
+    @Test
+    fun migrate4To5_dropsOrphansAndLeavesEveryRealBalanceAlone() {
+        helper.createDatabase(TEST_DB, 4).use { db ->
+            db.insertV4Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV4Transaction(personId = 1, amountMinor = 250_50, timestamp = 2_000, note = "dinner")
+            db.insertV4Transaction(personId = 1, amountMinor = -50_00, timestamp = 3_000, note = "refund")
+
+            // Left behind by some earlier delete that never cleaned up after itself.
+            db.insertV4Transaction(personId = 99, amountMinor = 900_00, timestamp = 4_000, note = "orphan")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 5, true, MIGRATION_4_5).use { db ->
+            assertEquals("Asha's balance must be untouched", 20_050L, db.derivedBalance(1))
+            assertEquals("both of Asha's entries survive", 2, db.transactionCount(1))
+            assertEquals("the orphan is gone", 0, db.transactionCount(99))
+            assertEquals(
+                "and nothing else was swept up with it",
+                2,
+                db.longOf("SELECT COUNT(*) FROM transactions").toInt()
+            )
+        }
+    }
+
+    /** Deleting a person now takes their history with it, rather than orphaning it. */
+    @Test
+    fun afterMigrating_deletingAPersonCascadesToTheirTransactions() {
+        helper.createDatabase(TEST_DB, 4).use { db ->
+            db.insertV4Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV4Person(id = 2, name = "Ravi", currency = "INR")
+            db.insertV4Transaction(personId = 1, amountMinor = 100_00, timestamp = 1, note = "a")
+            db.insertV4Transaction(personId = 2, amountMinor = 200_00, timestamp = 2, note = "b")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 5, true, MIGRATION_4_5).use { db ->
+            db.execSQL("PRAGMA foreign_keys = ON")
+            db.execSQL("DELETE FROM persons WHERE id = 1")
+
+            assertEquals(0, db.transactionCount(1))
+            assertEquals("the other person is unaffected", 20_000L, db.derivedBalance(2))
+        }
+    }
+
     // --- seeding helpers, written against the v3 shape ---
 
     private fun SupportSQLiteDatabase.insertV3Person(
@@ -123,6 +170,24 @@ class MigrationTest {
         note: String
     ) = execSQL(
         "INSERT INTO transactions (personId, amount, timestamp, note) VALUES ($personId, $amount, $timestamp, '$note')"
+    )
+
+    // --- seeding helpers, written against the v4 shape ---
+
+    private fun SupportSQLiteDatabase.insertV4Person(id: Long, name: String, currency: String) =
+        execSQL(
+            "INSERT INTO persons (id, name, pfpType, pfpValue, pfpColor, sortOrder, isSettled, currency) " +
+                "VALUES ($id, '$name', 'initials', '${name.take(2)}', '#4CAF50', 0, 0, '$currency')"
+        )
+
+    private fun SupportSQLiteDatabase.insertV4Transaction(
+        personId: Long,
+        amountMinor: Long,
+        timestamp: Long,
+        note: String
+    ) = execSQL(
+        "INSERT INTO transactions (personId, amountMinor, timestamp, note) " +
+            "VALUES ($personId, $amountMinor, $timestamp, '$note')"
     )
 
     // --- assertion helpers, written against the v4 shape ---

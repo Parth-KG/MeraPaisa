@@ -11,9 +11,6 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface PersonDao {
 
-    @Query("SELECT * FROM persons ORDER BY sortOrder ASC")
-    fun getAllPersons(): Flow<List<Person>>
-
     /** Every person with their balance derived in one pass, for the list screen and widget. */
     @Query(
         """
@@ -43,9 +40,6 @@ interface PersonDao {
 
     @Query("SELECT * FROM transactions WHERE personId = :personId ORDER BY timestamp ASC")
     suspend fun getTransactionsForPersonNow(personId: Long): List<Transaction>
-
-    @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM transactions WHERE personId = :personId")
-    fun getBalance(personId: Long): Flow<Long>
 
     @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM transactions WHERE personId = :personId")
     suspend fun getBalanceNow(personId: Long): Long
@@ -78,11 +72,12 @@ interface PersonDao {
     @Query("DELETE FROM transactions WHERE personId = :personId")
     suspend fun deleteTransactionsForPerson(personId: Long)
 
-    @Query("UPDATE persons SET sortOrder = :newOrder WHERE id = :personId")
-    suspend fun updateSortOrder(personId: Long, newOrder: Int)
-
-    @Query("UPDATE persons SET sortOrder = COALESCE((SELECT MAX(sortOrder) FROM persons), 0) + 1 WHERE id = :personId")
-    suspend fun moveToEndOfList(personId: Long)
+    /**
+     * The next free position. Counting the existing rows collided after any deletion — delete
+     * the middle of three people and the next person added would reuse an order already taken.
+     */
+    @Query("SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM persons")
+    suspend fun nextSortOrder(): Int
 
     @Query("UPDATE persons SET isSettled = :settled WHERE id = :personId")
     suspend fun setSettled(personId: Long, settled: Boolean)
@@ -91,7 +86,8 @@ interface PersonDao {
      * Closes a debt out: records an entry for exactly what is outstanding and marks the person
      * settled. The balance is read inside the transaction so two fast taps cannot both act on
      * the same stale figure. A person already at zero can still be settled — that is how you
-     * file someone away without inventing a transaction.
+     * file someone away without inventing a transaction. There is no need to reorder them:
+     * isSettled is what moves them out of the active list.
      */
     @androidx.room.Transaction
     suspend fun settle(personId: Long, note: String = "Settled") {
@@ -100,7 +96,6 @@ interface PersonDao {
             insertTransaction(Transaction(personId = personId, amountMinor = -outstanding, note = note))
         }
         setSettled(personId, true)
-        moveToEndOfList(personId)
     }
 
     /**

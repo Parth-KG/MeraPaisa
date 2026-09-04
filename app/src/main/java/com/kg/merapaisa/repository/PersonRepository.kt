@@ -33,6 +33,8 @@ class PersonRepository(
         }
     }
 
+    suspend fun nextSortOrder(): Int = dao.nextSortOrder()
+
     suspend fun addPerson(person: Person): Long = dao.insertPerson(person).also { notifier.onLedgerChanged() }
 
     suspend fun updatePerson(person: Person) {

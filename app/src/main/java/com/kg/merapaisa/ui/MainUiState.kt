@@ -27,6 +27,8 @@ data class MainUiState(
 data class SplitFlowState(
     val step: Int = 0,
     val amount: String = "",
+    /** ISO 4217 code the split is entered in — the user's working currency, not a guess. */
+    val currency: String = "INR",
     val note: String = "",
     val selectedIds: Set<Long> = emptySet(),
     val includeMe: Boolean = false

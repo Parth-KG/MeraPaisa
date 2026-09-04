@@ -26,8 +26,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.kg.merapaisa.AppTheme
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
@@ -141,135 +139,132 @@ fun SplitAdjustmentsScreen(
     val total = amountsInSource.values.sum()
     val totalsMatch = total == amountMinor
 
-    Dialog(
-        onDismissRequest = onCancel,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+    Box(
+        modifier = Modifier.fillMaxSize().background(theme.background)
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize().background(theme.background)
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
 
-                // Top bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp, 48.dp, 16.dp, 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = theme.textPrimary)
-                    }
-                    Text("Adjust split", color = theme.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                    IconButton(onClick = onCancel) {
-                        Icon(Icons.Default.Close, contentDescription = "Cancel", tint = theme.textPrimary)
-                    }
+            // Top bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+                    .padding(16.dp, 16.dp, 16.dp, 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = theme.textPrimary)
                 }
-
-                // Total amount header
-                Text(
-                    "${formatMinor(amountMinor, sourceCurrency)} total",
-                    color = theme.textSecondary,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(horizontal = 24.dp)
-                )
-
-                // Optional note
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = onNoteChange,
-                    placeholder = { Text("Description (optional)", color = theme.textSecondary) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(20.dp, 12.dp, 20.dp, 8.dp)
-                )
-
-                // Per-person rows
-                LazyColumn(
-                    modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
-                    contentPadding = PaddingValues(bottom = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(participants, key = { it.id }) { p ->
-                        SplitAdjustmentRow(
-                            participant = p,
-                            sourceCurrency = sourceCurrency,
-                            amountInSourceMinor = amountsInSource[p.id] ?: 0L,
-                            convertedAmountMinor = convertedAmounts[p.id],
-                            locked = p.id in lockedIds,
-                            onAmountChange = { newAmt ->
-                                amountsInSource = redistribute(
-                                    current = amountsInSource,
-                                    locked = lockedIds + p.id,   // editing locks this row
-                                    changedId = p.id,
-                                    newValue = newAmt,
-                                    total = amountMinor
-                                )
-                                lockedIds = lockedIds + p.id
-                            },
-                            onToggleLock = {
-                                lockedIds = if (p.id in lockedIds) lockedIds - p.id else lockedIds + p.id
-                            },
-                            theme = theme
-                        )
-                    }
+                Text("Adjust split", color = theme.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                IconButton(onClick = onCancel) {
+                    Icon(Icons.Default.Close, contentDescription = "Cancel", tint = theme.textPrimary)
                 }
+            }
 
-                // Total + warning
-                Column(modifier = Modifier.padding(20.dp, 8.dp, 20.dp, 0.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Total", color = theme.textSecondary, fontSize = 14.sp)
-                        Text(
-                            "${formatMinor(total, sourceCurrency)} of ${formatMinor(amountMinor, sourceCurrency)}",
-                            color = if (totalsMatch) theme.textPrimary else theme.negative,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                    if (!totalsMatch) {
-                        Text(
-                            "Warning: totals don't match.",
-                            color = theme.negative,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
-                    if (conversionError != null) {
-                        Text(
-                            conversionError!!,
-                            color = theme.negative,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
-                }
+            // Total amount header
+            Text(
+                "${formatMinor(amountMinor, sourceCurrency)} total",
+                color = theme.textSecondary,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(horizontal = 24.dp)
+            )
 
-                // Confirm
-                Button(
-                    onClick = {
-                        // Build final map, excluding "You"
-                        val finalMap = convertedAmounts
-                            .filterKeys { it != youId }
-                        onConfirm(finalMap)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp, 8.dp, 20.dp, 24.dp)
-                        .height(56.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    enabled = conversionError == null,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = theme.positive,
-                        contentColor = theme.background,
-                        disabledContainerColor = theme.positive.copy(alpha = 0.3f),
-                        disabledContentColor = theme.background.copy(alpha = 0.5f)
+            // Optional note
+            OutlinedTextField(
+                value = note,
+                onValueChange = onNoteChange,
+                placeholder = { Text("Description (optional)", color = theme.textSecondary) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(20.dp, 12.dp, 20.dp, 8.dp)
+            )
+
+            // Per-person rows
+            LazyColumn(
+                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(participants, key = { it.id }) { p ->
+                    SplitAdjustmentRow(
+                        participant = p,
+                        sourceCurrency = sourceCurrency,
+                        amountInSourceMinor = amountsInSource[p.id] ?: 0L,
+                        convertedAmountMinor = convertedAmounts[p.id],
+                        locked = p.id in lockedIds,
+                        onAmountChange = { newAmt ->
+                            amountsInSource = redistribute(
+                                current = amountsInSource,
+                                locked = lockedIds + p.id,   // editing locks this row
+                                changedId = p.id,
+                                newValue = newAmt,
+                                total = amountMinor
+                            )
+                            lockedIds = lockedIds + p.id
+                        },
+                        onToggleLock = {
+                            lockedIds = if (p.id in lockedIds) lockedIds - p.id else lockedIds + p.id
+                        },
+                        theme = theme
                     )
-                ) {
-                    Text("Confirm split", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
+            }
+
+            // Total + warning
+            Column(modifier = Modifier.padding(20.dp, 8.dp, 20.dp, 0.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Total", color = theme.textSecondary, fontSize = 14.sp)
+                    Text(
+                        "${formatMinor(total, sourceCurrency)} of ${formatMinor(amountMinor, sourceCurrency)}",
+                        color = if (totalsMatch) theme.textPrimary else theme.negative,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                if (!totalsMatch) {
+                    Text(
+                        "Warning: totals don't match.",
+                        color = theme.negative,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                if (conversionError != null) {
+                    Text(
+                        conversionError!!,
+                        color = theme.negative,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+
+            // Confirm
+            Button(
+                onClick = {
+                    // Build final map, excluding "You"
+                    val finalMap = convertedAmounts
+                        .filterKeys { it != youId }
+                    onConfirm(finalMap)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+                    .padding(20.dp, 8.dp, 20.dp, 16.dp)
+                    .height(56.dp),
+                shape = RoundedCornerShape(14.dp),
+                enabled = conversionError == null,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = theme.positive,
+                    contentColor = theme.background,
+                    disabledContainerColor = theme.positive.copy(alpha = 0.3f),
+                    disabledContentColor = theme.background.copy(alpha = 0.5f)
+                )
+            ) {
+                Text("Confirm split", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
