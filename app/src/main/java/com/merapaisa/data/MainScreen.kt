@@ -58,12 +58,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.kg.merapaisa.data.Person
+import com.kg.merapaisa.data.PersonWithBalance
+import com.kg.merapaisa.data.SUPPORTED_CURRENCIES
+import com.kg.merapaisa.data.currencySymbol
+import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.data.formatMinorPlain
+import com.kg.merapaisa.data.parseAmountToMinor
 
 
-fun formatAmount(balance: Double, currency: String = "₹"): String {
-    val abs = "%.0f".format(Math.abs(balance))
-    return if (balance < 0) "-$currency$abs" else "$currency$abs"
-}
+fun formatAmount(amountMinor: Long, currencyCode: String = "INR"): String =
+    formatMinor(amountMinor, currencyCode)
 
 data class SplitParticipant(
     val id: Long,
@@ -72,24 +76,22 @@ data class SplitParticipant(
 )
 
 
-private fun equalSplit(amount: Double, participants: List<SplitParticipant>): Map<Long, Double> {
+private fun equalSplit(amountMinor: Long, participants: List<SplitParticipant>): Map<Long, Long> {
     if (participants.isEmpty()) return emptyMap()
-    val cents = (amount * 100).toLong()
-    val baseCents = cents / participants.size
-    val remainder = cents - (baseCents * participants.size)
+    val base = amountMinor / participants.size
+    val remainder = amountMinor - (base * participants.size)
     return participants.mapIndexed { i, p ->
-        val withRemainder = if (i == 0) baseCents + remainder else baseCents
-        p.id to withRemainder / 100.0
+        p.id to if (i == 0) base + remainder else base
     }.toMap()
 }
 
 private fun redistribute(
-    current: Map<Long, Double>,
+    current: Map<Long, Long>,
     locked: Set<Long>,
     changedId: Long,
-    newValue: Double,
-    total: Double
-): Map<Long, Double> {
+    newValue: Long,
+    total: Long
+): Map<Long, Long> {
     val updated = current.toMutableMap()
     updated[changedId] = newValue
 
@@ -99,9 +101,13 @@ private fun redistribute(
 
     val remaining = total - lockedSum
     val perUnlocked = remaining / unlockedIds.size
+    // Integer division leaves a few minor units over; give them to the first row so the
+    // parts still add up to the whole rather than tripping the totals-mismatch warning.
+    val leftover = remaining - perUnlocked * unlockedIds.size
 
-    unlockedIds.forEach { id ->
-        updated[id] = kotlin.math.max(0.0, perUnlocked)
+    unlockedIds.forEachIndexed { i, id ->
+        val share = if (i == 0) perUnlocked + leftover else perUnlocked
+        updated[id] = kotlin.math.max(0L, share)
     }
     return updated
 }
@@ -114,9 +120,9 @@ fun saveImageToInternalStorage(context: Context, uri: Uri): String {
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
-    var pendingReminder by remember { mutableStateOf<Person?>(null) }
+    var pendingReminder by remember { mutableStateOf<PersonWithBalance?>(null) }
     val context = LocalContext.current
-    var pendingDelete by remember { mutableStateOf<Person?>(null) }
+    var pendingDelete by remember { mutableStateOf<PersonWithBalance?>(null) }
     val theme = LocalAppTheme.current
     val scope = rememberCoroutineScope()
     var showSplitFlow by remember { mutableStateOf(false) }
@@ -130,9 +136,9 @@ fun MainScreen(viewModel: MainViewModel) {
     var tab by remember { mutableStateOf("active") }
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
-    var editingPerson by remember { mutableStateOf<Person?>(null) }
+    var editingPerson by remember { mutableStateOf<PersonWithBalance?>(null) }
     var showHistoryDialog by remember { mutableStateOf(false) }
-    var historyPerson by remember { mutableStateOf<Person?>(null) }
+    var historyPerson by remember { mutableStateOf<PersonWithBalance?>(null) }
     var pd = 16
     BackHandler(enabled = selectedId != null) {
         selectedId = null
@@ -142,8 +148,8 @@ fun MainScreen(viewModel: MainViewModel) {
     var splitNote by remember { mutableStateOf("") }
     var splitSelectedIds by remember { mutableStateOf(setOf<Long>()) }
     var splitIncludeMe by remember { mutableStateOf(false) }
-    val activePersons = persons.filter { !it.isSettled && it.balance != 0.0 }
-    val settledPersons = persons.filter { it.isSettled || it.balance == 0.0 }
+    val activePersons = persons.filter { !it.isSettled && it.balanceMinor != 0L }
+    val settledPersons = persons.filter { it.isSettled || it.balanceMinor == 0L }
     val list = if (tab == "active") activePersons else settledPersons
     val selectedPerson = persons.find { it.id == selectedId }
     if (isGestureNavigation()) {
@@ -195,14 +201,14 @@ fun MainScreen(viewModel: MainViewModel) {
 
             if (tab == "active") {
                 val lastCurrency by CurrencyStore.getLastCurrency(context).collectAsState(initial = "INR")
-                var netTotal by remember { mutableStateOf(0.0) }
+                var netTotal by remember { mutableStateOf(0L) }
                 var loading by remember { mutableStateOf(false) }
 
                 LaunchedEffect(list, lastCurrency) {
                     loading = true
                     netTotal = list.sumOf { person ->
-                        if (person.currency == lastCurrency) person.balance
-                        else viewModel.convertCurrency(person.balance, person.currency, lastCurrency) ?: 0.0
+                        if (person.currency == lastCurrency) person.balanceMinor
+                        else viewModel.convertCurrency(person.balanceMinor, person.currency, lastCurrency) ?: 0L
                     }
                     loading = false
                 }
@@ -295,11 +301,11 @@ fun MainScreen(viewModel: MainViewModel) {
                         }
                     },
                     onAdd = {
-                        val amt = input.toDoubleOrNull() ?: return@NumPad
+                        val amt = parseAmountToMinor(input) ?: return@NumPad
                         val person = selectedPerson ?: return@NumPad
-                        val newBalance = person.balance + amt
-                        viewModel.updateBalance(person, amt)
-                        if (kotlin.math.abs(newBalance) < 0.005) {
+                        val newBalance = person.balanceMinor + amt
+                        viewModel.recordAmount(person.id, amt, note)
+                        if (newBalance == 0L) {
                             tab = "settled"
                             selectedId = null
                         } else if (tab == "settled") {
@@ -310,11 +316,11 @@ fun MainScreen(viewModel: MainViewModel) {
                         note = ""
                     },
                     onSubtract = {
-                        val amt = input.toDoubleOrNull() ?: return@NumPad
+                        val amt = parseAmountToMinor(input) ?: return@NumPad
                         val person = selectedPerson ?: return@NumPad
-                        val newBalance = person.balance - amt
-                        viewModel.updateBalance(person, -amt )
-                        if (kotlin.math.abs(newBalance) < 0.005) {
+                        val newBalance = person.balanceMinor - amt
+                        viewModel.recordAmount(person.id, -amt, note)
+                        if (newBalance == 0L) {
                             tab = "settled"
                             selectedId = null
                         } else if (tab == "settled") {
@@ -392,34 +398,33 @@ fun MainScreen(viewModel: MainViewModel) {
         }
         if (showEditDialog && editingPerson != null) {
             EditPersonDialog(
-                person = editingPerson!!,
+                person = editingPerson!!.person,
                 onDismiss = { showEditDialog = false; editingPerson = null },
                 onSave = { name, pfpType, pfpValue, pfpColor, currency, shouldConvert ->
-                    val personSnapshot = editingPerson!!
-                    if (shouldConvert && currency != personSnapshot.currency) {
-                        scope.launch {
-                            val converted = viewModel.convertCurrency(personSnapshot.balance, personSnapshot.currency, currency)
-                            viewModel.updatePerson(personSnapshot.copy(
-                                name = name,
-                                pfpType = pfpType,
-                                pfpValue = pfpValue,
-                                pfpColor = pfpColor,
-                                currency = currency,
-                                balance = converted ?: personSnapshot.balance
-                            ))
-                            CurrencyStore.setLastCurrency(context, currency)
+                    val snapshot = editingPerson!!
+                    scope.launch {
+                        if (shouldConvert && currency != snapshot.currency) {
+                            // Balance is derived, so a conversion is recorded as the difference
+                            // it makes rather than by overwriting a stored figure.
+                            val converted = viewModel.convertCurrency(
+                                snapshot.balanceMinor, snapshot.currency, currency
+                            )
+                            if (converted != null) {
+                                viewModel.recordAmount(
+                                    snapshot.id,
+                                    converted - snapshot.balanceMinor,
+                                    "Converted ${snapshot.currency} to $currency"
+                                )
+                            }
                         }
-                    } else {
-                        scope.launch {
-                            viewModel.updatePerson(personSnapshot.copy(
-                                name = name,
-                                pfpType = pfpType,
-                                pfpValue = pfpValue,
-                                pfpColor = pfpColor,
-                                currency = currency
-                            ))
-                            CurrencyStore.setLastCurrency(context, currency)
-                        }
+                        viewModel.updatePerson(snapshot.person.copy(
+                            name = name,
+                            pfpType = pfpType,
+                            pfpValue = pfpValue,
+                            pfpColor = pfpColor,
+                            currency = currency
+                        ))
+                        CurrencyStore.setLastCurrency(context, currency)
                     }
                     showEditDialog = false
                     editingPerson = null
@@ -482,8 +487,8 @@ fun MainScreen(viewModel: MainViewModel) {
                 val selectedPersons = allPersons.filter { it.id in splitSelectedIds }
                 SplitAdjustmentsScreen(
                     viewModel = viewModel,
-                    amount = splitAmount.toDoubleOrNull() ?: 0.0,
-                    sourceCurrency = "₹",   // adjust if you track this elsewhere; see notes below
+                    amountMinor = parseAmountToMinor(splitAmount) ?: 0L,
+                    sourceCurrency = "INR",
                     selectedPersons = selectedPersons,
                     includeMe = splitIncludeMe,
                     note = splitNote,
@@ -499,11 +504,8 @@ fun MainScreen(viewModel: MainViewModel) {
                         selectedId = null
                     },
                     onConfirm = { perPersonAmounts ->
-                        // perPersonAmounts is Map<Long, Double> -- person id to amount in their currency
-                        perPersonAmounts.forEach { (personId, amt) ->
-                            val person = allPersons.find { it.id == personId } ?: return@forEach
-                            viewModel.updateBalance(person, amt, splitNote.ifBlank { "Split" })
-                        }
+                        // person id -> amount in that person's own currency, as minor units
+                        viewModel.recordSplit(perPersonAmounts, splitNote.ifBlank { "Split" })
                         // reset
                         showSplitFlow = false
                         splitAmount = ""
@@ -540,7 +542,7 @@ fun MainScreen(viewModel: MainViewModel) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.deletePerson(target)
+                    viewModel.deletePerson(target.person)
                     pendingDelete = null
                 }) {
                     Text("Delete", color = theme.negative)
@@ -556,7 +558,7 @@ fun MainScreen(viewModel: MainViewModel) {
 }
 
 @Composable
-fun PersonRow(person: Person, isSelected: Boolean, onHistoryClick: () -> Unit, onClick: () -> Unit,onSendReminder: () -> Unit, onDelete: () -> Unit, onEditClick: () -> Unit) {
+fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: () -> Unit, onClick: () -> Unit,onSendReminder: () -> Unit, onDelete: () -> Unit, onEditClick: () -> Unit) {
     val theme = LocalAppTheme.current
     var showMenu by remember { mutableStateOf(false) }
 
@@ -575,11 +577,11 @@ fun PersonRow(person: Person, isSelected: Boolean, onHistoryClick: () -> Unit, o
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PfpView(person = person, size = 44)
+            PfpView(person = person.person, size = 44)
             Column {
                 Text(person.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = theme.textPrimary)
                 Text(
-                    if (person.balance > 0) "owes you" else if (person.balance < 0) "you owe" else "settled",
+                    if (person.balanceMinor > 0) "owes you" else if (person.balanceMinor < 0) "you owe" else "settled",
                     fontSize = 12.sp, color = theme.textSecondary
                 )
             }
@@ -587,10 +589,10 @@ fun PersonRow(person: Person, isSelected: Boolean, onHistoryClick: () -> Unit, o
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                formatAmount(person.balance, person.currency),
+                formatAmount(person.balanceMinor, person.currency),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (person.balance > 0) theme.positive else if (person.balance < 0) theme.negative else theme.textSecondary
+                color = if (person.balanceMinor > 0) theme.positive else if (person.balanceMinor < 0) theme.negative else theme.textSecondary
             )
             IconButton(onClick = onHistoryClick, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Default.Info, contentDescription = "History", tint = theme.textSecondary, modifier = Modifier.size(16.dp))
@@ -650,7 +652,7 @@ fun PfpView(person: Person, size: Int) {
 }
 
 @Composable
-fun NumPad(person: Person, pd: Int, input: String, onKey: (String) -> Unit,onSettle: () -> Unit, onAdd: () -> Unit, onSubtract: () -> Unit, note: String, onNoteChange: (String) -> Unit, showNote: Boolean, onToggleNote: () -> Unit){
+fun NumPad(person: PersonWithBalance, pd: Int, input: String, onKey: (String) -> Unit,onSettle: () -> Unit, onAdd: () -> Unit, onSubtract: () -> Unit, note: String, onNoteChange: (String) -> Unit, showNote: Boolean, onToggleNote: () -> Unit){
     val theme = LocalAppTheme.current
     Column(
         modifier = Modifier
@@ -760,7 +762,7 @@ fun NumPad(person: Person, pd: Int, input: String, onKey: (String) -> Unit,onSet
                 containerColor = theme.textSecondary.copy(alpha = 0.15f),
                 contentColor = theme.textPrimary
             ),
-            enabled = kotlin.math.abs(person.balance) > 0.005
+            enabled = person.balanceMinor != 0L
         ) {
             Text("Settle", fontSize = 16.sp, fontWeight = FontWeight.Medium)
         }
@@ -780,8 +782,8 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
             pfpType = "photo"
         }
     }
-    val lastCurrency by CurrencyStore.getLastCurrency(context).collectAsState(initial = "₹")
-    var selectedCurrency by remember { mutableStateOf("₹") }
+    val lastCurrency by CurrencyStore.getLastCurrency(context).collectAsState(initial = "INR")
+    var selectedCurrency by remember { mutableStateOf("INR") }
     LaunchedEffect(lastCurrency) { selectedCurrency = lastCurrency }
     var name by remember { mutableStateOf("") }
     var emoji by remember { mutableStateOf("😊") }
@@ -863,11 +865,11 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                 }
                 Text("Currency", color = theme.textSecondary, fontSize = 13.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("₹", "$", "€", "£", "¥").forEach { c ->
+                    SUPPORTED_CURRENCIES.forEach { c ->
                         FilterChip(
                             selected = selectedCurrency == c,
                             onClick = { selectedCurrency = c },
-                            label = { Text(c, fontSize = 14.sp) },
+                            label = { Text(currencySymbol(c), fontSize = 14.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = theme.positive.copy(alpha = 0.2f),
                                 selectedLabelColor = theme.positive,
@@ -994,7 +996,7 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (String, Str
                 }
                 Text("Currency", color = theme.textSecondary, fontSize = 13.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("₹", "$", "€", "£", "¥").forEach { c ->
+                    SUPPORTED_CURRENCIES.forEach { c ->
                         FilterChip(
                             selected = selectedCurrency == c,
                             onClick = {
@@ -1003,7 +1005,7 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (String, Str
                                     showConvertAlert = true
                                 }
                             },
-                            label = { Text(c, fontSize = 14.sp) },
+                            label = { Text(currencySymbol(c), fontSize = 14.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = theme.positive.copy(alpha = 0.2f),
                                 selectedLabelColor = theme.positive,
@@ -1064,7 +1066,7 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (String, Str
     }
 }
 @Composable
-fun TransactionHistoryDialog(person: Person, viewModel: MainViewModel, onDismiss: () -> Unit) {
+fun TransactionHistoryDialog(person: PersonWithBalance, viewModel: MainViewModel, onDismiss: () -> Unit) {
     val transactions by viewModel.getTransactions(person.id).collectAsState(initial = emptyList())
     val theme = LocalAppTheme.current
     val context = LocalContext.current
@@ -1112,8 +1114,8 @@ fun TransactionHistoryDialog(person: Person, viewModel: MainViewModel, onDismiss
                                 Text(date, color = theme.textSecondary, fontSize = 12.sp)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        formatAmount(t.amount, person.currency),
-                                        color = if (t.amount > 0) theme.positive else theme.negative,
+                                        formatAmount(t.amountMinor, person.currency),
+                                        color = if (t.amountMinor > 0) theme.positive else theme.negative,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
@@ -1276,7 +1278,7 @@ fun isGestureNavigation(): Boolean {
 
 @Composable
 fun ReminderDialog(
-    person: Person,
+    person: PersonWithBalance,
     viewModel: MainViewModel,
     onDismiss: () -> Unit
 ) {
@@ -1341,12 +1343,12 @@ fun ReminderDialog(
     )
 }
 
-private fun buildReminderText(person: Person): String {
-    val absAmt = formatAmount(kotlin.math.abs(person.balance), person.currency)
+private fun buildReminderText(person: PersonWithBalance): String {
+    val absAmt = formatAmount(kotlin.math.abs(person.balanceMinor), person.currency)
     return when {
-        person.balance > 0.005 ->
+        person.balanceMinor > 0 ->
             "Hey ${person.name}, friendly reminder — you owe me $absAmt."
-        person.balance < -0.005 ->
+        person.balanceMinor < 0 ->
             "Hey ${person.name}, friendly reminder — I owe you $absAmt."
         else ->
             "Hey ${person.name}, we're all settled up — thanks!"
@@ -1356,12 +1358,12 @@ private fun buildReminderText(person: Person): String {
 private fun buildTransactionLog(transactions: List<Transaction>, currency: String): String {
     val sorted = transactions.sortedBy { it.timestamp }
     val sdf = java.text.SimpleDateFormat("dd MMM, hh:mm a", java.util.Locale.getDefault())
-    var running = 0.0
+    var running = 0L
     return sorted.joinToString("\n") { t ->
-        running += t.amount
+        running += t.amountMinor
         val date = sdf.format(java.util.Date(t.timestamp))
-        val sign = if (t.amount > 0) "+" else ""
-        val amt = formatAmount(t.amount, currency)
+        val sign = if (t.amountMinor > 0) "+" else ""
+        val amt = formatAmount(t.amountMinor, currency)
         val noteStr = if (t.note.isNotBlank()) " (${t.note})" else ""
         val runningStr = formatAmount(running, currency)
         "$date: $sign$amt$noteStr  →  $runningStr"
@@ -1471,7 +1473,7 @@ fun SplitAmountScreen(
                 }
 
                 // Next button
-                val amtValue = amount.toDoubleOrNull() ?: 0.0
+                val amtValue = parseAmountToMinor(amount) ?: 0L
                 Button(
                     onClick = onNext,
                     modifier = Modifier
@@ -1497,7 +1499,7 @@ fun SplitAmountScreen(
 
 @Composable
 fun SplitPickerScreen(
-    allPersons: List<Person>,
+    allPersons: List<PersonWithBalance>,
     selectedIds: Set<Long>,
     includeMe: Boolean,
     onToggleMe: () -> Unit,
@@ -1598,7 +1600,7 @@ fun SplitPickerScreen(
                     items(allPersons, key = { it.id }) { person ->
                         SplitPickerRow(
                             label = person.name,
-                            sublabel = "${person.currency}${kotlin.math.abs(person.balance).let { if (it < 0.005) "0" else "%.2f".format(it) }}",
+                            sublabel = formatAmount(kotlin.math.abs(person.balanceMinor), person.currency),
                             selected = person.id in selectedIds,
                             theme = theme,
                             onClick = { onTogglePerson(person.id) }
@@ -1669,15 +1671,15 @@ private fun SplitPickerRow(
 @Composable
 fun SplitAdjustmentsScreen(
     viewModel: MainViewModel,
-    amount: Double,
+    amountMinor: Long,
     sourceCurrency: String,
-    selectedPersons: List<Person>,
+    selectedPersons: List<PersonWithBalance>,
     includeMe: Boolean,
     note: String,
     onNoteChange: (String) -> Unit,
     onBack: () -> Unit,
     onCancel: () -> Unit,
-    onConfirm: (Map<Long, Double>) -> Unit
+    onConfirm: (Map<Long, Long>) -> Unit
 ) {
     val theme = LocalAppTheme.current
     val scope = rememberCoroutineScope()
@@ -1696,20 +1698,20 @@ fun SplitAdjustmentsScreen(
     }
 
     // Per-person amounts in source currency (we convert at confirm time only for display)
-    var amountsInSource by remember(participants, amount) {
-        mutableStateOf(equalSplit(amount, participants))
+    var amountsInSource by remember(participants, amountMinor) {
+        mutableStateOf(equalSplit(amountMinor, participants))
     }
     var lockedIds by remember(participants) { mutableStateOf(setOf<Long>()) }
 
     // Converted amounts (in each person's own currency) — recalculated when amountsInSource changes
-    var convertedAmounts by remember { mutableStateOf<Map<Long, Double>>(emptyMap()) }
+    var convertedAmounts by remember { mutableStateOf<Map<Long, Long>>(emptyMap()) }
     var conversionError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(amountsInSource, participants) {
         conversionError = null
-        val result = mutableMapOf<Long, Double>()
+        val result = mutableMapOf<Long, Long>()
         for (p in participants) {
-            val srcAmt = amountsInSource[p.id] ?: 0.0
+            val srcAmt = amountsInSource[p.id] ?: 0L
             if (p.currency == sourceCurrency) {
                 result[p.id] = srcAmt
             } else {
@@ -1726,7 +1728,7 @@ fun SplitAdjustmentsScreen(
     }
 
     val total = amountsInSource.values.sum()
-    val totalsMatch = kotlin.math.abs(total - amount) < 0.005
+    val totalsMatch = total == amountMinor
 
     Dialog(
         onDismissRequest = onCancel,
@@ -1756,7 +1758,7 @@ fun SplitAdjustmentsScreen(
 
                 // Total amount header
                 Text(
-                    "$sourceCurrency${"%.2f".format(amount)} total",
+                    "${formatAmount(amountMinor, sourceCurrency)} total",
                     color = theme.textSecondary,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(horizontal = 24.dp)
@@ -1787,8 +1789,8 @@ fun SplitAdjustmentsScreen(
                         SplitAdjustmentRow(
                             participant = p,
                             sourceCurrency = sourceCurrency,
-                            amountInSource = amountsInSource[p.id] ?: 0.0,
-                            convertedAmount = convertedAmounts[p.id],
+                            amountInSourceMinor = amountsInSource[p.id] ?: 0L,
+                            convertedAmountMinor = convertedAmounts[p.id],
                             locked = p.id in lockedIds,
                             onAmountChange = { newAmt ->
                                 amountsInSource = redistribute(
@@ -1796,7 +1798,7 @@ fun SplitAdjustmentsScreen(
                                     locked = lockedIds + p.id,   // editing locks this row
                                     changedId = p.id,
                                     newValue = newAmt,
-                                    total = amount
+                                    total = amountMinor
                                 )
                                 lockedIds = lockedIds + p.id
                             },
@@ -1816,7 +1818,7 @@ fun SplitAdjustmentsScreen(
                     ) {
                         Text("Total", color = theme.textSecondary, fontSize = 14.sp)
                         Text(
-                            "$sourceCurrency${"%.2f".format(total)} of $sourceCurrency${"%.2f".format(amount)}",
+                            "${formatAmount(total, sourceCurrency)} of ${formatAmount(amountMinor, sourceCurrency)}",
                             color = if (totalsMatch) theme.textPrimary else theme.negative,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
@@ -1872,14 +1874,14 @@ fun SplitAdjustmentsScreen(
 private fun SplitAdjustmentRow(
     participant: SplitParticipant,
     sourceCurrency: String,
-    amountInSource: Double,
-    convertedAmount: Double?,
+    amountInSourceMinor: Long,
+    convertedAmountMinor: Long?,
     locked: Boolean,
-    onAmountChange: (Double) -> Unit,
+    onAmountChange: (Long) -> Unit,
     onToggleLock: () -> Unit,
     theme: AppTheme
 ) {
-    var text by remember(amountInSource) { mutableStateOf("%.2f".format(amountInSource)) }
+    var text by remember(amountInSourceMinor) { mutableStateOf(formatMinorPlain(amountInSourceMinor, sourceCurrency)) }
 
     Row(
         modifier = Modifier
@@ -1891,9 +1893,9 @@ private fun SplitAdjustmentRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(participant.name, color = theme.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            if (participant.currency != sourceCurrency && convertedAmount != null) {
+            if (participant.currency != sourceCurrency && convertedAmountMinor != null) {
                 Text(
-                    "= ${participant.currency}${"%.2f".format(convertedAmount)}",
+                    "= ${formatAmount(convertedAmountMinor, participant.currency)}",
                     color = theme.textSecondary,
                     fontSize = 11.sp
                 )
@@ -1904,7 +1906,7 @@ private fun SplitAdjustmentRow(
             value = text,
             onValueChange = { newText ->
                 text = newText
-                newText.toDoubleOrNull()?.let { onAmountChange(it) }
+                parseAmountToMinor(newText)?.let { onAmountChange(it) }
             },
             textStyle = LocalTextStyle.current.copy(
                 color = theme.textPrimary,
@@ -1918,7 +1920,7 @@ private fun SplitAdjustmentRow(
             modifier = Modifier.width(80.dp).padding(end = 4.dp)
         )
 
-        Text(sourceCurrency, color = theme.textSecondary, fontSize = 12.sp)
+        Text(currencySymbol(sourceCurrency), color = theme.textSecondary, fontSize = 12.sp)
 
         IconButton(
             onClick = onToggleLock,

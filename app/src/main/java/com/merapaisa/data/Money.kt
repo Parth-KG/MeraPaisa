@@ -1,0 +1,102 @@
+package com.kg.merapaisa.data
+
+import kotlin.math.absoluteValue
+
+/**
+ * Money is stored as a [Long] count of minor units — hundredths of the major unit — for
+ * every currency, including the zero-decimal ones. Zero-decimal display is handled here,
+ * at the formatting layer, so the stored representation stays uniform.
+ */
+
+/** ISO 4217 codes this app offers, in display order. */
+val SUPPORTED_CURRENCIES = listOf("INR", "USD", "EUR", "GBP", "JPY")
+
+private val CURRENCY_SYMBOLS = mapOf(
+    "INR" to "₹",
+    "USD" to "$",
+    "EUR" to "€",
+    "GBP" to "£",
+    "JPY" to "¥"
+)
+
+/** Symbols that older versions stored in place of a code, kept for reading legacy state. */
+private val LEGACY_SYMBOL_TO_CODE = mapOf(
+    "₹" to "INR",
+    "$" to "USD",
+    "€" to "EUR",
+    "£" to "GBP",
+    "¥" to "JPY"
+)
+
+/** Currencies with no minor unit in circulation, shown without decimals. */
+private val ZERO_DECIMAL_CURRENCIES = setOf("JPY")
+
+fun currencySymbol(code: String): String = CURRENCY_SYMBOLS[code] ?: code
+
+fun currencyDecimals(code: String): Int = if (code in ZERO_DECIMAL_CURRENCIES) 0 else 2
+
+/** Normalises a legacy symbol to its ISO code; passes codes through untouched. */
+fun normaliseCurrency(value: String): String = LEGACY_SYMBOL_TO_CODE[value] ?: value
+
+/**
+ * Parses user-entered decimal text into minor units, or null if it is not a usable amount.
+ * Parsing works on the digits directly rather than through [Double] so that a half at the
+ * third decimal rounds predictably away from zero instead of following binary float error.
+ */
+fun parseAmountToMinor(text: String): Long? {
+    val trimmed = text.trim()
+    if (trimmed.isEmpty()) return null
+
+    val negative = trimmed.startsWith("-")
+    val unsigned = if (negative) trimmed.substring(1) else trimmed
+    if (unsigned.isEmpty()) return null
+
+    val dot = unsigned.indexOf('.')
+    if (dot != unsigned.lastIndexOf('.')) return null
+
+    val whole = if (dot < 0) unsigned else unsigned.substring(0, dot)
+    val fraction = if (dot < 0) "" else unsigned.substring(dot + 1)
+
+    // A lone "." carries no digits and is not an amount.
+    if (whole.isEmpty() && fraction.isEmpty()) return null
+    if (!whole.all { it.isDigit() } || !fraction.all { it.isDigit() }) return null
+    // Guard against input long enough to overflow the multiply below.
+    if (whole.length > 15) return null
+
+    val wholeValue = if (whole.isEmpty()) 0L else whole.toLong()
+    val hundredths = (fraction + "00").substring(0, 2).toLong()
+    var minor = wholeValue * 100 + hundredths
+
+    // Round half away from zero on the first discarded digit.
+    val next = fraction.getOrNull(2)
+    if (next != null && next.digitToInt() >= 5) minor += 1
+
+    return if (negative) -minor else minor
+}
+
+/** Renders minor units with the currency's symbol, using its real number of decimals. */
+fun formatMinor(amountMinor: Long, currencyCode: String): String {
+    val symbol = currencySymbol(currencyCode)
+    val sign = if (amountMinor < 0) "-" else ""
+    val magnitude = amountMinor.absoluteValue
+
+    val body = if (currencyDecimals(currencyCode) == 0) {
+        // Still stored in hundredths, so round to the nearest whole major unit for display.
+        ((magnitude + 50) / 100).toString()
+    } else {
+        "${magnitude / 100}.${(magnitude % 100).toString().padStart(2, '0')}"
+    }
+    return "$sign$symbol$body"
+}
+
+/** Digits only, no symbol — for text fields the user types back into. */
+fun formatMinorPlain(amountMinor: Long, currencyCode: String): String {
+    val magnitude = amountMinor.absoluteValue
+    val sign = if (amountMinor < 0) "-" else ""
+    val body = if (currencyDecimals(currencyCode) == 0) {
+        ((magnitude + 50) / 100).toString()
+    } else {
+        "${magnitude / 100}.${(magnitude % 100).toString().padStart(2, '0')}"
+    }
+    return "$sign$body"
+}
