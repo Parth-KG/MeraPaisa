@@ -1,8 +1,19 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android) 
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+}
+
+// Signing credentials live in keystore.properties, which is gitignored and never committed.
+// Without it the release build is simply unsigned, so a fresh clone still builds.
+val keystoreProperties = Properties().apply {
+    listOf(rootProject.file("keystore.properties"), rootProject.file("../keystore.properties"))
+        .firstOrNull { it.exists() }
+        ?.inputStream()
+        ?.use { load(it) }
 }
 
 android {
@@ -13,9 +24,20 @@ android {
         applicationId = "com.kg.merapaisa"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        if (keystoreProperties.getProperty("storeFile") != null) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
@@ -27,6 +49,7 @@ android {
             versionNameSuffix = "-debug"
         }
         release {
+            signingConfig = signingConfigs.findByName("release")
             // Shrink and obfuscate: the icon and Compose libraries pull in far more than
             // this app uses, and nothing here relies on reflection over its own classes.
             isMinifyEnabled = true
