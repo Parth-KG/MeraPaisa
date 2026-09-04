@@ -2,6 +2,7 @@ package com.kg.merapaisa.repository
 
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonDao
+import com.kg.merapaisa.data.PersonLedger
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +21,14 @@ class PersonRepository(
     fun transactions(personId: Long): Flow<List<Transaction>> = dao.getTransactionsForPerson(personId)
 
     fun transactionCount(personId: Long): Flow<Int> = dao.getTransactionCount(personId)
+
+    /** Everyone and everything they have, read together, for an export. */
+    suspend fun ledgerSnapshot(): List<PersonLedger> {
+        val byPerson = dao.getAllTransactionsNow().groupBy { it.personId }
+        return dao.getPersonsWithBalancesNow().map { person ->
+            PersonLedger(person, byPerson[person.id].orEmpty())
+        }
+    }
 
     suspend fun addPerson(person: Person): Long = dao.insertPerson(person).also { notifier.onLedgerChanged() }
 
