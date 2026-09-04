@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -80,7 +80,7 @@ fun TransactionHistoryDialog(person: PersonWithBalance, viewModel: MainViewModel
                                         modifier = Modifier.size(28.dp)
                                     ) {
                                         Icon(
-                                            Icons.Default.Undo,
+                                            Icons.AutoMirrored.Filled.Undo,
                                             contentDescription = "Rollback",
                                             tint = theme.textSecondary,
                                             modifier = Modifier.size(16.dp)
