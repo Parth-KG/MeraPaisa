@@ -129,6 +129,29 @@ interface PersonDao {
             .forEach { setSettled(it, false) }
     }
 
+    @Update
+    suspend fun updateTransaction(transaction: Transaction)
+
+    @Query("DELETE FROM transactions WHERE id = :transactionId")
+    suspend fun deleteTransaction(transactionId: Int)
+
+    /**
+     * Corrects a single entry in place, keeping its original timestamp. A correction can move
+     * the balance off zero, so the settled flag is re-derived rather than left stale.
+     */
+    @androidx.room.Transaction
+    suspend fun editTransaction(transaction: Transaction) {
+        updateTransaction(transaction)
+        if (getBalanceNow(transaction.personId) != 0L) setSettled(transaction.personId, false)
+    }
+
+    /** Removes one entry outright — a mistyped amount should not have to live in the history. */
+    @androidx.room.Transaction
+    suspend fun removeTransaction(transaction: Transaction) {
+        deleteTransaction(transaction.id)
+        if (getBalanceNow(transaction.personId) != 0L) setSettled(transaction.personId, false)
+    }
+
     /** Reverses everything at or after [since] in one entry, computed under the transaction. */
     @androidx.room.Transaction
     suspend fun rollbackTo(personId: Long, since: Long, note: String = "Rollback") {
