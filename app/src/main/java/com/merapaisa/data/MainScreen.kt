@@ -33,7 +33,6 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.ui.platform.LocalContext
-import android.provider.Settings
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import kotlinx.coroutines.launch
@@ -42,6 +41,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.combinedClickable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -64,6 +64,8 @@ import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.data.formatMinor
 import com.kg.merapaisa.data.formatMinorPlain
 import com.kg.merapaisa.data.parseAmountToMinor
+import com.kg.merapaisa.data.isUsableAmount
+import java.io.File
 
 
 fun formatAmount(amountMinor: Long, currencyCode: String = "INR"): String =
@@ -111,81 +113,57 @@ private fun redistribute(
     }
     return updated
 }
-fun saveImageToInternalStorage(context: Context, uri: Uri): String {
-    val inputStream = context.contentResolver.openInputStream(uri) ?: return ""
-    val file = java.io.File(context.filesDir, "pfp_${System.currentTimeMillis()}.jpg")
-    file.outputStream().use { inputStream.copyTo(it) }
-    return file.absolutePath
-}
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
-    var pendingReminder by remember { mutableStateOf<PersonWithBalance?>(null) }
     val context = LocalContext.current
-    var pendingDelete by remember { mutableStateOf<PersonWithBalance?>(null) }
     val theme = LocalAppTheme.current
     val scope = rememberCoroutineScope()
-    var showSplitFlow by remember { mutableStateOf(false) }
-    var splitAmount by remember { mutableStateOf("") }
-    var splitStep by remember { mutableStateOf(0) }
     val persons by viewModel.persons.collectAsState()
-    var selectedId by remember { mutableStateOf<Long?>(null) }
-    var input by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
-    var showNote by remember { mutableStateOf(false) }
-    var tab by remember { mutableStateOf("active") }
-    var showAddDialog by remember { mutableStateOf(false) }
-    var showEditDialog by remember { mutableStateOf(false) }
-    var editingPerson by remember { mutableStateOf<PersonWithBalance?>(null) }
-    var showHistoryDialog by remember { mutableStateOf(false) }
-    var historyPerson by remember { mutableStateOf<PersonWithBalance?>(null) }
-    var pd = 16
-    BackHandler(enabled = selectedId != null) {
-        selectedId = null
-        input = ""
-    }
-    var showThemeDialog by remember { mutableStateOf(false) }
-    var splitNote by remember { mutableStateOf("") }
-    var splitSelectedIds by remember { mutableStateOf(setOf<Long>()) }
-    var splitIncludeMe by remember { mutableStateOf(false) }
-    val activePersons = persons.filter { !it.isSettled && it.balanceMinor != 0L }
-    val settledPersons = persons.filter { it.isSettled || it.balanceMinor == 0L }
-    val list = if (tab == "active") activePersons else settledPersons
-    val selectedPerson = persons.find { it.id == selectedId }
-    if (isGestureNavigation()) {
-        pd = 16
-    } else {
-        pd = 40
-    }
+    val ui by viewModel.uiState.collectAsState()
+
+    BackHandler(enabled = ui.selectedId != null) { viewModel.clearSelection() }
+
+    // A settled debt is one you have marked settled, not merely one that nets to zero —
+    // otherwise everyone you add lands in Settled the moment they are created.
+    val activePersons = persons.filter { !it.isSettled }
+    val settledPersons = persons.filter { it.isSettled }
+    val list = if (ui.tab == Tab.Active) activePersons else settledPersons
+    val selectedPerson = persons.find { it.id == ui.selectedId }
+    val editingPerson = persons.find { it.id == ui.editingPersonId }
+    val historyPerson = persons.find { it.id == ui.historyPersonId }
+    val pendingDelete = persons.find { it.id == ui.pendingDeleteId }
+    val pendingReminder = persons.find { it.id == ui.pendingReminderId }
 
     Box(modifier = Modifier.fillMaxSize().background(theme.background)) {
-        Column(modifier = Modifier.fillMaxSize().padding(bottom = pd.dp)) {
+        Column(modifier = Modifier.fillMaxSize()) {
             // Tabs
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp, 48.dp, 24.dp, 16.dp),
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+                    .padding(24.dp, 16.dp, 24.dp, 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("active", "settled").forEach { t ->
+                    Tab.entries.forEach { t ->
                         Button(
-                            onClick = { tab = t; selectedId = null; input = "" },
+                            onClick = { viewModel.selectTab(t) },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (tab == t) Color.White else Color.White.copy(alpha = 0.06f),
-                                contentColor = if (tab == t) Color.Black else theme.textSecondary
+                                containerColor = if (ui.tab == t) Color.White else Color.White.copy(alpha = 0.06f),
+                                contentColor = if (ui.tab == t) Color.Black else theme.textSecondary
                             ),
                             shape = RoundedCornerShape(20.dp),
                             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 7.dp)
                         ) {
-                            Text(t.replaceFirstChar { it.uppercase() }, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(t.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
 
                 IconButton(
-                    onClick = { showThemeDialog = true },
+                    onClick = { viewModel.showThemeDialog(true) },
                     modifier = Modifier
                         .size(40.dp)
                         .background(Color.White.copy(alpha = 0.06f), CircleShape)
@@ -199,7 +177,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 }
             }
 
-            if (tab == "active") {
+            if (ui.tab == Tab.Active) {
                 val lastCurrency by CurrencyStore.getLastCurrency(context).collectAsState(initial = "INR")
                 var netTotal by remember { mutableStateOf(0L) }
                 var loading by remember { mutableStateOf(false) }
@@ -250,101 +228,67 @@ fun MainScreen(viewModel: MainViewModel) {
 
             // People list
             LazyColumn(
-                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(bottom = 100.dp),  // <-- comma here
+                modifier = Modifier
+                    .weight(1f)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(bottom = 100.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(list, key = { it.id }) { person ->
                     PersonRow(
                         person = person,
-                        isSelected = selectedId == person.id,
-                        onClick = {
-                            selectedId = if (selectedId == person.id) null else person.id
-                            input = ""
-                        },
-                        onDelete = { pendingDelete = person },
-                        onSendReminder = { pendingReminder = person },
-                        onEditClick = {
-                            editingPerson = person
-                            showEditDialog = true
-                        },
-                        onHistoryClick = {
-                            historyPerson = person
-                            showHistoryDialog = true
-                        }
+                        isSelected = ui.selectedId == person.id,
+                        onClick = { viewModel.togglePerson(person.id) },
+                        onDelete = { viewModel.confirmDelete(person.id) },
+                        onSendReminder = { viewModel.composeReminder(person.id) },
+                        onEditClick = { viewModel.editPerson(person.id) },
+                        onHistoryClick = { viewModel.showHistory(person.id) }
                     )
                 }
             }
 
             // Numpad
-            if (selectedPerson != null&& !showSplitFlow) {
+            if (selectedPerson != null && ui.split == null) {
                 NumPad(
                     person = selectedPerson,
-                    pd = pd,
-                    input = input,
+                    input = ui.input,
                     onSettle = {
                         viewModel.settlePerson(selectedPerson, context)
-                        tab = "settled"
-                        selectedId = null     // close numpad after settling
-                        input = ""
-                        note = ""
+                        viewModel.clearSelection()
                     },
-                    note = note,
-                    onNoteChange = { note = it },
-                    showNote = showNote,
-                    onToggleNote = { showNote = !showNote },
-                    onKey = { k ->
-                        when (k) {
-                            "⌫" -> input = input.dropLast(1)
-                            "." -> if (!input.contains(".")) input += "."
-                            else -> if (input.length < 8) input += k
-                        }
-                    },
+                    note = ui.note,
+                    onNoteChange = viewModel::setNote,
+                    showNote = ui.showNote,
+                    onToggleNote = viewModel::toggleNoteField,
+                    onKey = viewModel::onKeyPress,
                     onAdd = {
-                        val amt = parseAmountToMinor(input) ?: return@NumPad
-                        val person = selectedPerson ?: return@NumPad
-                        val newBalance = person.balanceMinor + amt
-                        viewModel.recordAmount(person.id, amt, note)
-                        if (newBalance == 0L) {
-                            tab = "settled"
-                            selectedId = null
-                        } else if (tab == "settled") {
-                            tab = "active"
-                        }
-                        selectedId = null
-                        input = ""
-                        note = ""
+                        val amount = parseAmountToMinor(ui.input) ?: return@NumPad
+                        viewModel.recordAmount(selectedPerson.id, amount, ui.note)
+                        viewModel.clearSelection()
                     },
                     onSubtract = {
-                        val amt = parseAmountToMinor(input) ?: return@NumPad
-                        val person = selectedPerson ?: return@NumPad
-                        val newBalance = person.balanceMinor - amt
-                        viewModel.recordAmount(person.id, -amt, note)
-                        if (newBalance == 0L) {
-                            tab = "settled"
-                            selectedId = null
-                        } else if (tab == "settled") {
-                            tab = "active"
-                        }
-                        selectedId = null
-                        input = ""
-                        note = ""
+                        val amount = parseAmountToMinor(ui.input) ?: return@NumPad
+                        viewModel.recordAmount(selectedPerson.id, -amount, ui.note)
+                        viewModel.clearSelection()
                     }
                 )
             }
         }
         // Bottom left - Add
         AnimatedVisibility(
-            visible = selectedId == null,
+            visible = ui.selectedId == null,
             enter = fadeIn() + scaleIn(),
             exit = fadeOut() + scaleOut(),
             modifier = Modifier.align(Alignment.BottomStart)
         ) {
             Box(
-                modifier = Modifier.padding(pd.dp)
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(16.dp)
             ) {
                 IconButton(
-                    onClick = { showAddDialog = true },
+                    onClick = { viewModel.showAddDialog(true) },
                     modifier = Modifier
                         .size(65.dp)
                         .background(theme.positive, RoundedCornerShape(16.dp))
@@ -356,16 +300,18 @@ fun MainScreen(viewModel: MainViewModel) {
 
 // Bottom right - Split
         AnimatedVisibility(
-            visible = selectedId == null,
+            visible = ui.selectedId == null,
             enter = fadeIn() + scaleIn(),
             exit = fadeOut() + scaleOut(),
             modifier = Modifier.align(Alignment.BottomEnd)
         ) {
             Box(
-                modifier = Modifier.padding(pd.dp)
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(16.dp)
             ) {
                 IconButton(
-                    onClick = { showSplitFlow = true },
+                    onClick = { viewModel.startSplit() },
                     modifier = Modifier
                         .size(65.dp)
                         .background(theme.card, RoundedCornerShape(16.dp))
@@ -380,162 +326,123 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         }
 
-        if (showAddDialog) {
+        if (ui.showAddDialog) {
             AddPersonDialog(
-                onDismiss = { showAddDialog = false },
+                onDismiss = { viewModel.showAddDialog(false) },
                 onAdd = { name, pfpType, pfpValue, pfpColor, currency ->
                     viewModel.addPerson(name, pfpType, pfpValue, pfpColor, currency) { newId ->
-                        selectedId = newId
-
-                        scope.launch { CurrencyStore.setLastCurrency(context, currency) }
-                        selectedId = newId
-                        tab = "active"
-                        input = ""
-                        showAddDialog = false
+                        viewModel.showAddDialog(false)
+                        viewModel.selectTab(Tab.Active)
+                        viewModel.togglePerson(newId)
                     }
                 }
             )
         }
-        if (showEditDialog && editingPerson != null) {
+        if (editingPerson != null) {
+            val converting by viewModel.converting.collectAsState()
+            val conversionError by viewModel.conversionError.collectAsState()
             EditPersonDialog(
-                person = editingPerson!!.person,
-                onDismiss = { showEditDialog = false; editingPerson = null },
+                person = editingPerson.person,
+                converting = converting,
+                conversionError = conversionError,
+                onDismiss = {
+                    viewModel.dismissConversionError()
+                    viewModel.editPerson(null)
+                },
                 onSave = { name, pfpType, pfpValue, pfpColor, currency, shouldConvert ->
-                    val snapshot = editingPerson!!
-                    scope.launch {
-                        if (shouldConvert && currency != snapshot.currency) {
-                            // Balance is derived, so a conversion is recorded as the difference
-                            // it makes rather than by overwriting a stored figure.
-                            val converted = viewModel.convertCurrency(
-                                snapshot.balanceMinor, snapshot.currency, currency
-                            )
-                            if (converted != null) {
-                                viewModel.recordAmount(
-                                    snapshot.id,
-                                    converted - snapshot.balanceMinor,
-                                    "Converted ${snapshot.currency} to $currency"
-                                )
-                            }
-                        }
-                        viewModel.updatePerson(snapshot.person.copy(
-                            name = name,
-                            pfpType = pfpType,
-                            pfpValue = pfpValue,
-                            pfpColor = pfpColor,
-                            currency = currency
-                        ))
-                        CurrencyStore.setLastCurrency(context, currency)
-                    }
-                    showEditDialog = false
-                    editingPerson = null
+                    viewModel.savePersonEdit(
+                        snapshot = editingPerson,
+                        name = name,
+                        pfpType = pfpType,
+                        pfpValue = pfpValue,
+                        pfpColor = pfpColor,
+                        currency = currency,
+                        convertBalance = shouldConvert
+                    ) { viewModel.editPerson(null) }
                 }
             )
         }
-        if (showHistoryDialog && historyPerson != null) {
+        if (historyPerson != null) {
             TransactionHistoryDialog(
-                person = historyPerson!!,
+                person = historyPerson,
                 viewModel = viewModel,
-                onDismiss = { showHistoryDialog = false; historyPerson = null }
+                onDismiss = { viewModel.showHistory(null) }
             )
         }
-        if (showThemeDialog) {
+        if (ui.showThemeDialog) {
             ThemePickerDialog(
                 currentThemeName = theme.name,
-                onDismiss = { showThemeDialog = false },
+                onDismiss = { viewModel.showThemeDialog(false) },
                 onApply = { selectedTheme ->
                     scope.launch { ThemeStore.setTheme(context, selectedTheme) }
-                    showThemeDialog = false
+                    viewModel.showThemeDialog(false)
                 }
             )
         }
     }
-    if (showSplitFlow) {
-        when (splitStep) {
+    ui.split?.let { split ->
+        when (split.step) {
             0 -> SplitAmountScreen(
-                amount = splitAmount,
-                onAmountChange = { splitAmount = it },
-                onCancel = {
-                    showSplitFlow = false
-                    splitAmount = ""
-                    splitSelectedIds = setOf()
-                    splitIncludeMe = false
-                    splitStep = 0
-                },
-                onNext = { splitStep = 1 }
+                amount = split.amount,
+                onAmountChange = { entry -> viewModel.updateSplit { it.copy(amount = entry) } },
+                onCancel = viewModel::cancelSplit,
+                onNext = { viewModel.updateSplit { it.copy(step = 1) } }
             )
             1 -> SplitPickerScreen(
-                allPersons = viewModel.persons.collectAsState(initial = emptyList()).value,
-                selectedIds = splitSelectedIds,
-                includeMe = splitIncludeMe,
-                onToggleMe = { splitIncludeMe = !splitIncludeMe },
+                allPersons = persons,
+                selectedIds = split.selectedIds,
+                includeMe = split.includeMe,
+                onToggleMe = { viewModel.updateSplit { it.copy(includeMe = !it.includeMe) } },
                 onTogglePerson = { id ->
-                    splitSelectedIds = if (id in splitSelectedIds) splitSelectedIds - id else splitSelectedIds + id
-                },
-                onAddPerson = { showAddDialog = true },
-                onBack = { splitStep = 0 },
-                onCancel = {
-                    showSplitFlow = false
-                    splitAmount = ""
-                    splitSelectedIds = setOf()
-                    splitIncludeMe = false
-                    splitStep = 0
-                },
-                onNext = { splitStep = 2 }
-            )
-            2 -> {
-                val allPersons = viewModel.persons.collectAsState(initial = emptyList()).value
-                val selectedPersons = allPersons.filter { it.id in splitSelectedIds }
-                SplitAdjustmentsScreen(
-                    viewModel = viewModel,
-                    amountMinor = parseAmountToMinor(splitAmount) ?: 0L,
-                    sourceCurrency = "INR",
-                    selectedPersons = selectedPersons,
-                    includeMe = splitIncludeMe,
-                    note = splitNote,
-                    onNoteChange = { splitNote = it },
-                    onBack = { splitStep = 1 },
-                    onCancel = {
-                        showSplitFlow = false
-                        splitAmount = ""
-                        splitSelectedIds = setOf()
-                        splitIncludeMe = false
-                        splitNote = ""
-                        splitStep = 0
-                        selectedId = null
-                    },
-                    onConfirm = { perPersonAmounts ->
-                        // person id -> amount in that person's own currency, as minor units
-                        viewModel.recordSplit(perPersonAmounts, splitNote.ifBlank { "Split" })
-                        // reset
-                        showSplitFlow = false
-                        splitAmount = ""
-                        splitSelectedIds = setOf()
-                        splitIncludeMe = false
-                        splitNote = ""
-                        splitStep = 0
-                        selectedId = null
+                    viewModel.updateSplit {
+                        val next = if (id in it.selectedIds) it.selectedIds - id else it.selectedIds + id
+                        it.copy(selectedIds = next)
                     }
-                )
-            }
+                },
+                onAddPerson = { viewModel.showAddDialog(true) },
+                onBack = { viewModel.updateSplit { it.copy(step = 0) } },
+                onCancel = viewModel::cancelSplit,
+                onNext = { viewModel.updateSplit { it.copy(step = 2) } }
+            )
+            else -> SplitAdjustmentsScreen(
+                viewModel = viewModel,
+                amountMinor = parseAmountToMinor(split.amount) ?: 0L,
+                sourceCurrency = "INR",
+                selectedPersons = persons.filter { it.id in split.selectedIds },
+                includeMe = split.includeMe,
+                note = split.note,
+                onNoteChange = { entry -> viewModel.updateSplit { it.copy(note = entry) } },
+                onBack = { viewModel.updateSplit { it.copy(step = 1) } },
+                onCancel = viewModel::cancelSplit,
+                onConfirm = { perPersonAmounts ->
+                    // person id -> amount in that person's own currency, as minor units
+                    viewModel.recordSplit(perPersonAmounts, split.note.ifBlank { "Split" })
+                    viewModel.cancelSplit()
+                }
+            )
         }
     }
     pendingReminder?.let { target ->
         ReminderDialog(
             person = target,
             viewModel = viewModel,
-            onDismiss = { pendingReminder = null }
+            onDismiss = { viewModel.composeReminder(null) }
         )
     }
     pendingDelete?.let { target ->
+        val transactionCount by viewModel.getTransactionCount(target.id).collectAsState(initial = 0)
         AlertDialog(
-            onDismissRequest = { pendingDelete = null },
+            onDismissRequest = { viewModel.confirmDelete(null) },
             containerColor = theme.card,
             title = {
                 Text("Delete ${target.name}?", color = theme.textPrimary, fontWeight = FontWeight.Bold)
             },
             text = {
+                val entries = if (transactionCount == 1) "1 transaction" else "$transactionCount transactions"
                 Text(
-                    "This will permanently delete ${target.name} and all their transaction history. This can't be undone.",
+                    "This permanently deletes ${target.name}, their balance of " +
+                        "${formatAmount(target.balanceMinor, target.currency)}, and $entries. " +
+                        "This can't be undone.",
                     color = theme.textSecondary,
                     fontSize = 14.sp
                 )
@@ -543,13 +450,13 @@ fun MainScreen(viewModel: MainViewModel) {
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deletePerson(target.person)
-                    pendingDelete = null
+                    viewModel.confirmDelete(null)
                 }) {
                     Text("Delete", color = theme.negative)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) {
+                TextButton(onClick = { viewModel.confirmDelete(null) }) {
                     Text("Cancel", color = theme.textSecondary)
                 }
             }
@@ -635,7 +542,7 @@ fun PfpView(person: Person, size: Int) {
     ) {
         when (person.pfpType) {
             "photo" -> AsyncImage(
-                model = person.pfpValue,
+                model = File(person.pfpValue),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -652,13 +559,15 @@ fun PfpView(person: Person, size: Int) {
 }
 
 @Composable
-fun NumPad(person: PersonWithBalance, pd: Int, input: String, onKey: (String) -> Unit,onSettle: () -> Unit, onAdd: () -> Unit, onSubtract: () -> Unit, note: String, onNoteChange: (String) -> Unit, showNote: Boolean, onToggleNote: () -> Unit){
+fun NumPad(person: PersonWithBalance, input: String, onKey: (String) -> Unit,onSettle: () -> Unit, onAdd: () -> Unit, onSubtract: () -> Unit, note: String, onNoteChange: (String) -> Unit, showNote: Boolean, onToggleNote: () -> Unit){
     val theme = LocalAppTheme.current
+    val amountIsUsable = isUsableAmount(input)
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(theme.card)
-            .padding(20.dp, 16.dp, 20.dp, pd.dp)
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+            .padding(20.dp, 16.dp, 20.dp, 16.dp)
     ) {
         // Display
         Row(
@@ -672,7 +581,7 @@ fun NumPad(person: PersonWithBalance, pd: Int, input: String, onKey: (String) ->
         ) {
             Text(person.name, color = theme.textSecondary, fontSize = 16.sp)
             Text(
-                if (input.isNotEmpty()) input else "0",
+                "${currencySymbol(person.currency)}${if (input.isNotEmpty()) input else "0"}",
                 color = theme.textPrimary,
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Medium
@@ -740,16 +649,28 @@ fun NumPad(person: PersonWithBalance, pd: Int, input: String, onKey: (String) ->
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(
                 onClick = onSubtract,
+                enabled = amountIsUsable,
                 modifier = Modifier.weight(1f).height(52.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = theme.negative.copy(alpha = 0.15f), contentColor = theme.negative)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = theme.negative.copy(alpha = 0.15f),
+                    contentColor = theme.negative,
+                    disabledContainerColor = theme.negative.copy(alpha = 0.05f),
+                    disabledContentColor = theme.negative.copy(alpha = 0.4f)
+                )
             ) { Text("−", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
 
             Button(
                 onClick = onAdd,
+                enabled = amountIsUsable,
                 modifier = Modifier.weight(1f).height(52.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = theme.positive.copy(alpha = 0.15f), contentColor = theme.positive)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = theme.positive.copy(alpha = 0.15f),
+                    contentColor = theme.positive,
+                    disabledContainerColor = theme.positive.copy(alpha = 0.05f),
+                    disabledContentColor = theme.positive.copy(alpha = 0.4f)
+                )
             ) { Text("+", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
         }
         Spacer(modifier = Modifier.height(10.dp))
@@ -773,13 +694,18 @@ fun NumPad(person: PersonWithBalance, pd: Int, input: String, onKey: (String) ->
 fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, String, String) -> Unit) {
     val theme = LocalAppTheme.current
     val context = LocalContext.current
-    var photoUri by remember { mutableStateOf<Uri?>(null) }
+    var photoPath by remember { mutableStateOf<String?>(null) }
     var pfpType by remember { mutableStateOf("initials") }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
-            val savedPath = saveImageToInternalStorage(context, it)
-            photoUri = Uri.parse(savedPath)
-            pfpType = "photo"
+    val scope = rememberCoroutineScope()
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) scope.launch {
+            // Downscaled and written off the main thread; the old file is replaced.
+            saveProfilePhoto(context, uri, photoPath)?.let {
+                photoPath = it
+                pfpType = "photo"
+            }
         }
     }
     val lastCurrency by CurrencyStore.getLastCurrency(context).collectAsState(initial = "INR")
@@ -793,8 +719,14 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
 
     val colors = listOf("#E84B3A","#3A8FE8","#2ECC71","#F39C12","#9B59B6","#E91E63","#00BCD4","#FF5722")
 
+    val dismiss = {
+        // Nothing was saved, so the picked file has no owner.
+        deleteProfilePhoto(context, photoPath)
+        onDismiss()
+    }
+
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = dismiss,
         containerColor = theme.card,
         title = { Text("Add Person", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
         text = {
@@ -820,7 +752,14 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                     listOf("initials","emoji","photo").forEach { type ->
                         FilterChip(
                             selected = pfpType == type,
-                            onClick = { pfpType = type; if (type == "photo") launcher.launch("image/*") },
+                            onClick = {
+                                pfpType = type
+                                if (type == "photo") {
+                                    launcher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                }
+                            },
                             label = { Text(type.replaceFirstChar { it.uppercase() }, fontSize = 12.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = theme.positive.copy(alpha = 0.2f),
@@ -887,7 +826,7 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                     if (name.isNotBlank()) {
                         val pfpValue = when (pfpType) {
                             "emoji" -> emoji
-                            "photo" -> photoUri?.toString() ?: ""
+                            "photo" -> photoPath ?: ""
                             else -> name.take(2)
                         }
                         onAdd(name, pfpType, pfpValue, selectedColor,selectedCurrency)
@@ -897,12 +836,18 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
             ) { Text("Add", color = Color.Black, fontWeight = FontWeight.Bold) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel", color = theme.textSecondary) }
+            TextButton(onClick = dismiss) { Text("Cancel", color = theme.textSecondary) }
         }
     )
 }
 @Composable
-fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (String, String, String, String, String, Boolean) -> Unit) {
+fun EditPersonDialog(
+    person: Person,
+    converting: Boolean,
+    conversionError: String?,
+    onDismiss: () -> Unit,
+    onSave: (String, String, String, String, String, Boolean) -> Unit
+) {
     var name by remember { mutableStateOf(person.name) }
     val theme = LocalAppTheme.current
     val context = LocalContext.current
@@ -911,22 +856,33 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (String, Str
     var pfpType by remember { mutableStateOf(person.pfpType) }
     var emoji by remember { mutableStateOf(if (person.pfpType == "emoji") person.pfpValue else "😊") }
     var selectedColor by remember { mutableStateOf(person.pfpColor) }
-    var photoUri by remember { mutableStateOf<Uri?>(null) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
-            val savedPath = saveImageToInternalStorage(context, it)
-            photoUri = Uri.parse(savedPath)
-            pfpType = "photo"
+    var photoPath by remember { mutableStateOf(person.pfpValue.takeIf { person.pfpType == "photo" }) }
+    val scope = rememberCoroutineScope()
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) scope.launch {
+            // Replace an earlier pick from this same dialog, but leave the saved photo
+            // alone until the edit is actually committed.
+            val replaceable = photoPath.takeIf { it != person.pfpValue }
+            saveProfilePhoto(context, uri, replaceable)?.let {
+                photoPath = it
+                pfpType = "photo"
+            }
         }
     }
 
     val colors = listOf("#E84B3A","#3A8FE8","#2ECC71","#F39C12","#9B59B6","#E91E63","#00BCD4","#FF5722")
     var showConvertAlert by remember { mutableStateOf(false) }
     var pendingCurrency by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
+
+    val dismiss = {
+        deleteProfilePhoto(context, photoPath.takeIf { it != person.pfpValue })
+        onDismiss()
+    }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!converting) dismiss() },
         containerColor = theme.card,
         title = { Text("Edit Person", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
         text = {
@@ -951,7 +907,14 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (String, Str
                     listOf("initials","emoji","photo").forEach { type ->
                         FilterChip(
                             selected = pfpType == type,
-                            onClick = { pfpType = type; if (type == "photo") launcher.launch("image/*") },
+                            onClick = {
+                                pfpType = type
+                                if (type == "photo") {
+                                    launcher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                }
+                            },
                             label = { Text(type.replaceFirstChar { it.uppercase() }, fontSize = 12.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = theme.positive.copy(alpha = 0.2f),
@@ -999,6 +962,7 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (String, Str
                     SUPPORTED_CURRENCIES.forEach { c ->
                         FilterChip(
                             selected = selectedCurrency == c,
+                            enabled = !converting,
                             onClick = {
                                 if (c != selectedCurrency) {
                                     pendingCurrency = c
@@ -1015,6 +979,19 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (String, Str
                         )
                     }
                 }
+
+                if (shouldConvert && selectedCurrency != person.currency) {
+                    Text(
+                        "Balance will be converted from ${currencySymbol(person.currency)} " +
+                            "to ${currencySymbol(selectedCurrency)} at today's rate when you save.",
+                        color = theme.textSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+
+                if (conversionError != null) {
+                    Text(conversionError, color = theme.negative, fontSize = 12.sp)
+                }
             }
         },
         confirmButton = {
@@ -1023,17 +1000,34 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (String, Str
                     if (name.isNotBlank()) {
                         val pfpValue = when (pfpType) {
                             "emoji" -> emoji
-                            "photo" -> photoUri?.toString() ?: person.pfpValue
+                            "photo" -> photoPath ?: person.pfpValue
                             else -> name.take(2)
                         }
                         onSave(name, pfpType, pfpValue, selectedColor, selectedCurrency,shouldConvert)
                     }
                 },
+                enabled = !converting && name.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = theme.positive)
-            ) { Text("Save", color = Color.Black, fontWeight = FontWeight.Bold) }
+            ) {
+                if (converting) {
+                    // The save is held until the rate resolves, so it cannot relabel
+                    // the currency while leaving the amount in the old one.
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Converting", color = Color.Black, fontWeight = FontWeight.Bold)
+                } else {
+                    Text("Save", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel", color = theme.textSecondary) }
+            TextButton(onClick = dismiss, enabled = !converting) {
+                Text("Cancel", color = theme.textSecondary)
+            }
         }
     )
     if (showConvertAlert) {
@@ -1045,22 +1039,22 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (String, Str
             confirmButton = {
                 Button(
                     onClick = {
-                        shouldConvert = false
-                        selectedCurrency = pendingCurrency
-                        showConvertAlert = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = theme.positive)
-                ) { Text("Keep as-is", color = Color.Black) }
-            },
-            dismissButton = {
-                Button(
-                    onClick = {
                         shouldConvert = true
                         selectedCurrency = pendingCurrency
                         showConvertAlert = false
                     },
+                    colors = ButtonDefaults.buttonColors(containerColor = theme.positive)
+                ) { Text("Convert", color = Color.Black) }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        shouldConvert = false
+                        selectedCurrency = pendingCurrency
+                        showConvertAlert = false
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f))
-                ) { Text("Convert", color = theme.textPrimary) }
+                ) { Text("Keep as-is", color = theme.textPrimary) }
             }
         )
     }
@@ -1262,18 +1256,6 @@ fun ThemePickerDialog(currentThemeName: String, onDismiss: () -> Unit, onApply: 
             }
         }
     )
-}
-
-@Composable
-fun isGestureNavigation(): Boolean {
-    val context = LocalContext.current
-    return remember {
-        try {
-            Settings.Secure.getInt(context.contentResolver, "navigation_mode") == 2
-        } catch (e: Settings.SettingNotFoundException) {
-            false
-        }
-    }
 }
 
 @Composable
