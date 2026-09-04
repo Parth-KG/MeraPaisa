@@ -147,6 +147,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun editTransaction(transaction: Transaction) {
+        viewModelScope.launch { repository.editTransaction(transaction) }
+    }
+
+    fun deleteTransaction(transaction: Transaction) {
+        viewModelScope.launch { repository.deleteTransaction(transaction) }
+    }
+
     fun clearTransactionsForPerson(personId: Long) {
         viewModelScope.launch { repository.clearTransactions(personId) }
     }

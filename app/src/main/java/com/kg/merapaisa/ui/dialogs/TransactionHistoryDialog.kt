@@ -19,6 +19,7 @@ import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
 import com.kg.merapaisa.data.formatMinor
 import com.kg.merapaisa.ui.MainViewModel
+import androidx.compose.foundation.clickable
 
 @Composable
 fun TransactionHistoryDialog(person: PersonWithBalance, viewModel: MainViewModel, onDismiss: () -> Unit) {
@@ -26,6 +27,7 @@ fun TransactionHistoryDialog(person: PersonWithBalance, viewModel: MainViewModel
     val theme = LocalAppTheme.current
     var showClearConfirm by remember { mutableStateOf(false) }
     var pendingRollback by remember { mutableStateOf<Transaction?>(null) }
+    var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -58,7 +60,8 @@ fun TransactionHistoryDialog(person: PersonWithBalance, viewModel: MainViewModel
                     items(transactions) { t ->
                         val date = java.text.SimpleDateFormat("dd MMM, hh:mm a", java.util.Locale.getDefault())
                             .format(java.util.Date(t.timestamp))
-                        Column {
+                        // Tapping an entry opens it for correction or removal.
+                        Column(modifier = Modifier.clickable { editingTransaction = t }) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -103,6 +106,22 @@ fun TransactionHistoryDialog(person: PersonWithBalance, viewModel: MainViewModel
             TextButton(onClick = onDismiss) { Text("Close", color = theme.positive) }
         }
     )
+
+    editingTransaction?.let { target ->
+        EditTransactionDialog(
+            transaction = target,
+            currency = person.currency,
+            onSave = {
+                viewModel.editTransaction(it)
+                editingTransaction = null
+            },
+            onDelete = {
+                viewModel.deleteTransaction(it)
+                editingTransaction = null
+            },
+            onDismiss = { editingTransaction = null }
+        )
+    }
 
     pendingRollback?.let { target ->
         AlertDialog(
