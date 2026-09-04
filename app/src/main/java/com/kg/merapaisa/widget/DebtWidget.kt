@@ -21,7 +21,9 @@ import com.kg.merapaisa.ThemeStore
 import com.kg.merapaisa.data.AppDatabase
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.repository.PersonRepository
+import com.kg.merapaisa.data.CurrencyTotal
 import com.kg.merapaisa.data.formatSignedAmount
+import com.kg.merapaisa.data.netTotalsByCurrency
 import com.kg.merapaisa.getThemeByName
 import com.kg.merapaisa.repository.LedgerChangeNotifier
 import kotlinx.coroutines.flow.first
@@ -53,13 +55,21 @@ class DebtWidget : GlanceAppWidget() {
         val palette = paletteFor(ThemeStore.getTheme(context).first())
 
         provideContent {
-            WidgetContent(persons = persons, palette = palette)
+            WidgetContent(
+                persons = persons,
+                totals = netTotalsByCurrency(persons),
+                palette = palette
+            )
         }
     }
 }
 
 @Composable
-fun WidgetContent(persons: List<PersonWithBalance>, palette: WidgetPalette) {
+fun WidgetContent(
+    persons: List<PersonWithBalance>,
+    totals: List<CurrencyTotal>,
+    palette: WidgetPalette
+) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -68,15 +78,36 @@ fun WidgetContent(persons: List<PersonWithBalance>, palette: WidgetPalette) {
             .clickable(onClick = actionStartActivity<MainActivity>()),
         verticalAlignment = Alignment.Top
     ) {
-        Text(
-            "Mera Paisa",
-            style = TextStyle(
-                color = palette.of { it.textPrimary },
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
-            ),
-            modifier = GlanceModifier.padding(bottom = 8.dp)
-        )
+        Row(
+            modifier = GlanceModifier.fillMaxWidth().padding(bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Mera Paisa",
+                style = TextStyle(
+                    color = palette.of { it.textPrimary },
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                modifier = GlanceModifier.defaultWeight()
+            )
+            // Where you stand overall, one figure per currency — never added together.
+            totals.take(2).forEach { total ->
+                Text(
+                    formatSignedAmount(total.amountMinor, total.currency),
+                    style = TextStyle(
+                        color = if (total.amountMinor > 0) {
+                            palette.of { it.positive }
+                        } else {
+                            palette.of { it.negative }
+                        },
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    modifier = GlanceModifier.padding(start = 8.dp)
+                )
+            }
+        }
 
         if (persons.isEmpty()) {
             Text(

@@ -18,11 +18,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -36,8 +34,8 @@ import com.kg.merapaisa.ui.dialogs.ReminderDialog
 import com.kg.merapaisa.ui.dialogs.ThemePickerDialog
 import com.kg.merapaisa.ui.dialogs.TransactionHistoryDialog
 import kotlinx.coroutines.launch
-import com.kg.merapaisa.CurrencyStore
 import com.kg.merapaisa.ThemeStore
+import com.kg.merapaisa.data.netTotalsByCurrency
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
@@ -103,50 +101,12 @@ fun MainScreen(viewModel: MainViewModel) {
             }
 
             if (ui.tab == Tab.Active) {
-                val lastCurrency by CurrencyStore.getLastCurrency(context).collectAsState(initial = "INR")
-                var netTotal by remember { mutableStateOf(0L) }
-                var loading by remember { mutableStateOf(false) }
-
-                LaunchedEffect(list, lastCurrency) {
-                    loading = true
-                    netTotal = list.sumOf { person ->
-                        if (person.currency == lastCurrency) person.balanceMinor
-                        else viewModel.convertCurrency(person.balanceMinor, person.currency, lastCurrency) ?: 0L
-                    }
-                    loading = false
-                }
-
-                Column(
+                NetTotalCard(
+                    totals = netTotalsByCurrency(list),
                     modifier = Modifier
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                         .padding(horizontal = 16.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(theme.fill)
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
-                ) {
-                    Text(
-                        text = when {
-                            loading -> "Calculating..."
-                            netTotal > 0 -> "Net owed to you"
-                            netTotal < 0 -> "Net you owe"
-                            else -> "All settled"
-                        },
-                        fontSize = 12.sp,
-                        color = theme.textSecondary,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = formatMinor(kotlin.math.abs(netTotal), lastCurrency),
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = when {
-                            netTotal > 0 -> theme.positive
-                            netTotal < 0 -> theme.negative
-                            else -> theme.textSecondary
-                        }
-                    )
-                }
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
