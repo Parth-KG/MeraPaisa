@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Backup and device-transfer rules for Android 12 and above.
+
+  Same intent as backup_rules.xml: the ledger is included on purpose, because a sideloaded
+  app has no other recovery path. See that file for why DataStore needs a "file" rule rather
+  than a "sharedpref" one.
+-->
 <data-extraction-rules>
     <cloud-backup>
-        <include domain="database" path="."/>
-        <include domain="sharedpref" path="."/>
+        <include domain="database" path="." />
+        <include domain="file" path="datastore/" />
     </cloud-backup>
     <device-transfer>
-        <include domain="database" path="."/>
-        <include domain="sharedpref" path="."/>
+        <include domain="database" path="." />
+        <include domain="file" path="datastore/" />
     </device-transfer>
 </data-extraction-rules>
