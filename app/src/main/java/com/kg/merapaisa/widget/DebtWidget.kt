@@ -11,6 +11,7 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.updateAll
 import androidx.glance.color.ColorProvider
 import androidx.glance.layout.*
 import androidx.glance.text.*
@@ -19,8 +20,10 @@ import com.kg.merapaisa.MainActivity
 import com.kg.merapaisa.ThemeStore
 import com.kg.merapaisa.data.AppDatabase
 import com.kg.merapaisa.data.PersonWithBalance
+import com.kg.merapaisa.repository.PersonRepository
 import com.kg.merapaisa.data.formatSignedAmount
 import com.kg.merapaisa.getThemeByName
+import com.kg.merapaisa.repository.LedgerChangeNotifier
 import kotlinx.coroutines.flow.first
 
 /**
@@ -44,7 +47,8 @@ private fun paletteFor(themeName: String): WidgetPalette {
 class DebtWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val persons = AppDatabase.getDatabase(context).personDao().getPersonsWithBalances().first()
+        val repository = PersonRepository(AppDatabase.getDatabase(context).personDao())
+        val persons = repository.personsWithBalances().first()
             .filter { !it.isSettled && it.balanceMinor != 0L }
         val palette = paletteFor(ThemeStore.getTheme(context).first())
 
@@ -116,7 +120,7 @@ fun WidgetContent(persons: List<PersonWithBalance>, palette: WidgetPalette) {
                     )
                     Text(
                         // Signed, so the direction of the debt does not rest on colour alone.
-                        formatWidgetAmount(person.balanceMinor, person.currency),
+                        formatSignedAmount(person.balanceMinor, person.currency),
                         style = TextStyle(
                             color = if (person.balanceMinor > 0) {
                                 palette.of { it.positive }
@@ -139,9 +143,16 @@ private fun avatarTint(person: PersonWithBalance): Color = try {
     Color(0xFF2ECC71).copy(alpha = 0.3f)
 }
 
-fun formatWidgetAmount(balanceMinor: Long, currencyCode: String = "INR"): String =
-    formatSignedAmount(balanceMinor, currencyCode)
-
 class DebtWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = DebtWidget()
+}
+
+/**
+ * Pushes the widget when the ledger changes, replacing the hand-rolled
+ * ACTION_APPWIDGET_UPDATE broadcast the ViewModel used to send from an Activity Context.
+ */
+class WidgetLedgerNotifier(private val appContext: Context) : LedgerChangeNotifier {
+    override suspend fun onLedgerChanged() {
+        DebtWidget().updateAll(appContext)
+    }
 }
