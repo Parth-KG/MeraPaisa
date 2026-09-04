@@ -1,6 +1,7 @@
 package com.kg.merapaisa.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -91,5 +92,55 @@ class MoneyTest {
         SUPPORTED_CURRENCIES.forEach { code ->
             assertEquals("$code should map to a symbol, not fall back to its code", true, currencySymbol(code) != code)
         }
+    }
+
+    @Test
+    fun numpadKeysBuildOnlyParseableEntries() {
+        assertEquals("5", appendAmountKey("", "5"))
+        assertEquals("0.", appendAmountKey("", "."))
+        assertEquals("5", appendAmountKey("0", "5"))
+        assertEquals("10.", appendAmountKey("10", "."))
+        assertEquals("10.5", appendAmountKey("10.", "5"))
+        assertEquals("10.", appendAmountKey("10.", "."))
+        assertEquals("10.5", appendAmountKey("10.5", "."))
+        assertEquals("10", appendAmountKey("10.", "\u232b"))
+    }
+
+    @Test
+    fun numpadCapsWholeDigitsAndDecimalPlaces() {
+        assertEquals("123456789", appendAmountKey("123456789", "1"))
+        assertEquals("10.50", appendAmountKey("10.5", "0"))
+        assertEquals("10.50", appendAmountKey("10.50", "7"))
+    }
+
+    @Test
+    fun numpadCannotReachRepeatedLeadingZeroes() {
+        var entry = ""
+        repeat(8) { entry = appendAmountKey(entry, "0") }
+        assertEquals("0", entry)
+        assertEquals(0L, parseAmountToMinor(entry))
+    }
+
+    @Test
+    fun everyNumpadSequenceStaysParseableOrEmpty() {
+        val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "\u232b")
+        var entry = ""
+        // Walk a long deterministic key sequence and check the field never becomes unparseable.
+        repeat(500) { i ->
+            entry = appendAmountKey(entry, keys[(i * 7) % keys.size])
+            if (entry.isNotEmpty()) {
+                assertNotNull("entry $entry stopped parsing", parseAmountToMinor(entry))
+            }
+        }
+    }
+
+    @Test
+    fun usableAmountRejectsBlankZeroAndLoneDot() {
+        assertEquals(false, isUsableAmount(""))
+        assertEquals(false, isUsableAmount("."))
+        assertEquals(false, isUsableAmount("0"))
+        assertEquals(false, isUsableAmount("0.00"))
+        assertEquals(true, isUsableAmount("0.01"))
+        assertEquals(true, isUsableAmount("10.50"))
     }
 }
