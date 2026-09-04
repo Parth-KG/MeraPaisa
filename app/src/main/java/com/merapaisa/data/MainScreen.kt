@@ -22,7 +22,6 @@ import android.content.Intent
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.foundation.clickable
 import com.kg.merapaisa.data.Transaction
 import androidx.compose.material.icons.automirrored.filled.CallSplit
@@ -52,6 +51,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -63,6 +63,7 @@ import com.kg.merapaisa.data.SUPPORTED_CURRENCIES
 import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.data.formatMinor
 import com.kg.merapaisa.data.formatMinorPlain
+import com.kg.merapaisa.data.formatSignedAmount
 import com.kg.merapaisa.data.parseAmountToMinor
 import com.kg.merapaisa.data.isUsableAmount
 import java.io.File
@@ -151,8 +152,8 @@ fun MainScreen(viewModel: MainViewModel) {
                         Button(
                             onClick = { viewModel.selectTab(t) },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (ui.tab == t) Color.White else Color.White.copy(alpha = 0.06f),
-                                contentColor = if (ui.tab == t) Color.Black else theme.textSecondary
+                                containerColor = if (ui.tab == t) theme.primary else theme.fill,
+                                contentColor = if (ui.tab == t) theme.background else theme.textSecondary
                             ),
                             shape = RoundedCornerShape(20.dp),
                             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 7.dp)
@@ -166,7 +167,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     onClick = { viewModel.showThemeDialog(true) },
                     modifier = Modifier
                         .size(40.dp)
-                        .background(Color.White.copy(alpha = 0.06f), CircleShape)
+                        .background(theme.fill, CircleShape)
                 ) {
                     Icon(
                         Icons.Default.Palette,
@@ -196,7 +197,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         .padding(horizontal = 16.dp)
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.06f))
+                        .background(theme.fill)
                         .padding(horizontal = 20.dp, vertical = 16.dp)
                 ) {
                     Text(
@@ -216,8 +217,8 @@ fun MainScreen(viewModel: MainViewModel) {
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = when {
-                            netTotal > 0 -> Color(0xFF4ADE80)
-                            netTotal < 0 -> Color(0xFFF87171)
+                            netTotal > 0 -> theme.positive
+                            netTotal < 0 -> theme.negative
                             else -> theme.textSecondary
                         }
                     )
@@ -227,7 +228,14 @@ fun MainScreen(viewModel: MainViewModel) {
             Spacer(modifier = Modifier.height(12.dp))
 
             // People list
-            LazyColumn(
+            if (list.isEmpty()) {
+                EmptyState(
+                    tab = ui.tab,
+                    modifier = Modifier
+                        .weight(1f)
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                )
+            } else LazyColumn(
                 modifier = Modifier
                     .weight(1f)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
@@ -433,8 +441,7 @@ fun MainScreen(viewModel: MainViewModel) {
         val transactionCount by viewModel.getTransactionCount(target.id).collectAsState(initial = 0)
         AlertDialog(
             onDismissRequest = { viewModel.confirmDelete(null) },
-            containerColor = theme.card,
-            title = {
+                title = {
                 Text("Delete ${target.name}?", color = theme.textPrimary, fontWeight = FontWeight.Bold)
             },
             text = {
@@ -464,6 +471,36 @@ fun MainScreen(viewModel: MainViewModel) {
     }
 }
 
+/** First launch used to be two tab buttons above nothing at all. */
+@Composable
+fun EmptyState(tab: Tab, modifier: Modifier = Modifier) {
+    val theme = LocalAppTheme.current
+    Column(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            if (tab == Tab.Active) "No one here yet" else "Nothing settled yet",
+            color = theme.textPrimary,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            if (tab == Tab.Active) {
+                "Tap the + button in the bottom-left corner to add someone you split money with."
+            } else {
+                "Debts you settle up will be kept here."
+            },
+            color = theme.textSecondary,
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
 @Composable
 fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: () -> Unit, onClick: () -> Unit,onSendReminder: () -> Unit, onDelete: () -> Unit, onEditClick: () -> Unit) {
     val theme = LocalAppTheme.current
@@ -473,8 +510,8 @@ fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: ()
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(if (isSelected) Color.White.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.03f))
-            .border(1.dp, if (isSelected) Color.White.copy(alpha = 0.1f) else Color.Transparent, RoundedCornerShape(16.dp))
+            .background(if (isSelected) theme.fillStrong else theme.fill)
+            .border(1.dp, if (isSelected) theme.outline else Color.Transparent, RoundedCornerShape(16.dp))
             .combinedClickable(
                 onClick = { onClick() },
                 onLongClick = { showMenu = true }
@@ -496,19 +533,18 @@ fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: ()
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                formatAmount(person.balanceMinor, person.currency),
+                formatSignedAmount(person.balanceMinor, person.currency),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = if (person.balanceMinor > 0) theme.positive else if (person.balanceMinor < 0) theme.negative else theme.textSecondary
             )
-            IconButton(onClick = onHistoryClick, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Info, contentDescription = "History", tint = theme.textSecondary, modifier = Modifier.size(16.dp))
+            IconButton(onClick = onHistoryClick, modifier = Modifier.size(48.dp)) {
+                Icon(Icons.Default.Info, contentDescription = "History", tint = theme.textSecondary, modifier = Modifier.size(20.dp))
             }
             Box {
                 DropdownMenu(
                     expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    containerColor = theme.card
+                    onDismissRequest = { showMenu = false }
                 ) {
                     DropdownMenuItem(
                         text = { Text("Send reminder", color = theme.textPrimary) },
@@ -574,7 +610,7 @@ fun NumPad(person: PersonWithBalance, input: String, onKey: (String) -> Unit,onS
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color.White.copy(alpha = 0.04f))
+                .background(theme.fillStrong)
                 .padding(16.dp, 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -598,8 +634,7 @@ fun NumPad(person: PersonWithBalance, input: String, onKey: (String) -> Unit,onS
         Text("Add description", color = theme.textSecondary, fontSize = 13.sp)
         Switch(
             checked = showNote,
-            onCheckedChange = { onToggleNote() },
-            colors = SwitchDefaults.colors(checkedThumbColor = theme.positive, checkedTrackColor = theme.positive.copy(alpha = 0.3f))
+            onCheckedChange = { onToggleNote() }
         )
     }
 
@@ -609,12 +644,6 @@ fun NumPad(person: PersonWithBalance, input: String, onKey: (String) -> Unit,onS
             onValueChange = onNoteChange,
             placeholder = { Text("e.g. dinner, cab fare...", color = theme.textSecondary) },
             singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = theme.textPrimary,
-                unfocusedTextColor = theme.textPrimary,
-                focusedBorderColor = theme.positive,
-                unfocusedBorderColor = theme.textSecondary
-            ),
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -632,7 +661,7 @@ fun NumPad(person: PersonWithBalance, input: String, onKey: (String) -> Unit,onS
                             modifier = Modifier.weight(1f).height(52.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (k == "⌫") theme.negative.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.06f),
+                                containerColor = if (k == "⌫") lerp(theme.card, theme.negative, 0.18f) else theme.fillStrong,
                                 contentColor = if (k == "⌫") theme.negative else theme.textPrimary
                             )
                         ) {
@@ -727,7 +756,6 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
 
     AlertDialog(
         onDismissRequest = dismiss,
-        containerColor = theme.card,
         title = { Text("Add Person", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -736,12 +764,6 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                     onValueChange = { name = it },
                     label = { Text("Name", color = theme.textSecondary) },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = theme.textPrimary,
-                        unfocusedTextColor = theme.textPrimary,
-                        focusedBorderColor = theme.positive,
-                        unfocusedBorderColor = theme.textSecondary
-                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -760,13 +782,7 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                                     )
                                 }
                             },
-                            label = { Text(type.replaceFirstChar { it.uppercase() }, fontSize = 12.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = theme.positive.copy(alpha = 0.2f),
-                                selectedLabelColor = theme.positive,
-                                containerColor = Color.White.copy(alpha = 0.05f),
-                                labelColor = theme.textSecondary
-                            )
+                            label = { Text(type.replaceFirstChar { it.uppercase() }, fontSize = 12.sp) }
                         )
                     }
                 }
@@ -777,12 +793,6 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                         onValueChange = { emoji = it },
                         label = { Text("Emoji", color = theme.textSecondary) },
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = theme.textPrimary,
-                            unfocusedTextColor = theme.textPrimary,
-                            focusedBorderColor = theme.positive,
-                            unfocusedBorderColor = theme.textSecondary
-                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -796,7 +806,7 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                                     .size(32.dp)
                                     .clip(CircleShape)
                                     .background(Color(android.graphics.Color.parseColor(c)))
-                                    .border(if (selectedColor == c) 2.dp else 0.dp, Color.White, CircleShape)
+                                    .border(if (selectedColor == c) 2.dp else 0.dp, theme.textPrimary, CircleShape)
                                     .clickable { selectedColor = c }
                             )
                         }
@@ -808,13 +818,7 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                         FilterChip(
                             selected = selectedCurrency == c,
                             onClick = { selectedCurrency = c },
-                            label = { Text(currencySymbol(c), fontSize = 14.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = theme.positive.copy(alpha = 0.2f),
-                                selectedLabelColor = theme.positive,
-                                containerColor = Color.White.copy(alpha = 0.05f),
-                                labelColor = theme.textSecondary
-                            )
+                            label = { Text(currencySymbol(c), fontSize = 14.sp) }
                         )
                     }
                 }
@@ -831,9 +835,8 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                         }
                         onAdd(name, pfpType, pfpValue, selectedColor,selectedCurrency)
                     }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = theme.positive)
-            ) { Text("Add", color = Color.Black, fontWeight = FontWeight.Bold) }
+                }
+            ) { Text("Add", fontWeight = FontWeight.Bold) }
         },
         dismissButton = {
             TextButton(onClick = dismiss) { Text("Cancel", color = theme.textSecondary) }
@@ -883,7 +886,6 @@ fun EditPersonDialog(
 
     AlertDialog(
         onDismissRequest = { if (!converting) dismiss() },
-        containerColor = theme.card,
         title = { Text("Edit Person", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -892,12 +894,6 @@ fun EditPersonDialog(
                     onValueChange = { name = it },
                     label = { Text("Name", color = theme.textSecondary) },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = theme.textPrimary,
-                        unfocusedTextColor = theme.textPrimary,
-                        focusedBorderColor = theme.positive,
-                        unfocusedBorderColor = theme.textSecondary
-                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -915,13 +911,7 @@ fun EditPersonDialog(
                                     )
                                 }
                             },
-                            label = { Text(type.replaceFirstChar { it.uppercase() }, fontSize = 12.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = theme.positive.copy(alpha = 0.2f),
-                                selectedLabelColor = theme.positive,
-                                containerColor = Color.White.copy(alpha = 0.05f),
-                                labelColor = theme.textSecondary
-                            )
+                            label = { Text(type.replaceFirstChar { it.uppercase() }, fontSize = 12.sp) }
                         )
                     }
                 }
@@ -932,12 +922,6 @@ fun EditPersonDialog(
                         onValueChange = { emoji = it },
                         label = { Text("Emoji", color = theme.textSecondary) },
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = theme.textPrimary,
-                            unfocusedTextColor = theme.textPrimary,
-                            focusedBorderColor = theme.positive,
-                            unfocusedBorderColor = theme.textSecondary
-                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -951,7 +935,7 @@ fun EditPersonDialog(
                                     .size(32.dp)
                                     .clip(CircleShape)
                                     .background(Color(android.graphics.Color.parseColor(c)))
-                                    .border(if (selectedColor == c) 2.dp else 0.dp, Color.White, CircleShape)
+                                    .border(if (selectedColor == c) 2.dp else 0.dp, theme.textPrimary, CircleShape)
                                     .clickable { selectedColor = c }
                             )
                         }
@@ -969,13 +953,7 @@ fun EditPersonDialog(
                                     showConvertAlert = true
                                 }
                             },
-                            label = { Text(currencySymbol(c), fontSize = 14.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = theme.positive.copy(alpha = 0.2f),
-                                selectedLabelColor = theme.positive,
-                                containerColor = Color.White.copy(alpha = 0.05f),
-                                labelColor = theme.textSecondary
-                            )
+                            label = { Text(currencySymbol(c), fontSize = 14.sp) }
                         )
                     }
                 }
@@ -1006,8 +984,7 @@ fun EditPersonDialog(
                         onSave(name, pfpType, pfpValue, selectedColor, selectedCurrency,shouldConvert)
                     }
                 },
-                enabled = !converting && name.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = theme.positive)
+                enabled = !converting && name.isNotBlank()
             ) {
                 if (converting) {
                     // The save is held until the rate resolves, so it cannot relabel
@@ -1015,12 +992,12 @@ fun EditPersonDialog(
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
-                        color = Color.Black
+                        color = theme.background
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Converting", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text("Converting", fontWeight = FontWeight.Bold)
                 } else {
-                    Text("Save", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text("Save", fontWeight = FontWeight.Bold)
                 }
             }
         },
@@ -1033,8 +1010,7 @@ fun EditPersonDialog(
     if (showConvertAlert) {
         AlertDialog(
             onDismissRequest = { showConvertAlert = false },
-            containerColor = theme.card,
-            title = { Text("Change Currency", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
+                title = { Text("Change Currency", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
             text = { Text("Convert balance from $selectedCurrency to $pendingCurrency using live rates, or keep amount as-is?", color = theme.textSecondary) },
             confirmButton = {
                 Button(
@@ -1042,9 +1018,8 @@ fun EditPersonDialog(
                         shouldConvert = true
                         selectedCurrency = pendingCurrency
                         showConvertAlert = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = theme.positive)
-                ) { Text("Convert", color = Color.Black) }
+                    }
+                    ) { Text("Convert") }
             },
             dismissButton = {
                 Button(
@@ -1053,7 +1028,7 @@ fun EditPersonDialog(
                         selectedCurrency = pendingCurrency
                         showConvertAlert = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f))
+                    colors = ButtonDefaults.buttonColors(containerColor = theme.fillStrong)
                 ) { Text("Keep as-is", color = theme.textPrimary) }
             }
         )
@@ -1069,7 +1044,6 @@ fun TransactionHistoryDialog(person: PersonWithBalance, viewModel: MainViewModel
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = theme.card,
         title = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1129,12 +1103,12 @@ fun TransactionHistoryDialog(person: PersonWithBalance, viewModel: MainViewModel
                             if (t.note.isNotBlank()) {
                                 Text(
                                     t.note,
-                                    color = theme.textSecondary.copy(alpha = 0.7f),
+                                    color = theme.textSecondary,
                                     fontSize = 12.sp,
                                     modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
                                 )
                             }
-                            HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                            HorizontalDivider(color = theme.outline)
                         }
                     }
                 }
@@ -1148,8 +1122,7 @@ fun TransactionHistoryDialog(person: PersonWithBalance, viewModel: MainViewModel
     pendingRollback?.let { target ->
         AlertDialog(
             onDismissRequest = { pendingRollback = null },
-            containerColor = theme.card,
-            title = { Text("Rollback?", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
+                title = { Text("Rollback?", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
                     "This will undo this transaction and all newer ones. The history entries will be kept.",
@@ -1173,8 +1146,7 @@ fun TransactionHistoryDialog(person: PersonWithBalance, viewModel: MainViewModel
     if (showClearConfirm) {
         AlertDialog(
             onDismissRequest = { showClearConfirm = false },
-            containerColor = theme.card,
-            title = { Text("Clear log?", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
+                title = { Text("Clear log?", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
                     "This deletes all transaction history for ${person.name}. The current balance won't change. This can't be undone.",
@@ -1205,7 +1177,6 @@ fun ThemePickerDialog(currentThemeName: String, onDismiss: () -> Unit, onApply: 
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = theme.card,
         title = { Text("Choose Theme", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
         text = {
             Column {
@@ -1218,7 +1189,7 @@ fun ThemePickerDialog(currentThemeName: String, onDismiss: () -> Unit, onApply: 
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (pendingTheme == t.name) t.primary.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.04f))
+                            .background(if (pendingTheme == t.name) lerp(theme.card, t.primary, 0.22f) else theme.fill)
                             .border(1.dp, if (pendingTheme == t.name) t.primary.copy(alpha = 0.5f) else Color.Transparent, RoundedCornerShape(12.dp))
                             .clickable { pendingTheme = t.name }
                             .padding(12.dp),
@@ -1227,7 +1198,7 @@ fun ThemePickerDialog(currentThemeName: String, onDismiss: () -> Unit, onApply: 
                     ) {
                         Text(t.name, color = theme.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(t.background).border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape))
+                            Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(t.background).border(1.dp, theme.outline, CircleShape))
                             Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(t.positive))
                             Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(t.negative))
                         }
@@ -1246,9 +1217,8 @@ fun ThemePickerDialog(currentThemeName: String, onDismiss: () -> Unit, onApply: 
         },
         confirmButton = {
             Button(
-                onClick = { onApply(pendingTheme) },
-                colors = ButtonDefaults.buttonColors(containerColor = theme.positive)
-            ) { Text("Apply", color = theme.background, fontWeight = FontWeight.Bold) }
+                onClick = { onApply(pendingTheme) }
+            ) { Text("Apply", fontWeight = FontWeight.Bold) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
@@ -1273,7 +1243,6 @@ fun ReminderDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = theme.card,
         title = { Text("Send reminder", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1281,13 +1250,7 @@ fun ReminderDialog(
                     value = message,
                     onValueChange = { message = it },
                     modifier = Modifier.fillMaxWidth(),
-                    minLines = 3,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = theme.textPrimary,
-                        unfocusedTextColor = theme.textPrimary,
-                        focusedBorderColor = theme.positive,
-                        unfocusedBorderColor = theme.textSecondary
-                    )
+                    minLines = 3
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -1297,9 +1260,8 @@ fun ReminderDialog(
                 ) {
                     Checkbox(
                         checked = includeLog,
-                        onCheckedChange = { includeLog = it },
-                        colors = CheckboxDefaults.colors(checkedColor = theme.positive)
-                    )
+                        onCheckedChange = { includeLog = it }
+                                )
                     Text("Include transaction history", color = theme.textSecondary, fontSize = 14.sp)
                 }
             }
@@ -1443,7 +1405,7 @@ fun SplitAmountScreen(
                                     modifier = Modifier.weight(1f).height(60.dp),
                                     shape = RoundedCornerShape(14.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (k == "⌫") theme.negative.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.06f),
+                                        containerColor = if (k == "⌫") lerp(theme.card, theme.negative, 0.18f) else theme.fillStrong,
                                         contentColor = if (k == "⌫") theme.negative else theme.textPrimary
                                     )
                                 ) {
@@ -1637,8 +1599,7 @@ private fun SplitPickerRow(
     ) {
         Checkbox(
             checked = selected,
-            onCheckedChange = { onClick() },
-            colors = CheckboxDefaults.colors(checkedColor = theme.positive)
+            onCheckedChange = { onClick() }
         )
         Spacer(modifier = Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -1752,13 +1713,7 @@ fun SplitAdjustmentsScreen(
                     onValueChange = onNoteChange,
                     placeholder = { Text("Description (optional)", color = theme.textSecondary) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(20.dp, 12.dp, 20.dp, 8.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = theme.textPrimary,
-                        unfocusedTextColor = theme.textPrimary,
-                        focusedBorderColor = theme.positive,
-                        unfocusedBorderColor = theme.textSecondary
-                    )
+                    modifier = Modifier.fillMaxWidth().padding(20.dp, 12.dp, 20.dp, 8.dp)
                 )
 
                 // Per-person rows
@@ -1869,7 +1824,7 @@ private fun SplitAdjustmentRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.04f))
+            .background(theme.fill)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
