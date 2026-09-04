@@ -15,6 +15,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -34,6 +35,15 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // Exported Room schemas are the baseline every migration test validates against.
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
@@ -66,4 +76,14 @@ dependencies {
 
     // Coil (image loading)
     implementation("io.coil-kt:coil-compose:2.7.0")
+
+    // Testing
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation("androidx.room:room-testing:2.7.0")
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
