@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Backup rules for Android 11 and below (android:fullBackupContent).
+
+  Including the ledger in Google cloud backup is deliberate: this app is sideloaded to a
+  handful of phones with no Play Store update path, so a restore is the only thing standing
+  between a lost phone and a lost ledger. Nothing here is a credential or a secret.
+
+  Two things to note:
+   - the Room database lives in the "database" domain as mera_paisa_db
+   - the theme and last-used-currency preferences are DataStore, which writes to
+     files/datastore/, NOT to sharedpref. A sharedpref rule would silently back up nothing.
+  Cached CSV exports are in cacheDir, which is excluded from backup by default.
+-->
 <full-backup-content>
-    <include domain="database" path="."/>
-    <include domain="sharedpref" path="."/>
+    <include domain="database" path="." />
+    <include domain="file" path="datastore/" />
 </full-backup-content>

@@ -1,21 +1,10 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Room and Glance ship their own consumer rules, and nothing in this app reflects over its
+# own classes, so the defaults in proguard-android-optimize.txt cover it. Two exceptions:
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Entities and DAOs are referenced by generated Room code and by column name.
+-keep class com.kg.merapaisa.data.Person { *; }
+-keep class com.kg.merapaisa.data.Transaction { *; }
+-keep class com.kg.merapaisa.data.PersonWithBalance { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# org.json is part of the platform; the rate response is parsed by key, not by field name.
+-dontwarn org.json.**
