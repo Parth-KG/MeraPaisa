@@ -38,6 +38,24 @@ class ExportedSchemaTest {
         )
     }
 
+    @Test
+    fun version5SchemaIndexesAndConstrainsTheLedger() {
+        val json = readSchema(5)
+        assertTrue("schema 5.json does not declare version 5", json.contains("\"version\": 5"))
+        assertTrue(
+            "schema 5 identity hash changed — regenerate and commit a new version instead",
+            json.contains("\"identityHash\": \"d1de031b67b22ca90b2191074cd3661e\"")
+        )
+        assertTrue(
+            "every balance is a SUM filtered by personId, so it must be indexed",
+            json.contains("index_transactions_personId")
+        )
+        assertTrue(
+            "an orphaned transaction should be impossible, not merely unlikely",
+            json.contains("\"onDelete\": \"CASCADE\"")
+        )
+    }
+
     private fun readSchema(version: Int): String {
         val relative = "schemas/com.kg.merapaisa.data.AppDatabase/$version.json"
         // Unit tests run with the module dir as working dir, but tolerate the repo root too.

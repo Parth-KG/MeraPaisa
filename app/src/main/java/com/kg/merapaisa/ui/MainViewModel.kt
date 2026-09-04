@@ -18,6 +18,7 @@ import com.kg.merapaisa.widget.WidgetLedgerNotifier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -82,7 +83,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun composeReminder(personId: Long?) = _uiState.update { it.copy(pendingReminderId = personId) }
 
-    fun startSplit() = _uiState.update { it.copy(split = SplitFlowState()) }
+    /** Splits are entered in whichever currency you last used, not in a hardcoded one. */
+    fun startSplit() {
+        viewModelScope.launch {
+            val currency = CurrencyStore.getLastCurrency(getApplication()).first()
+            _uiState.update { it.copy(split = SplitFlowState(currency = currency)) }
+        }
+    }
 
     fun cancelSplit() = _uiState.update { it.copy(split = null, selectedId = null) }
 
@@ -122,7 +129,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     pfpValue = pfpValue,
                     pfpColor = pfpColor,
                     currency = currency,
-                    sortOrder = persons.value.size
+                    sortOrder = repository.nextSortOrder()
                 )
             )
             CurrencyStore.setLastCurrency(getApplication(), currency)

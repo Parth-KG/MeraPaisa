@@ -13,123 +13,137 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.kg.merapaisa.LocalAppTheme
+import com.kg.merapaisa.data.SUPPORTED_CURRENCIES
+import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.data.parseAmountToMinor
 
 @Composable
 fun SplitAmountScreen(
     amount: String,
+    currency: String,
+    onCurrencyChange: (String) -> Unit,
     onAmountChange: (String) -> Unit,
     onCancel: () -> Unit,
     onNext: () -> Unit
 ) {
     val theme = LocalAppTheme.current
 
-    Dialog(
-        onDismissRequest = onCancel,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(theme.background)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(theme.background)
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
 
-                // Top bar with cancel + title
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp, 48.dp, 16.dp, 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onCancel) {
-                        Icon(Icons.Default.Close, contentDescription = "Cancel", tint = theme.textPrimary)
-                    }
-                    Text(
-                        "Split amount",
-                        color = theme.textPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.size(48.dp)) // balances the close button
+            // Top bar with cancel + title
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+                    .padding(16.dp, 16.dp, 16.dp, 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onCancel) {
+                    Icon(Icons.Default.Close, contentDescription = "Cancel", tint = theme.textPrimary)
                 }
+                Text(
+                    "Split amount",
+                    color = theme.textPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.size(48.dp)) // balances the close button
+            }
 
-                Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.weight(1f))
 
-                // Amount display
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        if (amount.isNotEmpty()) amount else "0",
-                        color = theme.textPrimary,
-                        fontSize = 64.sp,
-                        fontWeight = FontWeight.Light
+            // Amount display
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "${currencySymbol(currency)}${if (amount.isNotEmpty()) amount else "0"}",
+                    color = theme.textPrimary,
+                    fontSize = 64.sp,
+                    fontWeight = FontWeight.Light
+                )
+            }
+
+            // Which currency the split is in. Everyone's share converts from this, so
+            // leaving it implicit is how the amounts used to come out wrong.
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+            ) {
+                SUPPORTED_CURRENCIES.forEach { code ->
+                    FilterChip(
+                        selected = currency == code,
+                        onClick = { onCurrencyChange(code) },
+                        label = { Text(currencySymbol(code), fontSize = 14.sp) }
                     )
                 }
+            }
 
-                Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.weight(1f))
 
-                // Numpad keys
-                val keys = listOf("1","2","3","4","5","6","7","8","9",".","0","⌫")
-                Column(
-                    modifier = Modifier.padding(20.dp, 0.dp, 20.dp, 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    keys.chunked(3).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            row.forEach { k ->
-                                Button(
-                                    onClick = {
-                                        onAmountChange(
-                                            when {
-                                                k == "⌫" -> amount.dropLast(1)
-                                                k == "." && amount.contains(".") -> amount
-                                                k == "." && amount.isEmpty() -> "0."
-                                                else -> amount + k
-                                            }
-                                        )
-                                    },
-                                    modifier = Modifier.weight(1f).height(60.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (k == "⌫") lerp(theme.card, theme.negative, 0.18f) else theme.fillStrong,
-                                        contentColor = if (k == "⌫") theme.negative else theme.textPrimary
+            // Numpad keys
+            val keys = listOf("1","2","3","4","5","6","7","8","9",".","0","⌫")
+            Column(
+                modifier = Modifier.padding(20.dp, 0.dp, 20.dp, 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                keys.chunked(3).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { k ->
+                            Button(
+                                onClick = {
+                                    onAmountChange(
+                                        when {
+                                            k == "⌫" -> amount.dropLast(1)
+                                            k == "." && amount.contains(".") -> amount
+                                            k == "." && amount.isEmpty() -> "0."
+                                            else -> amount + k
+                                        }
                                     )
-                                ) {
-                                    Text(k, fontSize = 20.sp, fontWeight = FontWeight.Medium)
-                                }
+                                },
+                                modifier = Modifier.weight(1f).height(60.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (k == "⌫") lerp(theme.card, theme.negative, 0.18f) else theme.fillStrong,
+                                    contentColor = if (k == "⌫") theme.negative else theme.textPrimary
+                                )
+                            ) {
+                                Text(k, fontSize = 20.sp, fontWeight = FontWeight.Medium)
                             }
                         }
                     }
                 }
+            }
 
-                // Next button
-                val amtValue = parseAmountToMinor(amount) ?: 0L
-                Button(
-                    onClick = onNext,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp, 8.dp, 20.dp, 24.dp)
-                        .height(56.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    enabled = amtValue > 0,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = theme.positive,
-                        contentColor = theme.background,
-                        disabledContainerColor = theme.positive.copy(alpha = 0.3f),
-                        disabledContentColor = theme.background.copy(alpha = 0.5f)
-                    )
-                ) {
-                    Text("Next", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                }
+            // Next button
+            val amtValue = parseAmountToMinor(amount) ?: 0L
+            Button(
+                onClick = onNext,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+                    .padding(20.dp, 8.dp, 20.dp, 16.dp)
+                    .height(56.dp),
+                shape = RoundedCornerShape(14.dp),
+                enabled = amtValue > 0,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = theme.positive,
+                    contentColor = theme.background,
+                    disabledContainerColor = theme.positive.copy(alpha = 0.3f),
+                    disabledContentColor = theme.background.copy(alpha = 0.5f)
+                )
+            ) {
+                Text("Next", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }

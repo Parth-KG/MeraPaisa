@@ -81,3 +81,39 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         db.execSQL("ALTER TABLE `persons_new` RENAME TO `persons`")
     }
 }
+
+/**
+ * 4 -> 5. Adds an index on transactions.personId and a cascading foreign key to persons.
+ *
+ * Nothing enforced that relationship before, so the table may already hold rows pointing at a
+ * person who no longer exists. Those rows are counted by no balance and shown in no history —
+ * they are invisible, and SQLite would refuse to apply the foreign key while they are present.
+ * So they are deleted first, before the constrained table is built.
+ */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "DELETE FROM `transactions` " +
+                "WHERE `personId` NOT IN (SELECT `id` FROM `persons`)"
+        )
+
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `transactions_new` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`personId` INTEGER NOT NULL, " +
+                "`amountMinor` INTEGER NOT NULL, " +
+                "`timestamp` INTEGER NOT NULL, " +
+                "`note` TEXT NOT NULL, " +
+                "FOREIGN KEY(`personId`) REFERENCES `persons`(`id`) " +
+                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+        )
+        db.execSQL(
+            "INSERT INTO `transactions_new` (`id`, `personId`, `amountMinor`, `timestamp`, `note`) " +
+                "SELECT `id`, `personId`, `amountMinor`, `timestamp`, `note` FROM `transactions`"
+        )
+        db.execSQL("DROP TABLE `transactions`")
+        db.execSQL("ALTER TABLE `transactions_new` RENAME TO `transactions`")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_personId` ON `transactions` (`personId`)")
+    }
+}
