@@ -66,17 +66,49 @@ interface PersonDao {
     @Query("UPDATE persons SET sortOrder = COALESCE((SELECT MAX(sortOrder) FROM persons), 0) + 1 WHERE id = :personId")
     suspend fun moveToEndOfList(personId: Long)
 
+    @Query("UPDATE persons SET isSettled = :settled WHERE id = :personId")
+    suspend fun setSettled(personId: Long, settled: Boolean)
+
     /**
-     * Records a closing entry for whatever is outstanding and moves the person to the end of
-     * the list. Reads the balance inside the transaction so two fast taps cannot both act on
-     * the same stale figure.
+     * Closes a debt out: records an entry for exactly what is outstanding and marks the person
+     * settled. The balance is read inside the transaction so two fast taps cannot both act on
+     * the same stale figure. A person already at zero can still be settled — that is how you
+     * file someone away without inventing a transaction.
      */
     @androidx.room.Transaction
     suspend fun settle(personId: Long, note: String = "Settled") {
         val outstanding = getBalanceNow(personId)
-        if (outstanding == 0L) return
-        insertTransaction(Transaction(personId = personId, amountMinor = -outstanding, note = note))
+        if (outstanding != 0L) {
+            insertTransaction(Transaction(personId = personId, amountMinor = -outstanding, note = note))
+        }
+        setSettled(personId, true)
         moveToEndOfList(personId)
+    }
+
+    /**
+     * Puts a settled person back in the active list. The closing entry stays in their history —
+     * it happened — so reopening does not resurrect the old balance, it just unfiles them.
+     */
+    suspend fun reopen(personId: Long) = setSettled(personId, false)
+
+    /**
+     * Records one entry. Money moving again means the debt is live again, so this also lifts
+     * the settled flag; otherwise the entry would land on someone hidden in the Settled tab.
+     */
+    @androidx.room.Transaction
+    suspend fun recordEntry(transaction: Transaction) {
+        insertTransaction(transaction)
+        if (transaction.amountMinor != 0L) setSettled(transaction.personId, false)
+    }
+
+    /** As [recordEntry], for a split that touches several people at once. */
+    @androidx.room.Transaction
+    suspend fun recordEntries(transactions: List<Transaction>) {
+        insertTransactions(transactions)
+        transactions.filter { it.amountMinor != 0L }
+            .map { it.personId }
+            .distinct()
+            .forEach { setSettled(it, false) }
     }
 
     /** Reverses everything at or after [since] in one entry, computed under the transaction. */
@@ -85,6 +117,8 @@ interface PersonDao {
         val toReverse = sumTransactionsSince(personId, since)
         if (toReverse == 0L) return
         insertTransaction(Transaction(personId = personId, amountMinor = -toReverse, note = note))
+        // The balance is non-zero again, so they are no longer settled.
+        setSettled(personId, false)
     }
 
     /**

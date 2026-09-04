@@ -34,18 +34,23 @@ class PersonRepository(
     }
 
     suspend fun recordAmount(personId: Long, amountMinor: Long, note: String = "") {
-        dao.insertTransaction(Transaction(personId = personId, amountMinor = amountMinor, note = note))
+        dao.recordEntry(Transaction(personId = personId, amountMinor = amountMinor, note = note))
         notifier.onLedgerChanged()
     }
 
     suspend fun recordEntries(entries: List<Transaction>) {
         if (entries.isEmpty()) return
-        dao.insertTransactions(entries)
+        dao.recordEntries(entries)
         notifier.onLedgerChanged()
     }
 
     suspend fun settle(personId: Long) {
         dao.settle(personId)
+        notifier.onLedgerChanged()
+    }
+
+    suspend fun reopen(personId: Long) {
+        dao.reopen(personId)
         notifier.onLedgerChanged()
     }
 
