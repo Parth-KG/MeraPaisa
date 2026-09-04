@@ -107,15 +107,35 @@ class PersonDaoTest {
     }
 
     @Test
-    fun rollingBackASettledPersonReopensThem() = runBlocking {
+    fun rollingBackTheSettlementRestoresTheBalanceAndReopensThem() = runBlocking {
         val id = newPerson()
         dao.recordEntry(Transaction(personId = id, amountMinor = 80_00, timestamp = 1_000))
         dao.settle(id)
+        val closing = dao.getTransactionsForPersonNow(id).single { it.note == "Settled" }
 
-        // Undo everything from the original entry onwards, closing entry included.
+        dao.rollbackTo(id, since = closing.timestamp)
+
+        assertEquals("the debt is owed again", 80_00L, dao.getBalanceNow(id))
+        assertFalse(personById(id).isSettled)
+    }
+
+    @Test
+    fun rollingBackARangeThatNetsToZeroChangesNothing() = runBlocking {
+        val id = newPerson()
+        dao.recordEntry(Transaction(personId = id, amountMinor = 80_00, timestamp = 1_000))
+        dao.settle(id)
+        val countBefore = dao.getTransactionCount(id).first()
+
+        // This range covers the original entry and the closing entry, which cancel out.
         dao.rollbackTo(id, since = 1_000)
 
-        assertFalse(personById(id).isSettled)
+        assertEquals(0L, dao.getBalanceNow(id))
+        assertEquals(
+            "with nothing to reverse, no entry should be written",
+            countBefore,
+            dao.getTransactionCount(id).first()
+        )
+        assertTrue("still square, so still settled", personById(id).isSettled)
     }
 
     @Test
