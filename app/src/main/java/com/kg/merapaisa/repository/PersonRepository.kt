@@ -56,6 +56,16 @@ class PersonRepository(
         notifier.onLedgerChanged()
     }
 
+    suspend fun editTransaction(transaction: Transaction) {
+        dao.editTransaction(transaction)
+        notifier.onLedgerChanged()
+    }
+
+    suspend fun deleteTransaction(transaction: Transaction) {
+        dao.removeTransaction(transaction)
+        notifier.onLedgerChanged()
+    }
+
     suspend fun settle(personId: Long) {
         dao.settle(personId)
         notifier.onLedgerChanged()

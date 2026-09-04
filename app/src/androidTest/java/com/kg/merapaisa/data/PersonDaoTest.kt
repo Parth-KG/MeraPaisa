@@ -130,4 +130,61 @@ class PersonDaoTest {
         assertEquals(1, dao.getTransactionCount(id).first())
         assertFalse(personById(id).isSettled)
     }
+
+    @Test
+    fun editingAnEntryCorrectsTheBalanceAndKeepsItsTimestamp() = runBlocking {
+        val id = newPerson()
+        dao.recordEntry(Transaction(personId = id, amountMinor = 1_000_00, timestamp = 42, note = "typo"))
+        val entry = dao.getTransactionsForPersonNow(id).single()
+
+        dao.editTransaction(entry.copy(amountMinor = 100_00, note = "cab"))
+
+        val corrected = dao.getTransactionsForPersonNow(id).single()
+        assertEquals(100_00L, corrected.amountMinor)
+        assertEquals("cab", corrected.note)
+        assertEquals("a correction keeps the entry's place in history", 42L, corrected.timestamp)
+        assertEquals(100_00L, dao.getBalanceNow(id))
+    }
+
+    @Test
+    fun deletingAnEntryRemovesItFromTheBalance() = runBlocking {
+        val id = newPerson()
+        dao.recordEntry(Transaction(personId = id, amountMinor = 100_00, timestamp = 1, note = "keep"))
+        dao.recordEntry(Transaction(personId = id, amountMinor = 250_00, timestamp = 2, note = "mistake"))
+        val mistake = dao.getTransactionsForPersonNow(id).single { it.note == "mistake" }
+
+        dao.removeTransaction(mistake)
+
+        assertEquals(100_00L, dao.getBalanceNow(id))
+        assertEquals(1, dao.getTransactionCount(id).first())
+    }
+
+    @Test
+    fun correctingASettledPersonOffZeroReopensThem() = runBlocking {
+        val id = newPerson()
+        dao.recordEntry(Transaction(personId = id, amountMinor = 100_00, timestamp = 1))
+        dao.settle(id)
+        assertTrue(personById(id).isSettled)
+
+        val closing = dao.getTransactionsForPersonNow(id).single { it.note == "Settled" }
+        dao.editTransaction(closing.copy(amountMinor = -40_00))
+
+        assertEquals(60_00L, dao.getBalanceNow(id))
+        assertFalse("a balance that is no longer zero is no longer settled", personById(id).isSettled)
+    }
+
+    @Test
+    fun deletingAnEntryThatLeavesZeroKeepsThePersonSettled() = runBlocking {
+        val id = newPerson()
+        dao.recordEntry(Transaction(personId = id, amountMinor = 100_00, timestamp = 1))
+        dao.settle(id)
+        // Remove a stray zero-value note; the balance is unaffected.
+        dao.recordEntry(Transaction(personId = id, amountMinor = 0, timestamp = 2, note = "note only"))
+        val stray = dao.getTransactionsForPersonNow(id).single { it.note == "note only" }
+
+        dao.removeTransaction(stray)
+
+        assertEquals(0L, dao.getBalanceNow(id))
+        assertTrue("still square, so still settled", personById(id).isSettled)
+    }
 }
