@@ -1,36 +1,32 @@
 package com.kg.merapaisa
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.first
-import com.kg.merapaisa.data.Transaction
 import com.kg.merapaisa.data.AppDatabase
 import com.kg.merapaisa.data.Person
-import android.content.Context
+import com.kg.merapaisa.data.PersonWithBalance
+import com.kg.merapaisa.data.Transaction
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao = AppDatabase.getDatabase(application).personDao()
 
-    val persons = dao.getAllPersons().stateIn(
+    val persons = dao.getPersonsWithBalances().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
-    fun settlePerson(person: Person, context: Context) {
+    fun settlePerson(person: PersonWithBalance, context: Context) {
         viewModelScope.launch {
-            if (kotlin.math.abs(person.balance) < 0.005) return@launch
-
-            updateBalance(person, -person.balance, "Settled")
-
-            val maxOrder = persons.value.maxOfOrNull { it.sortOrder } ?: 0
-            dao.updateSortOrder(person.id, maxOrder + 1)
-
+            dao.settle(person.id)
             triggerWidgetUpdate(context)
         }
     }
@@ -58,10 +54,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun updateBalance(person: Person, amount: Double, note: String = "") {
+    /** The balance follows from the rows, so recording the entry is the whole write. */
+    fun recordAmount(personId: Long, amountMinor: Long, note: String = "") {
         viewModelScope.launch {
-            dao.updateBalance(person.id, person.balance + amount)
-            addTransaction(person.id, amount, note)
+            dao.insertTransaction(
+                Transaction(personId = personId, amountMinor = amountMinor, note = note)
+            )
+        }
+    }
+
+    fun recordSplit(amountsByPerson: Map<Long, Long>, note: String) {
+        viewModelScope.launch {
+            val entries = amountsByPerson
+                .filterValues { it != 0L }
+                .map { (personId, amountMinor) ->
+                    Transaction(personId = personId, amountMinor = amountMinor, note = note)
+                }
+            if (entries.isNotEmpty()) dao.insertTransactions(entries)
         }
     }
 
@@ -76,7 +85,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             dao.updatePerson(person)
         }
     }
-    fun triggerWidgetUpdate(context: android.content.Context) {
+
+    fun triggerWidgetUpdate(context: Context) {
         val widgetManager = android.appwidget.AppWidgetManager.getInstance(context)
         val widgetComponent = android.content.ComponentName(context, com.kg.merapaisa.widget.DebtWidgetReceiver::class.java)
         val widgetIds = widgetManager.getAppWidgetIds(widgetComponent)
@@ -88,29 +98,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             context.sendBroadcast(intent)
         }
     }
-    fun addTransaction(personId: Long, amount: Double, note: String = "") {
-        viewModelScope.launch {
-            dao.insertTransaction(
-                com.kg.merapaisa.data.Transaction(
-                    personId = personId,
-                    amount = amount,
-                    note = note
-                )
-            )
-        }
-    }
 
-    fun getTransactions(personId : Long) = dao.getTransactionsForPerson(personId)
+    fun getTransactions(personId: Long) = dao.getTransactionsForPerson(personId)
 
-    suspend fun convertCurrency(amount: Double, from: String, to: String): Double? {
-        val symbols = mapOf("₹" to "INR", "$" to "USD", "€" to "EUR", "£" to "GBP", "¥" to "JPY")
-        val fromCode = symbols[from] ?: return null
-        val toCode = symbols[to] ?: return null
+    /**
+     * Converts between ISO 4217 codes. Amounts cross the wire in major units because that is
+     * what the rates API speaks; the result comes back as minor units.
+     */
+    suspend fun convertCurrency(amountMinor: Long, from: String, to: String): Long? {
+        if (from == to) return amountMinor
         return try {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                val url = java.net.URL("https://api.frankfurter.app/latest?amount=$amount&from=$fromCode&to=$toCode")
+            withContext(Dispatchers.IO) {
+                val major = amountMinor / 100.0
+                val url = java.net.URL("https://api.frankfurter.app/latest?amount=$major&from=$from&to=$to")
                 val json = url.readText()
-                org.json.JSONObject(json).getJSONObject("rates").getDouble(toCode)
+                val converted = org.json.JSONObject(json).getJSONObject("rates").getDouble(to)
+                Math.round(converted * 100)
             }
         } catch (e: Exception) {
             null
@@ -119,16 +122,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deletePerson(person: Person) {
         viewModelScope.launch {
-            dao.deleteTransactionsForPerson(person.id)
-            dao.deletePerson(person)
+            dao.deletePersonWithHistory(person)
         }
     }
-    fun rollbackToTransaction(person: Person, target: Transaction, context: Context) {
+
+    fun rollbackToTransaction(person: PersonWithBalance, target: Transaction, context: Context) {
         viewModelScope.launch {
-            val all = dao.getTransactionsForPerson(person.id).first()
-            val toUndo = all.filter { it.timestamp >= target.timestamp }
-            val sumToReverse = toUndo.sumOf { it.amount }
-            updateBalance(person, -sumToReverse, "Rollback")
+            dao.rollbackTo(person.id, target.timestamp)
             triggerWidgetUpdate(context)
         }
     }

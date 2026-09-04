@@ -16,14 +16,15 @@ import androidx.glance.text.*
 import androidx.glance.color.ColorProvider
 import com.kg.merapaisa.MainActivity
 import com.kg.merapaisa.data.AppDatabase
-import com.kg.merapaisa.data.Person
+import com.kg.merapaisa.data.PersonWithBalance
+import com.kg.merapaisa.data.formatMinor
 import kotlinx.coroutines.flow.first
 
 class DebtWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val persons = AppDatabase.getDatabase(context).personDao().getAllPersons().first()
-            .filter { !it.isSettled && it.balance != 0.0 }
+        val persons = AppDatabase.getDatabase(context).personDao().getPersonsWithBalances().first()
+            .filter { !it.isSettled && it.balanceMinor != 0L }
 
         provideContent {
             WidgetContent(persons = persons)
@@ -32,7 +33,7 @@ class DebtWidget : GlanceAppWidget() {
 }
 
 @Composable
-fun WidgetContent(persons: List<Person>) {
+fun WidgetContent(persons: List<PersonWithBalance>) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -71,8 +72,8 @@ fun WidgetContent(persons: List<Person>) {
                             .size(28.dp)
                             .background(
                                 ColorProvider(
-                                    day = try { Color(android.graphics.Color.parseColor(person.pfpColor)).copy(alpha = 0.3f) } catch (e: Exception) { Color(0xFF2ECC71).copy(alpha = 0.3f) },
-                                    night = try { Color(android.graphics.Color.parseColor(person.pfpColor)).copy(alpha = 0.3f) } catch (e: Exception) { Color(0xFF2ECC71).copy(alpha = 0.3f) }
+                                    day = try { Color(android.graphics.Color.parseColor(person.person.pfpColor)).copy(alpha = 0.3f) } catch (e: Exception) { Color(0xFF2ECC71).copy(alpha = 0.3f) },
+                                    night = try { Color(android.graphics.Color.parseColor(person.person.pfpColor)).copy(alpha = 0.3f) } catch (e: Exception) { Color(0xFF2ECC71).copy(alpha = 0.3f) }
                                 )
                             ),
                         contentAlignment = Alignment.Center
@@ -97,11 +98,11 @@ fun WidgetContent(persons: List<Person>) {
                         modifier = GlanceModifier.defaultWeight()
                     )
                     Text(
-                        formatWidgetAmount(person.balance, person.currency),
+                        formatWidgetAmount(person.balanceMinor, person.currency),
                         style = TextStyle(
                             color = ColorProvider(
-                                day = if (person.balance > 0) Color(0xFF2ECC71) else Color(0xFFE84B3A),
-                                night = if (person.balance > 0) Color(0xFF2ECC71) else Color(0xFFE84B3A)
+                                day = if (person.balanceMinor > 0) Color(0xFF2ECC71) else Color(0xFFE84B3A),
+                                night = if (person.balanceMinor > 0) Color(0xFF2ECC71) else Color(0xFFE84B3A)
                             ),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
@@ -112,10 +113,8 @@ fun WidgetContent(persons: List<Person>) {
         }
     }
 }
-fun formatWidgetAmount(balance: Double, currency: String = "₹"): String {
-    val abs = "%.0f".format(Math.abs(balance))
-    return if (balance < 0) "-$currency$abs" else "$currency$abs"
-}
+fun formatWidgetAmount(balanceMinor: Long, currencyCode: String = "INR"): String =
+    formatMinor(balanceMinor, currencyCode)
 
 class DebtWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = DebtWidget()
