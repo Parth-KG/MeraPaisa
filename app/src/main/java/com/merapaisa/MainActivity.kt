@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
             val themeName by ThemeStore.getTheme(context).collectAsState(initial = "Midnight")
             val currentTheme = getThemeByName(themeName)
 
-            MeraPaisaTheme {
+            MeraPaisaTheme(theme = currentTheme) {
                 CompositionLocalProvider(LocalAppTheme provides currentTheme) {
                     val viewModel: MainViewModel = viewModel()
                     MainScreen(viewModel = viewModel)

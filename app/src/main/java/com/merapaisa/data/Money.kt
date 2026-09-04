@@ -137,3 +137,10 @@ fun isUsableAmount(text: String): Boolean {
     val minor = parseAmountToMinor(text)
     return minor != null && minor != 0L
 }
+
+/**
+ * Like [formatMinor] but always carries an explicit sign, so which way a debt runs does not
+ * depend on telling green from red.
+ */
+fun formatSignedAmount(amountMinor: Long, currencyCode: String): String =
+    if (amountMinor > 0) "+${formatMinor(amountMinor, currencyCode)}" else formatMinor(amountMinor, currencyCode)
