@@ -19,7 +19,7 @@ import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.data.isUsableAmount
 
 @Composable
-fun NumPad(person: PersonWithBalance, input: String, onKey: (String) -> Unit,onSettle: () -> Unit, onAdd: () -> Unit, onSubtract: () -> Unit, note: String, onNoteChange: (String) -> Unit, showNote: Boolean, onToggleNote: () -> Unit){
+fun NumPad(person: PersonWithBalance, input: String, onKey: (String) -> Unit,onSettleToggle: () -> Unit, onAdd: () -> Unit, onSubtract: () -> Unit, note: String, onNoteChange: (String) -> Unit, showNote: Boolean, onToggleNote: () -> Unit){
     val theme = LocalAppTheme.current
     val amountIsUsable = isUsableAmount(input)
     Column(
@@ -128,17 +128,22 @@ fun NumPad(person: PersonWithBalance, input: String, onKey: (String) -> Unit,onS
         }
         Spacer(modifier = Modifier.height(10.dp))
 
+        // Settling files a person away and closes their balance; reopening brings them back.
+        // A person already at zero can still be settled, which is how you file someone away.
         Button(
-            onClick = onSettle,
+            onClick = onSettleToggle,
             modifier = Modifier.fillMaxWidth().height(48.dp),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = theme.textSecondary.copy(alpha = 0.15f),
                 contentColor = theme.textPrimary
-            ),
-            enabled = person.balanceMinor != 0L
+            )
         ) {
-            Text("Settle", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Text(
+                if (person.isSettled) "Reopen" else "Settle up",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }

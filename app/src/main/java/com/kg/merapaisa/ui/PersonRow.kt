@@ -20,7 +20,7 @@ import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.formatSignedAmount
 
 @Composable
-fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: () -> Unit, onClick: () -> Unit,onSendReminder: () -> Unit, onDelete: () -> Unit, onEditClick: () -> Unit) {
+fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: () -> Unit, onClick: () -> Unit,onSendReminder: () -> Unit, onDelete: () -> Unit, onEditClick: () -> Unit, onSettleToggle: () -> Unit) {
     val theme = LocalAppTheme.current
     var showMenu by remember { mutableStateOf(false) }
 
@@ -65,6 +65,15 @@ fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: ()
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false }
                 ) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                if (person.isSettled) "Reopen" else "Settle up",
+                                color = theme.textPrimary
+                            )
+                        },
+                        onClick = { showMenu = false; onSettleToggle() }
+                    )
                     DropdownMenuItem(
                         text = { Text("Send reminder", color = theme.textPrimary) },
                         onClick = { showMenu = false; onSendReminder() }

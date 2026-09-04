@@ -135,7 +135,10 @@ fun MainScreen(viewModel: MainViewModel) {
                         onDelete = { viewModel.confirmDelete(person.id) },
                         onSendReminder = { viewModel.composeReminder(person.id) },
                         onEditClick = { viewModel.editPerson(person.id) },
-                        onHistoryClick = { viewModel.showHistory(person.id) }
+                        onHistoryClick = { viewModel.showHistory(person.id) },
+                        onSettleToggle = {
+                            if (person.isSettled) viewModel.reopenPerson(person) else viewModel.settlePerson(person)
+                        }
                     )
                 }
             }
@@ -145,9 +148,12 @@ fun MainScreen(viewModel: MainViewModel) {
                 NumPad(
                     person = selectedPerson,
                     input = ui.input,
-                    onSettle = {
-                        viewModel.settlePerson(selectedPerson)
-                        viewModel.clearSelection()
+                    onSettleToggle = {
+                        if (selectedPerson.isSettled) {
+                            viewModel.reopenPerson(selectedPerson)
+                        } else {
+                            viewModel.settlePerson(selectedPerson)
+                        }
                     },
                     note = ui.note,
                     onNoteChange = viewModel::setNote,

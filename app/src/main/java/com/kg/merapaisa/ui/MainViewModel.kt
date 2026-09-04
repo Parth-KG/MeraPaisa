@@ -91,7 +91,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // --- writes ---
 
     fun settlePerson(person: PersonWithBalance) {
-        viewModelScope.launch { repository.settle(person.id) }
+        viewModelScope.launch {
+            repository.settle(person.id)
+            _uiState.update { it.copy(tab = Tab.Settled, selectedId = null, input = "", note = "") }
+        }
+    }
+
+    fun reopenPerson(person: PersonWithBalance) {
+        viewModelScope.launch {
+            repository.reopen(person.id)
+            _uiState.update { it.copy(tab = Tab.Active, selectedId = null, input = "", note = "") }
+        }
     }
 
     fun addPerson(
