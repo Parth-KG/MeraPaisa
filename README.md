@@ -128,7 +128,7 @@ Android's built-in Auto Backup handles this: the database and your preferences g
 
 Single `:app` module, split into `data` (entities, DAO, migrations, money), `repository` (the only thing that touches the ledger), `network`, `ui` and `widget`.
 
-61 tests — 47 on the JVM covering money arithmetic, CSV, summaries and theme contrast, and 14 instrumentation tests covering every schema migration and the settle/edit/delete paths against a real database.
+63 tests — 47 on the JVM covering money arithmetic, CSV, summaries and theme contrast, and 16 instrumentation tests covering every schema migration and the settle/edit/delete paths against a real database.
 
 ## 🚀 Build from source
 
