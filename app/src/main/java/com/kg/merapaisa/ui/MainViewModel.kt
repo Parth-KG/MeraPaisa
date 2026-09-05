@@ -73,7 +73,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun showAddDialog(show: Boolean) = _uiState.update { it.copy(showAddDialog = show) }
 
-    fun showThemeDialog(show: Boolean) = _uiState.update { it.copy(showThemeDialog = show) }
+    fun showSettingsDialog(show: Boolean) = _uiState.update { it.copy(showSettingsDialog = show) }
 
     fun editPerson(personId: Long?) = _uiState.update { it.copy(editingPersonId = personId) }
 

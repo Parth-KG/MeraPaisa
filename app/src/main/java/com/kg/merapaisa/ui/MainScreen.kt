@@ -15,7 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
@@ -31,9 +31,10 @@ import com.kg.merapaisa.data.parseAmountToMinor
 import com.kg.merapaisa.ui.dialogs.AddPersonDialog
 import com.kg.merapaisa.ui.dialogs.EditPersonDialog
 import com.kg.merapaisa.ui.dialogs.ReminderDialog
-import com.kg.merapaisa.ui.dialogs.ThemePickerDialog
+import com.kg.merapaisa.ui.dialogs.SettingsDialog
 import com.kg.merapaisa.ui.dialogs.TransactionHistoryDialog
 import kotlinx.coroutines.launch
+import com.kg.merapaisa.SecurityStore
 import com.kg.merapaisa.ThemeStore
 import com.kg.merapaisa.data.netTotalsByCurrency
 import androidx.compose.material.icons.filled.Share
@@ -118,14 +119,14 @@ fun MainScreen(viewModel: MainViewModel) {
                     }
 
                     IconButton(
-                        onClick = { viewModel.showThemeDialog(true) },
+                        onClick = { viewModel.showSettingsDialog(true) },
                         modifier = Modifier
                             .size(40.dp)
                             .background(theme.fill, CircleShape)
                     ) {
                         Icon(
-                            Icons.Default.Palette,
-                            contentDescription = "Theme",
+                            Icons.Default.Settings,
+                            contentDescription = "Settings",
                             tint = theme.textSecondary,
                             modifier = Modifier.size(20.dp)
                         )
@@ -305,13 +306,19 @@ fun MainScreen(viewModel: MainViewModel) {
                 onDismiss = { viewModel.showHistory(null) }
             )
         }
-        if (ui.showThemeDialog) {
-            ThemePickerDialog(
+        if (ui.showSettingsDialog) {
+            val appLockEnabled by SecurityStore.isAppLockEnabled(context).collectAsState(initial = false)
+            SettingsDialog(
                 currentThemeName = theme.name,
-                onDismiss = { viewModel.showThemeDialog(false) },
+                appLockEnabled = appLockEnabled,
+                appLockAvailable = remember { canAuthenticate(context) },
+                onAppLockChange = { enabled ->
+                    scope.launch { SecurityStore.setAppLockEnabled(context, enabled) }
+                },
+                onDismiss = { viewModel.showSettingsDialog(false) },
                 onApply = { selectedTheme ->
                     scope.launch { ThemeStore.setTheme(context, selectedTheme) }
-                    viewModel.showThemeDialog(false)
+                    viewModel.showSettingsDialog(false)
                 }
             )
         }

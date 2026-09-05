@@ -15,7 +15,7 @@ data class MainUiState(
     val note: String = "",
     val showNote: Boolean = false,
     val showAddDialog: Boolean = false,
-    val showThemeDialog: Boolean = false,
+    val showSettingsDialog: Boolean = false,
     val editingPersonId: Long? = null,
     val historyPersonId: Long? = null,
     val pendingDeleteId: Long? = null,

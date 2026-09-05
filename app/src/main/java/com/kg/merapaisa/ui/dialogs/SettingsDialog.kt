@@ -21,16 +21,61 @@ import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.themes
 
+/**
+ * The app's only settings surface. It began as a theme picker; the app lock needed somewhere
+ * to live and a second one-off dialog would have been worse than one that says "Settings".
+ */
 @Composable
-fun ThemePickerDialog(currentThemeName: String, onDismiss: () -> Unit, onApply: (String) -> Unit) {
+fun SettingsDialog(
+    currentThemeName: String,
+    appLockEnabled: Boolean,
+    appLockAvailable: Boolean,
+    onAppLockChange: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+    onApply: (String) -> Unit
+) {
     val theme = LocalAppTheme.current
     var pendingTheme by remember { mutableStateOf(currentThemeName) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Choose Theme", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
+        title = { Text("Settings", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
         text = {
             Column {
+                Text(
+                    "App lock",
+                    color = theme.textSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                        Text(
+                            if (appLockAvailable) {
+                                "Ask for fingerprint, face or device PIN"
+                            } else {
+                                "Set a screen lock on your phone to use this"
+                            },
+                            color = theme.textPrimary,
+                            fontSize = 14.sp
+                        )
+                    }
+                    Switch(
+                        checked = appLockEnabled,
+                        enabled = appLockAvailable,
+                        onCheckedChange = onAppLockChange
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+                Text("Theme", color = theme.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Spacer(modifier = Modifier.height(8.dp))
+
                 LazyColumn(
                     modifier = Modifier.weight(1f, fill = false),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -67,9 +112,9 @@ fun ThemePickerDialog(currentThemeName: String, onDismiss: () -> Unit, onApply: 
             }
         },
         confirmButton = {
-            Button(
-                onClick = { onApply(pendingTheme) }
-            ) { Text("Apply", fontWeight = FontWeight.Bold) }
+            Button(onClick = { onApply(pendingTheme) }) {
+                Text("Apply", fontWeight = FontWeight.Bold)
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
