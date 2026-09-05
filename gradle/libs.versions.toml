@@ -5,6 +5,7 @@ ksp = "2.1.21-2.0.2"
 
 # Bring the stragglers up to versions the Compose BOM expects; these had drifted by years.
 activityCompose = "1.10.1"
+biometric = "1.1.0"
 composeBom = "2026.02.01"
 coil = "2.7.0"
 coreKtx = "1.15.0"
@@ -21,6 +22,7 @@ room = "2.7.0"
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
