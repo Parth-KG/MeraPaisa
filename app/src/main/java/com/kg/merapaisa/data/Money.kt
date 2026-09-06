@@ -89,11 +89,13 @@ fun formatMinor(amountMinor: Long, currencyCode: String): String {
         // Still stored in hundredths, so round to the nearest whole major unit for display.
         ((magnitude + 50) / 100).toString()
     } else {
+        // Trailing zeros carry no information: 237.40 reads as 237.4, and 237.00 as 237.
         val paise = magnitude % 100
-        if (paise == 0L) {
+        val fraction = paise.toString().padStart(2, '0').trimEnd('0')
+        if (fraction.isEmpty()) {
             (magnitude / 100).toString()
         } else {
-            "${magnitude / 100}.${paise.toString().padStart(2, '0')}"
+            "${magnitude / 100}.$fraction"
         }
     }
     return "$sign$symbol$body"

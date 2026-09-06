@@ -49,8 +49,8 @@ class MoneyTest {
 
     @Test
     fun formatsWithTheCurrencySymbolAndSign() {
-        assertEquals("₹10.50", formatMinor(1050L, "INR"))
-        assertEquals("-₹10.50", formatMinor(-1050L, "INR"))
+        assertEquals("₹10.5", formatMinor(1050L, "INR"))
+        assertEquals("-₹10.5", formatMinor(-1050L, "INR"))
         assertEquals("₹0.05", formatMinor(5L, "INR"))
         assertEquals("£0.01", formatMinor(1L, "GBP"))
     }
@@ -62,9 +62,12 @@ class MoneyTest {
         assertEquals("₹0", formatMinor(0L, "INR"))
         assertEquals("-₹340", formatMinor(-34_000L, "INR"))
         assertEquals("\$1234", formatMinor(123_400L, "USD"))
-        // ...but never at the cost of hiding paise that are actually there.
-        assertEquals("₹237.40", formatMinor(23_740L, "INR"))
-        assertEquals("₹98.90", formatMinor(9_890L, "INR"))
+        // A trailing zero is dropped too, but never a digit that carries information.
+        assertEquals("₹237.4", formatMinor(23_740L, "INR"))
+        assertEquals("₹98.9", formatMinor(9_890L, "INR"))
+        assertEquals("₹237.45", formatMinor(23_745L, "INR"))
+        assertEquals("₹0.05", formatMinor(5L, "INR"))
+        assertEquals("₹0.5", formatMinor(50L, "INR"))
         assertEquals("-₹2", formatMinor(-200L, "INR"))
     }
 
