@@ -51,10 +51,28 @@ class MoneyTest {
     fun formatsWithTheCurrencySymbolAndSign() {
         assertEquals("₹10.50", formatMinor(1050L, "INR"))
         assertEquals("-₹10.50", formatMinor(-1050L, "INR"))
-        assertEquals("₹0.00", formatMinor(0L, "INR"))
         assertEquals("₹0.05", formatMinor(5L, "INR"))
-        assertEquals("\$1234.00", formatMinor(123400L, "USD"))
         assertEquals("£0.01", formatMinor(1L, "GBP"))
+    }
+
+    @Test
+    fun dropsTheDecimalsOnRoundAmounts() {
+        // Most entries are whole rupees; a column of ".00" only makes the ones with paise harder to spot.
+        assertEquals("₹237", formatMinor(23_700L, "INR"))
+        assertEquals("₹0", formatMinor(0L, "INR"))
+        assertEquals("-₹340", formatMinor(-34_000L, "INR"))
+        assertEquals("\$1234", formatMinor(123_400L, "USD"))
+        // ...but never at the cost of hiding paise that are actually there.
+        assertEquals("₹237.40", formatMinor(23_740L, "INR"))
+        assertEquals("₹98.90", formatMinor(9_890L, "INR"))
+        assertEquals("-₹2", formatMinor(-200L, "INR"))
+    }
+
+    @Test
+    fun theExportFormatKeepsItsDecimals() {
+        // formatMinorPlain backs the CSV, where a stable two-decimal column matters more.
+        assertEquals("237.00", formatMinorPlain(23_700L, "INR"))
+        assertEquals("0.00", formatMinorPlain(0L, "INR"))
     }
 
     @Test

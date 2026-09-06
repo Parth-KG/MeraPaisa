@@ -74,7 +74,12 @@ fun parseAmountToMinor(text: String): Long? {
     return if (negative) -minor else minor
 }
 
-/** Renders minor units with the currency's symbol, using its real number of decimals. */
+/**
+ * Renders minor units with the currency's symbol, using its real number of decimals.
+ *
+ * A round amount is shown without them: most entries are whole rupees, and a column of
+ * ".00" is noise that makes the amounts that *do* have paise harder to pick out.
+ */
 fun formatMinor(amountMinor: Long, currencyCode: String): String {
     val symbol = currencySymbol(currencyCode)
     val sign = if (amountMinor < 0) "-" else ""
@@ -84,7 +89,12 @@ fun formatMinor(amountMinor: Long, currencyCode: String): String {
         // Still stored in hundredths, so round to the nearest whole major unit for display.
         ((magnitude + 50) / 100).toString()
     } else {
-        "${magnitude / 100}.${(magnitude % 100).toString().padStart(2, '0')}"
+        val paise = magnitude % 100
+        if (paise == 0L) {
+            (magnitude / 100).toString()
+        } else {
+            "${magnitude / 100}.${paise.toString().padStart(2, '0')}"
+        }
     }
     return "$sign$symbol$body"
 }

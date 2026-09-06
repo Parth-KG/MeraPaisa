@@ -87,11 +87,14 @@ fun EditPersonDialog(
                         FilterChip(
                             selected = pfpType == type,
                             onClick = {
-                                pfpType = type
+                                // Only switch to "photo" once one is actually saved — cancelling
+                                // the picker used to leave an avatar with no image and no fallback.
                                 if (type == "photo") {
                                     launcher.launch(
                                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                     )
+                                } else {
+                                    pfpType = type
                                 }
                             },
                             label = { Text(type.replaceFirstChar { it.uppercase() }, fontSize = 12.sp) }

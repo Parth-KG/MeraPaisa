@@ -9,7 +9,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /** Longest edge of a stored avatar. It backs a 44dp view, so anything larger is waste. */
-private const val MAX_AVATAR_PX = 256
+internal const val MAX_AVATAR_PX = 256
 
 /**
  * Copies a picked image into internal storage, downscaled, on a background dispatcher, and
@@ -46,6 +46,20 @@ fun deleteProfilePhoto(context: Context, path: String?) {
     if (file.parentFile == context.filesDir && file.isFile) file.delete()
 }
 
+/**
+ * Largest power-of-two downscale that still leaves the long edge at or above the target.
+ *
+ * This was written as `generateSequence(1) { it * 2 }.last { ... }`, which never terminates
+ * on its own: `last` consumes the whole sequence, so the factor doubled until Int overflowed
+ * to zero and the division threw. Photos were silently never saved.
+ */
+internal fun sampleSizeFor(longEdgePx: Int, targetPx: Int = MAX_AVATAR_PX): Int {
+    if (longEdgePx <= targetPx) return 1
+    var sample = 1
+    while (longEdgePx / (sample * 2) >= targetPx) sample *= 2
+    return sample
+}
+
 private fun decodeScaled(context: Context, source: Uri): Bitmap? {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     context.contentResolver.openInputStream(source)?.use {
@@ -56,10 +70,7 @@ private fun decodeScaled(context: Context, source: Uri): Bitmap? {
     if (longEdge <= 0) return null
 
     // Cheap power-of-two decode first, then an exact scale down to the target.
-    val options = BitmapFactory.Options().apply {
-        inSampleSize = generateSequence(1) { it * 2 }
-            .last { longEdge / it >= MAX_AVATAR_PX || it == 1 }
-    }
+    val options = BitmapFactory.Options().apply { inSampleSize = sampleSizeFor(longEdge) }
     val decoded = context.contentResolver.openInputStream(source)?.use {
         BitmapFactory.decodeStream(it, null, options)
     } ?: return null
