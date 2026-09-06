@@ -23,7 +23,7 @@ class LedgerSummaryTest {
     @Test
     fun headlineIsWrittenToThePersonBeingSent() {
         assertEquals("Asha — you owe me ₹250.50", summary(person(balanceMinor = 250_50), emptyList()))
-        assertEquals("Asha — I owe you ₹40.00", summary(person(balanceMinor = -40_00), emptyList()))
+        assertEquals("Asha — I owe you ₹40", summary(person(balanceMinor = -40_00), emptyList()))
         assertEquals("Asha — we're all settled up", summary(person(balanceMinor = 0), emptyList()))
     }
 
@@ -34,16 +34,16 @@ class LedgerSummaryTest {
             listOf(entry(100_00, 1_700_000_000_000, "cab"), entry(50_00, 1_700_000_060_000, "dinner"))
         )
         val lines = text.lines()
-        assertEquals("Asha — you owe me ₹150.00", lines[0])
+        assertEquals("Asha — you owe me ₹150", lines[0])
         assertEquals("Recent activity:", lines[2])
-        assertEquals("14 Nov, 10:13 PM: +₹100.00 (cab)  →  ₹100.00", lines[3])
-        assertEquals("14 Nov, 10:14 PM: +₹50.00 (dinner)  →  ₹150.00", lines[4])
+        assertEquals("14 Nov, 10:13 PM: +₹100 (cab)  →  ₹100", lines[3])
+        assertEquals("14 Nov, 10:14 PM: +₹50 (dinner)  →  ₹150", lines[4])
     }
 
     @Test
     fun anEntryWithoutANoteOmitsTheParentheses() {
         val text = summary(person(balanceMinor = 100_00), listOf(entry(100_00, 0)))
-        assertTrue(text.contains("+₹100.00  →  ₹100.00"))
+        assertTrue(text.contains("+₹100  →  ₹100"))
         assertFalse(text.contains("()"))
     }
 
@@ -54,8 +54,8 @@ class LedgerSummaryTest {
 
         // Only the last two lines appear, but they carry balances of 40 and 50, not 10 and 20.
         assertFalse("the first entry should be hidden", text.contains("entry 1"))
-        assertTrue(text.contains("(entry 4)  →  ₹40.00"))
-        assertTrue(text.contains("(entry 5)  →  ₹50.00"))
+        assertTrue(text.contains("(entry 4)  →  ₹40"))
+        assertTrue(text.contains("(entry 5)  →  ₹50"))
         assertTrue(text.endsWith("(3 earlier entries not shown)"))
     }
 
@@ -75,12 +75,12 @@ class LedgerSummaryTest {
     @Test
     fun negativeEntriesKeepTheirSign() {
         val text = summary(person(balanceMinor = 50_00), listOf(entry(100_00, 1), entry(-50_00, 2, "refund")))
-        assertTrue(text.contains("-₹50.00 (refund)  →  ₹50.00"))
+        assertTrue(text.contains("-₹50 (refund)  →  ₹50"))
     }
 
     @Test
     fun aPersonWithNoHistoryIsJustTheHeadline() {
-        assertEquals("Asha — you owe me ₹10.00", summary(person(balanceMinor = 10_00), emptyList()))
+        assertEquals("Asha — you owe me ₹10", summary(person(balanceMinor = 10_00), emptyList()))
     }
 
     @Test

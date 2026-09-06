@@ -33,16 +33,19 @@ fun PfpView(person: Person, size: Int) {
             .border(1.5.dp, color.copy(alpha = 0.4f), RoundedCornerShape((size * 0.32f).dp)),
         contentAlignment = Alignment.Center
     ) {
-        when (person.pfpType) {
-            "photo" -> AsyncImage(
-                model = File(person.pfpValue),
+        val photo = remember(person.pfpValue, person.pfpType) {
+            File(person.pfpValue).takeIf { person.pfpType == "photo" && it.isFile }
+        }
+        when {
+            photo != null -> AsyncImage(
+                model = photo,
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            "emoji" -> Text(person.pfpValue, fontSize = (size * 0.45f).sp, textAlign = TextAlign.Center)
+            person.pfpType == "emoji" -> Text(person.pfpValue, fontSize = (size * 0.45f).sp, textAlign = TextAlign.Center)
             else -> Text(
-                person.pfpValue.take(2).uppercase(),
+                person.name.take(2).uppercase(),
                 fontSize = (size * 0.35f).sp,
                 fontWeight = FontWeight.Bold,
                 color = color
