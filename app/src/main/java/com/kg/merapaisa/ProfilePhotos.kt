@@ -61,10 +61,12 @@ internal fun sampleSizeFor(longEdgePx: Int, targetPx: Int = MAX_AVATAR_PX): Int 
 }
 
 private fun decodeScaled(context: Context, source: Uri): Bitmap? {
+    // A bounds pass deliberately returns no bitmap — the dimensions land in `bounds` instead.
+    // Guarding this with `?: return null` on the decode result therefore failed every time,
+    // which is why photos were never saved. Only the stream itself is worth null-checking.
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    context.contentResolver.openInputStream(source)?.use {
-        BitmapFactory.decodeStream(it, null, bounds)
-    } ?: return null
+    val boundsStream = context.contentResolver.openInputStream(source) ?: return null
+    boundsStream.use { BitmapFactory.decodeStream(it, null, bounds) }
 
     val longEdge = maxOf(bounds.outWidth, bounds.outHeight)
     if (longEdge <= 0) return null
