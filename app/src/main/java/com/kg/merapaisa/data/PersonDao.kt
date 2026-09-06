@@ -17,6 +17,7 @@ interface PersonDao {
         SELECT persons.*, COALESCE(SUM(transactions.amountMinor), 0) AS balanceMinor
         FROM persons
         LEFT JOIN transactions ON transactions.personId = persons.id
+        WHERE persons.isSelf = 0
         GROUP BY persons.id
         ORDER BY persons.sortOrder ASC
         """
@@ -29,6 +30,7 @@ interface PersonDao {
         SELECT persons.*, COALESCE(SUM(transactions.amountMinor), 0) AS balanceMinor
         FROM persons
         LEFT JOIN transactions ON transactions.personId = persons.id
+        WHERE persons.isSelf = 0
         GROUP BY persons.id
         ORDER BY persons.sortOrder ASC
         """
@@ -76,7 +78,10 @@ interface PersonDao {
      * The next free position. Counting the existing rows collided after any deletion — delete
      * the middle of three people and the next person added would reuse an order already taken.
      */
-    @Query("SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM persons")
+    @Query("SELECT * FROM persons WHERE isSelf = 1 LIMIT 1")
+    suspend fun getSelf(): Person?
+
+    @Query("SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM persons WHERE isSelf = 0")
     suspend fun nextSortOrder(): Int
 
     @Query("UPDATE persons SET isSettled = :settled WHERE id = :personId")

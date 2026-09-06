@@ -117,3 +117,67 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_personId` ON `transactions` (`personId`)")
     }
 }
+
+/**
+ * 5 -> 6. Groups.
+ *
+ * Adds `isSelf` to persons and creates the one row that is you. Until now "You" was a -1L
+ * sentinel invented inside the split screen, which meant you could not be a group member, be
+ * owed money by the group, or appear in a settle-up. Being a real row fixes all three.
+ *
+ * The self row is hidden from the people list, so nobody gains a mysterious extra contact.
+ */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `persons` ADD COLUMN `isSelf` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL(
+            "INSERT INTO `persons` (`name`, `pfpType`, `pfpValue`, `pfpColor`, `sortOrder`, `isSettled`, `currency`, `isSelf`) " +
+                "VALUES ('You', 'initials', 'You', '#4CAF50', -1, 0, 'INR', 1)"
+        )
+
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `expense_groups` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`name` TEXT NOT NULL, " +
+                "`currency` TEXT NOT NULL, " +
+                "`createdAt` INTEGER NOT NULL, " +
+                "`archived` INTEGER NOT NULL)"
+        )
+
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `group_members` (" +
+                "`groupId` INTEGER NOT NULL, " +
+                "`personId` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`groupId`, `personId`), " +
+                "FOREIGN KEY(`groupId`) REFERENCES `expense_groups`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                "FOREIGN KEY(`personId`) REFERENCES `persons`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_group_members_personId` ON `group_members` (`personId`)")
+
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `expenses` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`groupId` INTEGER NOT NULL, " +
+                "`description` TEXT NOT NULL, " +
+                "`amountMinor` INTEGER NOT NULL, " +
+                "`paidByPersonId` INTEGER NOT NULL, " +
+                "`timestamp` INTEGER NOT NULL, " +
+                "FOREIGN KEY(`groupId`) REFERENCES `expense_groups`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                "FOREIGN KEY(`paidByPersonId`) REFERENCES `persons`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_groupId` ON `expenses` (`groupId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_paidByPersonId` ON `expenses` (`paidByPersonId`)")
+
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `expense_shares` (" +
+                "`expenseId` INTEGER NOT NULL, " +
+                "`personId` INTEGER NOT NULL, " +
+                "`shareMinor` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`expenseId`, `personId`), " +
+                "FOREIGN KEY(`expenseId`) REFERENCES `expenses`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                "FOREIGN KEY(`personId`) REFERENCES `persons`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_expense_shares_personId` ON `expense_shares` (`personId`)")
+    }
+}

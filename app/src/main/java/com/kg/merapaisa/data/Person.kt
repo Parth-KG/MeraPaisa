@@ -17,5 +17,11 @@ data class Person(
     val pfpColor: String = "#4CAF50", // color for initials background
     val sortOrder: Int = 0,
     val isSettled: Boolean = false,
-    val currency: String = "INR"      // ISO 4217 code
+    val currency: String = "INR",     // ISO 4217 code
+    /**
+     * Exactly one row is you. Groups need you to be a real member with a real id, rather than
+     * the -1L sentinel the split flow used to special-case. You are hidden from the people
+     * list, since you do not owe yourself anything.
+     */
+    val isSelf: Boolean = false
 )
