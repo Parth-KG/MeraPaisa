@@ -7,6 +7,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,7 +33,11 @@ import com.kg.merapaisa.data.parseAmountToMinor
 import com.kg.merapaisa.ui.dialogs.AddPersonDialog
 import com.kg.merapaisa.ui.dialogs.EditPersonDialog
 import com.kg.merapaisa.ui.dialogs.ReminderDialog
+import com.kg.merapaisa.CurrencyStore
+import com.kg.merapaisa.ui.dialogs.CreateGroupDialog
 import com.kg.merapaisa.ui.dialogs.SettingsDialog
+import com.kg.merapaisa.ui.groups.GroupRow
+import com.kg.merapaisa.ui.groups.GroupsEmptyState
 import com.kg.merapaisa.ui.dialogs.TransactionHistoryDialog
 import kotlinx.coroutines.launch
 import com.kg.merapaisa.SecurityStore
@@ -45,6 +51,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val theme = LocalAppTheme.current
     val scope = rememberCoroutineScope()
     val persons by viewModel.persons.collectAsState()
+    val groups by viewModel.groups.collectAsState()
     val ui by viewModel.uiState.collectAsState()
 
     // The split flow is part of this tree rather than a Dialog, so back has to be handled
@@ -78,11 +85,18 @@ fun MainScreen(viewModel: MainViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-                    .padding(24.dp, 16.dp, 24.dp, 16.dp),
+                    .padding(16.dp, 16.dp, 16.dp, 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Three tabs plus two icons overflow a narrow screen, so the tabs scroll
+                // rather than clip. On a wide screen this is invisible.
+                Row(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Tab.entries.forEach { t ->
                         Button(
                             onClick = { viewModel.selectTab(t) },
@@ -91,7 +105,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                 contentColor = if (ui.tab == t) theme.background else theme.textSecondary
                             ),
                             shape = RoundedCornerShape(20.dp),
-                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 7.dp)
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp)
                         ) {
                             Text(t.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
@@ -145,8 +159,33 @@ fun MainScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // People list
-            if (list.isEmpty()) {
+            // Groups get their own list; Active and Settled share the people list.
+            if (ui.tab == Tab.Groups) {
+                if (groups.isEmpty()) {
+                    GroupsEmptyState(
+                        modifier = Modifier
+                            .weight(1f)
+                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                            .padding(horizontal = 16.dp),
+                        contentPadding = PaddingValues(bottom = 100.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(groups, key = { it.group.id }) { summary ->
+                            GroupRow(
+                                summary = summary,
+                                onClick = { /* group detail arrives in C3 */ },
+                                onDelete = { viewModel.deleteGroup(summary.group.id) }
+                            )
+                        }
+                    }
+                }
+            } else if (list.isEmpty()) {
                 EmptyState(
                     tab = ui.tab,
                     modifier = Modifier
@@ -183,7 +222,7 @@ fun MainScreen(viewModel: MainViewModel) {
             }
 
             // Numpad
-            if (selectedPerson != null && ui.split == null) {
+            if (selectedPerson != null && ui.split == null && ui.tab != Tab.Groups) {
                 NumPad(
                     person = selectedPerson,
                     input = ui.input,
@@ -225,7 +264,10 @@ fun MainScreen(viewModel: MainViewModel) {
                     .padding(16.dp)
             ) {
                 IconButton(
-                    onClick = { viewModel.showAddDialog(true) },
+                    onClick = {
+                        if (ui.tab == Tab.Groups) viewModel.showCreateGroupDialog(true)
+                        else viewModel.showAddDialog(true)
+                    },
                     modifier = Modifier
                         .size(65.dp)
                         .background(theme.positive, RoundedCornerShape(16.dp))
@@ -237,7 +279,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
 // Bottom right - Split
         AnimatedVisibility(
-            visible = ui.selectedId == null,
+            visible = ui.selectedId == null && ui.tab != Tab.Groups,
             enter = fadeIn() + scaleIn(),
             exit = fadeOut() + scaleOut(),
             modifier = Modifier.align(Alignment.BottomEnd)
@@ -263,6 +305,15 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         }
 
+        if (ui.showCreateGroupDialog) {
+            val lastCurrency by CurrencyStore.getLastCurrency(context).collectAsState(initial = "INR")
+            CreateGroupDialog(
+                people = persons,
+                defaultCurrency = lastCurrency,
+                onDismiss = { viewModel.showCreateGroupDialog(false) },
+                onCreate = viewModel::createGroup
+            )
+        }
         if (ui.showAddDialog) {
             AddPersonDialog(
                 onDismiss = { viewModel.showAddDialog(false) },
