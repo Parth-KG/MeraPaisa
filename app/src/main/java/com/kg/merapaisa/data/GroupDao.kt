@@ -10,11 +10,39 @@ import kotlinx.coroutines.flow.Flow
 /** One member's share of a group, as stored. Summed into balances by [groupBalances]. */
 data class PersonAmount(val personId: Long, val amountMinor: Long)
 
+/** A group as the list screen needs it: who is in it, and where you stand. */
+data class GroupSummary(
+    @androidx.room.Embedded val group: Group,
+    val memberCount: Int,
+    /** Your own net position: what you fronted, less your share. Positive means you are owed. */
+    val yourBalanceMinor: Long
+)
+
 @Dao
 interface GroupDao {
 
     @Query("SELECT * FROM expense_groups WHERE archived = 0 ORDER BY createdAt DESC")
     fun getGroups(): Flow<List<Group>>
+
+    /**
+     * Every live group with your position in it, computed rather than stored: what you paid
+     * into the group, less what you were assigned.
+     */
+    @Query(
+        """
+        SELECT expense_groups.*,
+            (SELECT COUNT(*) FROM group_members WHERE group_members.groupId = expense_groups.id) AS memberCount,
+            COALESCE((SELECT SUM(e.amountMinor) FROM expenses e
+                      WHERE e.groupId = expense_groups.id AND e.paidByPersonId = :selfId), 0)
+            - COALESCE((SELECT SUM(s.shareMinor) FROM expense_shares s
+                        JOIN expenses e2 ON e2.id = s.expenseId
+                        WHERE e2.groupId = expense_groups.id AND s.personId = :selfId), 0) AS yourBalanceMinor
+        FROM expense_groups
+        WHERE archived = 0
+        ORDER BY createdAt DESC
+        """
+    )
+    fun getGroupSummaries(selfId: Long): Flow<List<GroupSummary>>
 
     @Query("SELECT * FROM expense_groups WHERE id = :groupId")
     fun getGroup(groupId: Long): Flow<Group?>

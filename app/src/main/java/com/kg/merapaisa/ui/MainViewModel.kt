@@ -13,6 +13,7 @@ import com.kg.merapaisa.data.buildLedgerCsv
 import com.kg.merapaisa.data.buildPersonSummary
 import com.kg.merapaisa.deleteProfilePhoto
 import com.kg.merapaisa.network.ExchangeRateApi
+import com.kg.merapaisa.repository.GroupRepository
 import com.kg.merapaisa.repository.PersonRepository
 import com.kg.merapaisa.widget.WidgetLedgerNotifier
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +34,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         dao = AppDatabase.getDatabase(application).personDao(),
         notifier = WidgetLedgerNotifier(application)
     )
+    private val groupRepository = GroupRepository(
+        groupDao = AppDatabase.getDatabase(application).groupDao(),
+        personDao = AppDatabase.getDatabase(application).personDao(),
+        notifier = WidgetLedgerNotifier(application)
+    )
     private val exchangeRates = ExchangeRateApi()
+
+    val groups = groupRepository.groupSummaries().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     val persons = repository.personsWithBalances().stateIn(
         scope = viewModelScope,
@@ -72,6 +84,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleNoteField() = _uiState.update { it.copy(showNote = !it.showNote) }
 
     fun showAddDialog(show: Boolean) = _uiState.update { it.copy(showAddDialog = show) }
+
+    fun showCreateGroupDialog(show: Boolean) = _uiState.update { it.copy(showCreateGroupDialog = show) }
+
+    fun createGroup(name: String, currency: String, memberIds: List<Long>) {
+        viewModelScope.launch {
+            groupRepository.createGroup(name, currency, memberIds)
+            _uiState.update { it.copy(showCreateGroupDialog = false) }
+        }
+    }
+
+    fun deleteGroup(groupId: Long) {
+        viewModelScope.launch { groupRepository.deleteGroup(groupId) }
+    }
 
     fun showSettingsDialog(show: Boolean) = _uiState.update { it.copy(showSettingsDialog = show) }
 

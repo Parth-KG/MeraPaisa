@@ -1,7 +1,7 @@
 package com.kg.merapaisa.ui
 
 /** Which of the two lists is on screen. */
-enum class Tab { Active, Settled }
+enum class Tab { Active, Settled, Groups }
 
 /**
  * Everything the main screen remembers between frames. It lives in the ViewModel rather than
@@ -15,6 +15,7 @@ data class MainUiState(
     val note: String = "",
     val showNote: Boolean = false,
     val showAddDialog: Boolean = false,
+    val showCreateGroupDialog: Boolean = false,
     val showSettingsDialog: Boolean = false,
     val editingPersonId: Long? = null,
     val historyPersonId: Long? = null,

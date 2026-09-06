@@ -81,6 +81,17 @@ interface PersonDao {
     @Query("SELECT * FROM persons WHERE isSelf = 1 LIMIT 1")
     suspend fun getSelf(): Person?
 
+    /**
+     * Returns the row that represents you, creating it if absent. Migration 5 -> 6 makes one
+     * for existing installs, but a fresh install builds the schema directly and never runs it.
+     */
+    @androidx.room.Transaction
+    suspend fun ensureSelf(): Person {
+        getSelf()?.let { return it }
+        insertPerson(Person(name = "You", pfpValue = "You", sortOrder = -1, isSelf = true))
+        return getSelf()!!
+    }
+
     @Query("SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM persons WHERE isSelf = 0")
     suspend fun nextSortOrder(): Int
 
