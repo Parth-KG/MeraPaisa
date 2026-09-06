@@ -151,6 +151,72 @@ class MigrationTest {
         }
     }
 
+    /**
+     * 5 -> 6 introduces groups, and with them the row that represents you. Until now "You" was
+     * a sentinel invented inside the split screen; it has to become a real person without
+     * disturbing anybody's balance.
+     */
+    @Test
+    fun migrate5To6_addsTheSelfPersonAndLeavesBalancesAlone() {
+        helper.createDatabase(TEST_DB, 5).use { db ->
+            db.insertV4Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV4Transaction(personId = 1, amountMinor = 250_50, timestamp = 2_000, note = "dinner")
+            db.insertV4Person(id = 2, name = "Ravi", currency = "USD")
+            db.insertV4Transaction(personId = 2, amountMinor = -40_00, timestamp = 3_000, note = "cab")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 6, true, MIGRATION_5_6).use { db ->
+            assertEquals("Asha's balance must survive", 25_050L, db.derivedBalance(1))
+            assertEquals("Ravi's balance must survive", -4_000L, db.derivedBalance(2))
+
+            assertEquals("exactly one row is you", 1, db.longOf("SELECT COUNT(*) FROM persons WHERE isSelf = 1").toInt())
+            assertEquals(
+                "the people you actually track are unchanged",
+                2,
+                db.longOf("SELECT COUNT(*) FROM persons WHERE isSelf = 0").toInt()
+            )
+
+            // The new tables exist and accept a full group round-trip.
+            db.execSQL("INSERT INTO expense_groups (name, currency, createdAt, archived) VALUES ('Goa', 'INR', 1, 0)")
+            val selfId = db.longOf("SELECT id FROM persons WHERE isSelf = 1")
+            db.execSQL("INSERT INTO group_members (groupId, personId) VALUES (1, $selfId), (1, 1)")
+            db.execSQL(
+                "INSERT INTO expenses (groupId, description, amountMinor, paidByPersonId, timestamp) " +
+                    "VALUES (1, 'Hotel', 200_00, $selfId, 5)".replace("_", "")
+            )
+            db.execSQL("INSERT INTO expense_shares (expenseId, personId, shareMinor) VALUES (1, $selfId, 10000), (1, 1, 10000)")
+
+            assertEquals(20_000L, db.longOf("SELECT SUM(shareMinor) FROM expense_shares WHERE expenseId = 1"))
+            assertEquals(1, db.longOf("SELECT COUNT(*) FROM expenses WHERE groupId = 1").toInt())
+        }
+    }
+
+    /** Deleting a group takes its expenses and shares with it, rather than orphaning them. */
+    @Test
+    fun afterMigrating_deletingAGroupCascades() {
+        helper.createDatabase(TEST_DB, 5).use { db ->
+            db.insertV4Person(id = 1, name = "Asha", currency = "INR")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 6, true, MIGRATION_5_6).use { db ->
+            db.execSQL("PRAGMA foreign_keys = ON")
+            db.execSQL("INSERT INTO expense_groups (name, currency, createdAt, archived) VALUES ('Goa', 'INR', 1, 0)")
+            db.execSQL("INSERT INTO group_members (groupId, personId) VALUES (1, 1)")
+            db.execSQL(
+                "INSERT INTO expenses (groupId, description, amountMinor, paidByPersonId, timestamp) " +
+                    "VALUES (1, 'Hotel', 20000, 1, 5)"
+            )
+            db.execSQL("INSERT INTO expense_shares (expenseId, personId, shareMinor) VALUES (1, 1, 20000)")
+
+            db.execSQL("DELETE FROM expense_groups WHERE id = 1")
+
+            assertEquals(0, db.longOf("SELECT COUNT(*) FROM expenses").toInt())
+            assertEquals(0, db.longOf("SELECT COUNT(*) FROM expense_shares").toInt())
+            assertEquals(0, db.longOf("SELECT COUNT(*) FROM group_members").toInt())
+            assertEquals("the person themselves is untouched", 1, db.longOf("SELECT COUNT(*) FROM persons WHERE id = 1").toInt())
+        }
+    }
+
     // --- seeding helpers, written against the v3 shape ---
 
     private fun SupportSQLiteDatabase.insertV3Person(
