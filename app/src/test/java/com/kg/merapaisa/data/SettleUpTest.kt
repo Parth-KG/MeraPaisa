@@ -127,4 +127,75 @@ class SettleUpTest {
         val result = groupBalances(listOf(1L, 2L), emptyMap(), emptyMap())
         assertEquals(listOf(MemberBalance(1L, 0L), MemberBalance(2L, 0L)), result)
     }
+
+    // --- the whole loop, using the same functions the app does ---
+
+    /** Mirrors how the app records things: an expense is a payer plus a set of shares. */
+    private data class Spend(val paidBy: Long, val amountMinor: Long, val sharedWith: List<Long>)
+
+    private fun balancesFrom(members: List<Long>, spends: List<Spend>): List<MemberBalance> {
+        val paid = mutableMapOf<Long, Long>()
+        val owed = mutableMapOf<Long, Long>()
+        spends.forEach { spend ->
+            paid[spend.paidBy] = (paid[spend.paidBy] ?: 0L) + spend.amountMinor
+            evenShares(spend.amountMinor, spend.sharedWith).forEach { (id, share) ->
+                owed[id] = (owed[id] ?: 0L) + share
+            }
+        }
+        return groupBalances(members, paid, owed)
+    }
+
+    @Test
+    fun recordingEverySuggestedPaymentLeavesTheGroupSquare() {
+        val members = listOf(1L, 2L, 3L, 4L)
+        val spends = listOf(
+            Spend(paidBy = 1L, amountMinor = 4_000_00L, sharedWith = members),   // hotel
+            Spend(paidBy = 2L, amountMinor = 1_250_00L, sharedWith = members),   // dinner
+            Spend(paidBy = 3L, amountMinor = 300_00L, sharedWith = listOf(3L, 4L)) // a cab those two took
+        )
+
+        val before = balancesFrom(members, spends)
+        assertEquals("a fully shared-out group nets to zero", 0L, before.sumOf { it.amountMinor })
+
+        // A settlement is just an expense the payer covered entirely on the payee's behalf,
+        // which is exactly how GroupRepository.recordTransfer writes it.
+        val settlements = settleUp(before).map {
+            Spend(paidBy = it.fromPersonId, amountMinor = it.amountMinor, sharedWith = listOf(it.toPersonId))
+        }
+        assertTrue("should not need more than one payment per member", settlements.size <= members.size - 1)
+
+        val after = balancesFrom(members, spends + settlements)
+        after.forEach { assertEquals("${it.personId} should end square", 0L, it.amountMinor) }
+    }
+
+    @Test
+    fun aGroupWhereOnePersonPaysForEverythingSettlesInOneRound() {
+        val members = listOf(1L, 2L, 3L)
+        val spends = listOf(Spend(paidBy = 1L, amountMinor = 900_00L, sharedWith = members))
+        val before = balancesFrom(members, spends)
+        val transfers = settleUp(before)
+
+        assertEquals(2, transfers.size)
+        assertTrue(transfers.all { it.toPersonId == 1L })
+        val after = balancesFrom(
+            members,
+            spends + transfers.map { Spend(it.fromPersonId, it.amountMinor, listOf(it.toPersonId)) }
+        )
+        after.forEach { assertEquals(0L, it.amountMinor) }
+    }
+
+    @Test
+    fun anIndivisibleAmountStillSettlesExactly() {
+        // 100.01 across three people cannot divide evenly; nobody should be left a paisa out.
+        val members = listOf(1L, 2L, 3L)
+        val spends = listOf(Spend(paidBy = 1L, amountMinor = 100_01L, sharedWith = members))
+        val before = balancesFrom(members, spends)
+        assertEquals(0L, before.sumOf { it.amountMinor })
+
+        val after = balancesFrom(
+            members,
+            spends + settleUp(before).map { Spend(it.fromPersonId, it.amountMinor, listOf(it.toPersonId)) }
+        )
+        after.forEach { assertEquals("${it.personId} should end square", 0L, it.amountMinor) }
+    }
 }

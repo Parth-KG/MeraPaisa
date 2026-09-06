@@ -36,7 +36,10 @@ import com.kg.merapaisa.ui.dialogs.ReminderDialog
 import com.kg.merapaisa.CurrencyStore
 import com.kg.merapaisa.ui.dialogs.CreateGroupDialog
 import com.kg.merapaisa.ui.dialogs.SettingsDialog
+import com.kg.merapaisa.ui.groups.AddExpenseDialog
+import com.kg.merapaisa.ui.groups.GroupDetailScreen
 import com.kg.merapaisa.ui.groups.GroupRow
+import com.kg.merapaisa.ui.groups.SettleUpSheet
 import com.kg.merapaisa.ui.groups.GroupsEmptyState
 import com.kg.merapaisa.ui.dialogs.TransactionHistoryDialog
 import kotlinx.coroutines.launch
@@ -179,7 +182,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         items(groups, key = { it.group.id }) { summary ->
                             GroupRow(
                                 summary = summary,
-                                onClick = { /* group detail arrives in C3 */ },
+                                onClick = { viewModel.openGroup(summary.group.id) },
                                 onDelete = { viewModel.deleteGroup(summary.group.id) }
                             )
                         }
@@ -374,6 +377,48 @@ fun MainScreen(viewModel: MainViewModel) {
             )
         }
     }
+    val openGroupId = ui.openGroupId
+    if (openGroupId != null) {
+        val detail by viewModel.openGroup.collectAsState()
+        val selfId by viewModel.selfId.collectAsState()
+        val summary = groups.firstOrNull { it.group.id == openGroupId }
+
+        BackHandler(enabled = true) { viewModel.openGroup(null) }
+
+        if (summary != null && detail != null) {
+            val loaded = detail!!
+            GroupDetailScreen(
+                group = summary.group,
+                members = loaded.members,
+                expenses = loaded.expenses,
+                balances = loaded.balances,
+                onBack = { viewModel.openGroup(null) },
+                onAddExpense = { viewModel.showAddExpenseDialog(true) },
+                onSettleUp = { viewModel.showSettleUp(true) },
+                onDeleteExpense = viewModel::deleteExpense
+            )
+
+            if (ui.showAddExpenseDialog) {
+                AddExpenseDialog(
+                    members = loaded.members,
+                    currency = summary.group.currency,
+                    selfId = selfId,
+                    onDismiss = { viewModel.showAddExpenseDialog(false) },
+                    onAdd = viewModel::addExpense
+                )
+            }
+            if (ui.showSettleUp) {
+                SettleUpSheet(
+                    balances = loaded.balances,
+                    members = loaded.members,
+                    currency = summary.group.currency,
+                    onRecord = { t -> viewModel.recordTransfer(t.fromPersonId, t.toPersonId, t.amountMinor) },
+                    onDismiss = { viewModel.showSettleUp(false) }
+                )
+            }
+        }
+    }
+
     ui.split?.let { split ->
         when (split.step) {
             0 -> SplitAmountScreen(

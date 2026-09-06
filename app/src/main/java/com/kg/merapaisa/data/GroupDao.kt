@@ -75,6 +75,16 @@ interface GroupDao {
     @Query("SELECT personId FROM group_members WHERE groupId = :groupId")
     suspend fun getMemberIds(groupId: Long): List<Long>
 
+    /** Every share in the group, so balances can be derived without a query per expense. */
+    @Query(
+        """
+        SELECT expense_shares.* FROM expense_shares
+        JOIN expenses ON expenses.id = expense_shares.expenseId
+        WHERE expenses.groupId = :groupId
+        """
+    )
+    fun getSharesForGroup(groupId: Long): Flow<List<ExpenseShare>>
+
     @Query("SELECT * FROM expenses WHERE groupId = :groupId ORDER BY timestamp DESC")
     fun getExpenses(groupId: Long): Flow<List<Expense>>
 
@@ -112,9 +122,15 @@ interface GroupDao {
      * Records an expense and its shares together — a half-written expense would make the
      * group's balances stop netting to zero, and settle-up would produce nonsense.
      */
+    /**
+     * Records an expense and its shares together — a half-written expense would stop the
+     * group's balances netting to zero, and settle-up would produce nonsense.
+     */
     @androidx.room.Transaction
-    suspend fun recordExpense(expense: Expense, shares: (Long) -> List<ExpenseShare>) {
+    suspend fun recordExpense(expense: Expense, sharesByPerson: Map<Long, Long>) {
         val id = insertExpense(expense)
-        insertShares(shares(id))
+        insertShares(sharesByPerson.map { (personId, share) ->
+            ExpenseShare(expenseId = id, personId = personId, shareMinor = share)
+        })
     }
 }
