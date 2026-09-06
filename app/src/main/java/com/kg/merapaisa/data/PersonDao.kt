@@ -11,10 +11,25 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface PersonDao {
 
-    /** Every person with their balance derived in one pass, for the list screen and widget. */
+    /**
+     * Every person with their balance derived in one pass, for the list screen and widget.
+     *
+     * A balance is their direct transactions plus your position with them inside groups:
+     * their share of what you paid, less your share of what they paid. That slice of a group
+     * is exactly the part that is between the two of you, so it belongs on the home screen —
+     * and deriving it here means nothing is written twice or counted twice.
+     */
     @Query(
         """
-        SELECT persons.*, COALESCE(SUM(transactions.amountMinor), 0) AS balanceMinor
+        SELECT persons.*,
+            COALESCE(SUM(transactions.amountMinor), 0)
+            + COALESCE((SELECT SUM(s.shareMinor) FROM expense_shares s
+                        JOIN expenses e ON e.id = s.expenseId
+                        WHERE s.personId = persons.id AND e.paidByPersonId = :selfId), 0)
+            - COALESCE((SELECT SUM(s2.shareMinor) FROM expense_shares s2
+                        JOIN expenses e2 ON e2.id = s2.expenseId
+                        WHERE s2.personId = :selfId AND e2.paidByPersonId = persons.id), 0)
+            AS balanceMinor
         FROM persons
         LEFT JOIN transactions ON transactions.personId = persons.id
         WHERE persons.isSelf = 0
@@ -22,12 +37,20 @@ interface PersonDao {
         ORDER BY persons.sortOrder ASC
         """
     )
-    fun getPersonsWithBalances(): Flow<List<PersonWithBalance>>
+    fun getPersonsWithBalances(selfId: Long): Flow<List<PersonWithBalance>>
 
     /** One-shot version of the same query, for a snapshot such as an export. */
     @Query(
         """
-        SELECT persons.*, COALESCE(SUM(transactions.amountMinor), 0) AS balanceMinor
+        SELECT persons.*,
+            COALESCE(SUM(transactions.amountMinor), 0)
+            + COALESCE((SELECT SUM(s.shareMinor) FROM expense_shares s
+                        JOIN expenses e ON e.id = s.expenseId
+                        WHERE s.personId = persons.id AND e.paidByPersonId = :selfId), 0)
+            - COALESCE((SELECT SUM(s2.shareMinor) FROM expense_shares s2
+                        JOIN expenses e2 ON e2.id = s2.expenseId
+                        WHERE s2.personId = :selfId AND e2.paidByPersonId = persons.id), 0)
+            AS balanceMinor
         FROM persons
         LEFT JOIN transactions ON transactions.personId = persons.id
         WHERE persons.isSelf = 0
@@ -35,7 +58,7 @@ interface PersonDao {
         ORDER BY persons.sortOrder ASC
         """
     )
-    suspend fun getPersonsWithBalancesNow(): List<PersonWithBalance>
+    suspend fun getPersonsWithBalancesNow(selfId: Long): List<PersonWithBalance>
 
     @Query("SELECT * FROM transactions ORDER BY personId ASC, timestamp ASC")
     suspend fun getAllTransactionsNow(): List<Transaction>

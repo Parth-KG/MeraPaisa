@@ -6,6 +6,8 @@ import com.kg.merapaisa.data.PersonLedger
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 
 /**
  * The only thing that touches the ledger. Every write goes through here and notifies the
@@ -16,7 +18,9 @@ class PersonRepository(
     private val notifier: LedgerChangeNotifier = LedgerChangeNotifier.None
 ) {
 
-    fun personsWithBalances(): Flow<List<PersonWithBalance>> = dao.getPersonsWithBalances()
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun personsWithBalances(): Flow<List<PersonWithBalance>> =
+        flow { emit(dao.ensureSelf().id) }.flatMapLatest { dao.getPersonsWithBalances(it) }
 
     fun transactions(personId: Long): Flow<List<Transaction>> = dao.getTransactionsForPerson(personId)
 
@@ -28,7 +32,7 @@ class PersonRepository(
     /** Everyone and everything they have, read together, for an export. */
     suspend fun ledgerSnapshot(): List<PersonLedger> {
         val byPerson = dao.getAllTransactionsNow().groupBy { it.personId }
-        return dao.getPersonsWithBalancesNow().map { person ->
+        return dao.getPersonsWithBalancesNow(dao.ensureSelf().id).map { person ->
             PersonLedger(person, byPerson[person.id].orEmpty())
         }
     }

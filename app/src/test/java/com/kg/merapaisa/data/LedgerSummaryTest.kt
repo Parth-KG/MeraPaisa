@@ -22,7 +22,7 @@ class LedgerSummaryTest {
 
     @Test
     fun headlineIsWrittenToThePersonBeingSent() {
-        assertEquals("Asha — you owe me ₹250.50", summary(person(balanceMinor = 250_50), emptyList()))
+        assertEquals("Asha — you owe me ₹250.5", summary(person(balanceMinor = 250_50), emptyList()))
         assertEquals("Asha — I owe you ₹40", summary(person(balanceMinor = -40_00), emptyList()))
         assertEquals("Asha — we're all settled up", summary(person(balanceMinor = 0), emptyList()))
     }

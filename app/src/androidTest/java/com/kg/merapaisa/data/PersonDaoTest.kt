@@ -36,7 +36,7 @@ class PersonDaoTest {
         dao.insertPerson(Person(name = name, currency = "INR"))
 
     private suspend fun personById(id: Long) =
-        dao.getPersonsWithBalances().first().single { it.id == id }
+        dao.getPersonsWithBalances(dao.ensureSelf().id).first().single { it.id == id }
 
     @Test
     fun settleClosesTheBalanceAndMarksThePersonSettled() = runBlocking {
@@ -206,5 +206,86 @@ class PersonDaoTest {
 
         assertEquals(0L, dao.getBalanceNow(id))
         assertTrue("still square, so still settled", personById(id).isSettled)
+    }
+
+    // --- group activity reaching the people list ---
+
+    private suspend fun groupWith(members: List<Long>, currency: String = "INR"): Long {
+        val groupId = db.groupDao().insertGroup(Group(name = "Trip", currency = currency))
+        db.groupDao().addMembers(members.map { GroupMember(groupId = groupId, personId = it) })
+        return groupId
+    }
+
+    private suspend fun spend(groupId: Long, paidBy: Long, amountMinor: Long, sharedWith: List<Long>) {
+        db.groupDao().recordExpense(
+            expense = Expense(groupId = groupId, description = "Hotel", amountMinor = amountMinor, paidByPersonId = paidBy),
+            sharesByPerson = evenShares(amountMinor, sharedWith)
+        )
+    }
+
+    /** The exact scenario: three people with existing balances, then a 500 split three ways. */
+    @Test
+    fun aGroupSplitYouPaidForRaisesEveryonesBalance() = runBlocking {
+        val me = dao.ensureSelf().id
+        val a = newPerson("A"); val b = newPerson("B"); val c = newPerson("C")
+        dao.recordEntry(Transaction(personId = a, amountMinor = 50_00))
+        dao.recordEntry(Transaction(personId = b, amountMinor = 100_00))
+        dao.recordEntry(Transaction(personId = c, amountMinor = 120_00))
+
+        val group = groupWith(listOf(me, a, b, c))
+        spend(group, paidBy = me, amountMinor = 500_00, sharedWith = listOf(a, b, c))
+
+        val byId = dao.getPersonsWithBalances(me).first().associateBy { it.id }
+        // 500 over three is 166.67 / 166.67 / 166.66 — the extra paisa goes to the first.
+        assertEquals(50_00L + 166_67L, byId[a]!!.balanceMinor)
+        assertEquals(100_00L + 166_67L, byId[b]!!.balanceMinor)
+        assertEquals(120_00L + 166_66L, byId[c]!!.balanceMinor)
+        assertEquals(
+            "the whole 500 should be reflected, not a paisa more or less",
+            50_00L + 100_00L + 120_00L + 500_00L,
+            byId.values.sumOf { it.balanceMinor }
+        )
+    }
+
+    @Test
+    fun anExpenseSomebodyElsePaidForLowersYourPositionWithThem() = runBlocking {
+        val me = dao.ensureSelf().id
+        val a = newPerson("A")
+        val group = groupWith(listOf(me, a))
+        spend(group, paidBy = a, amountMinor = 100_00, sharedWith = listOf(me, a))
+
+        // They covered 50 of mine, so I owe them 50.
+        assertEquals(-50_00L, dao.getPersonsWithBalances(me).first().single { it.id == a }.balanceMinor)
+    }
+
+    @Test
+    fun anExpenseBetweenTwoOtherPeopleDoesNotTouchYourBalances() = runBlocking {
+        val me = dao.ensureSelf().id
+        val a = newPerson("A"); val b = newPerson("B")
+        val group = groupWith(listOf(me, a, b))
+        spend(group, paidBy = a, amountMinor = 80_00, sharedWith = listOf(b))
+
+        val byId = dao.getPersonsWithBalances(me).first().associateBy { it.id }
+        assertEquals("A paid for B, which is nothing to do with me", 0L, byId[a]!!.balanceMinor)
+        assertEquals(0L, byId[b]!!.balanceMinor)
+    }
+
+    @Test
+    fun settlingClosesTheDirectDebtAndLeavesTheGroupPositionAlone() = runBlocking {
+        val me = dao.ensureSelf().id
+        val a = newPerson("A")
+        dao.recordEntry(Transaction(personId = a, amountMinor = 50_00))
+        val group = groupWith(listOf(me, a))
+        spend(group, paidBy = me, amountMinor = 100_00, sharedWith = listOf(a))
+
+        dao.settle(a)
+
+        // Settle records against the direct ledger, so what remains is the group position.
+        assertEquals("the direct debt is closed", 0L, dao.getBalanceNow(a))
+        assertEquals(
+            "what they owe from the group is still owed, and is settled inside the group",
+            100_00L,
+            dao.getPersonsWithBalances(me).first().single { it.id == a }.balanceMinor
+        )
     }
 }
