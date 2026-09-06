@@ -16,6 +16,10 @@ data class MainUiState(
     val showNote: Boolean = false,
     val showAddDialog: Boolean = false,
     val showCreateGroupDialog: Boolean = false,
+    /** The group whose detail screen is open, if any. */
+    val openGroupId: Long? = null,
+    val showAddExpenseDialog: Boolean = false,
+    val showSettleUp: Boolean = false,
     val showSettingsDialog: Boolean = false,
     val editingPersonId: Long? = null,
     val historyPersonId: Long? = null,

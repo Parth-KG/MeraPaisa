@@ -13,6 +13,7 @@ import com.kg.merapaisa.data.buildLedgerCsv
 import com.kg.merapaisa.data.buildPersonSummary
 import com.kg.merapaisa.deleteProfilePhoto
 import com.kg.merapaisa.network.ExchangeRateApi
+import com.kg.merapaisa.repository.GroupDetail
 import com.kg.merapaisa.repository.GroupRepository
 import com.kg.merapaisa.repository.PersonRepository
 import com.kg.merapaisa.widget.WidgetLedgerNotifier
@@ -21,6 +22,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -84,6 +88,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleNoteField() = _uiState.update { it.copy(showNote = !it.showNote) }
 
     fun showAddDialog(show: Boolean) = _uiState.update { it.copy(showAddDialog = show) }
+
+    /** Detail for whichever group is open, recomputed whenever its expenses change. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val openGroup = _uiState
+        .map { it.openGroupId }
+        .flatMapLatest { id -> if (id == null) flowOf(null) else groupRepository.groupDetail(id) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private val _selfId = MutableStateFlow(0L)
+    val selfId = _selfId.asStateFlow()
+
+    init {
+        viewModelScope.launch { _selfId.value = groupRepository.self().id }
+    }
+
+    fun openGroup(groupId: Long?) = _uiState.update {
+        it.copy(openGroupId = groupId, showAddExpenseDialog = false, showSettleUp = false)
+    }
+
+    fun showAddExpenseDialog(show: Boolean) = _uiState.update { it.copy(showAddExpenseDialog = show) }
+
+    fun showSettleUp(show: Boolean) = _uiState.update { it.copy(showSettleUp = show) }
+
+    fun addExpense(description: String, amountMinor: Long, paidByPersonId: Long, sharedWith: List<Long>) {
+        val groupId = _uiState.value.openGroupId ?: return
+        viewModelScope.launch {
+            groupRepository.addExpense(groupId, description, amountMinor, paidByPersonId, sharedWith)
+            _uiState.update { it.copy(showAddExpenseDialog = false) }
+        }
+    }
+
+    fun recordTransfer(fromPersonId: Long, toPersonId: Long, amountMinor: Long) {
+        val groupId = _uiState.value.openGroupId ?: return
+        viewModelScope.launch { groupRepository.recordTransfer(groupId, fromPersonId, toPersonId, amountMinor) }
+    }
+
+    fun deleteExpense(expenseId: Long) {
+        viewModelScope.launch { groupRepository.deleteExpense(expenseId) }
+    }
 
     fun showCreateGroupDialog(show: Boolean) = _uiState.update { it.copy(showCreateGroupDialog = show) }
 

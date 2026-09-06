@@ -6,7 +6,13 @@ import com.kg.merapaisa.data.GroupMember
 import com.kg.merapaisa.data.GroupSummary
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonDao
+import com.kg.merapaisa.data.Expense
+import com.kg.merapaisa.data.ExpenseShare
+import com.kg.merapaisa.data.MemberBalance
+import com.kg.merapaisa.data.evenShares
+import com.kg.merapaisa.data.groupBalances
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 
@@ -38,8 +44,79 @@ class GroupRepository(
         return groupId
     }
 
+    /**
+     * Members, expenses and the balances that follow from them. Balances are recomputed from
+     * the rows on every change rather than stored, so they cannot drift from the expenses.
+     */
+    fun groupDetail(groupId: Long): Flow<GroupDetail> = combine(
+        groupDao.getMembers(groupId),
+        groupDao.getExpenses(groupId),
+        groupDao.getSharesForGroup(groupId)
+    ) { members, expenses, shares ->
+        GroupDetail(
+            members = members,
+            expenses = expenses,
+            balances = groupBalances(
+                memberIds = members.map { it.id },
+                paidByPerson = expenses.groupBy { it.paidByPersonId }
+                    .mapValues { (_, e) -> e.sumOf { it.amountMinor } },
+                sharesByPerson = shares.groupBy { it.personId }
+                    .mapValues { (_, s) -> s.sumOf { it.shareMinor } }
+            )
+        )
+    }
+
+    suspend fun addExpense(
+        groupId: Long,
+        description: String,
+        amountMinor: Long,
+        paidByPersonId: Long,
+        sharedWith: List<Long>
+    ) {
+        groupDao.recordExpense(
+            expense = Expense(
+                groupId = groupId,
+                description = description,
+                amountMinor = amountMinor,
+                paidByPersonId = paidByPersonId
+            ),
+            sharesByPerson = evenShares(amountMinor, sharedWith)
+        )
+        notifier.onLedgerChanged()
+    }
+
+    /**
+     * Records one settle-up payment. A payment is just an expense the payer covered on the
+     * payee's behalf, so it runs through the same machinery and shows up in the history
+     * instead of silently adjusting a number.
+     */
+    suspend fun recordTransfer(groupId: Long, fromPersonId: Long, toPersonId: Long, amountMinor: Long) {
+        groupDao.recordExpense(
+            expense = Expense(
+                groupId = groupId,
+                description = "Settlement",
+                amountMinor = amountMinor,
+                paidByPersonId = fromPersonId
+            ),
+            sharesByPerson = mapOf(toPersonId to amountMinor)
+        )
+        notifier.onLedgerChanged()
+    }
+
+    suspend fun deleteExpense(expenseId: Long) {
+        groupDao.deleteExpense(expenseId)
+        notifier.onLedgerChanged()
+    }
+
     suspend fun deleteGroup(groupId: Long) {
         groupDao.deleteGroup(groupId)
         notifier.onLedgerChanged()
     }
 }
+
+/** A group with everything the detail screen needs, balances included. */
+data class GroupDetail(
+    val members: List<com.kg.merapaisa.data.Person>,
+    val expenses: List<com.kg.merapaisa.data.Expense>,
+    val balances: List<com.kg.merapaisa.data.MemberBalance>
+)
