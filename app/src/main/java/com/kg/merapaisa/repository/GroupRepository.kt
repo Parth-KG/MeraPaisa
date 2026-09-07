@@ -34,6 +34,9 @@ class GroupRepository(
 
     fun members(groupId: Long): Flow<List<Person>> = groupDao.getMembers(groupId)
 
+    /** Group expenses this person fronted, which deleting them would take with it. */
+    fun expensesPaidBy(personId: Long): Flow<Int> = groupDao.expenseCountPaidBy(personId)
+
     /** Creates a group with you and the chosen people in it. */
     suspend fun createGroup(name: String, currency: String, memberIds: List<Long>): Long {
         val selfId = self().id

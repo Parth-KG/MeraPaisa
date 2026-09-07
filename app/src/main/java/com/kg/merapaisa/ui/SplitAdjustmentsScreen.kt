@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import com.kg.merapaisa.AppTheme
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
@@ -41,6 +42,9 @@ data class SplitParticipant(
     val name: String,
     val currency: String
 )
+
+/** How long the amount fields must be quiet before a rate is fetched for them. */
+private const val CONVERSION_SETTLE_MS = 400L
 
 private fun equalSplit(amountMinor: Long, participants: List<SplitParticipant>): Map<Long, Long> {
     if (participants.isEmpty()) return emptyMap()
@@ -119,6 +123,10 @@ fun SplitAdjustmentsScreen(
 
     LaunchedEffect(amountsInSource, participants) {
         conversionError = null
+        // Every keystroke rewrites amountsInSource, so without this each digit fired one rate
+        // request per foreign-currency participant for a number still being typed. Waiting for
+        // the typing to settle cancels those. Rows already in the source currency never wait.
+        if (participants.any { it.currency != sourceCurrency }) delay(CONVERSION_SETTLE_MS)
         val result = mutableMapOf<Long, Long>()
         for (p in participants) {
             val srcAmt = amountsInSource[p.id] ?: 0L

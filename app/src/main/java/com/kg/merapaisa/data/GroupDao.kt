@@ -97,6 +97,13 @@ interface GroupDao {
     @Query("DELETE FROM expenses WHERE id = :expenseId")
     suspend fun deleteExpense(expenseId: Long)
 
+    /**
+     * How many group expenses this person fronted. Deleting them cascades those expenses away,
+     * which moves every other member's position, so the confirmation has to say so.
+     */
+    @Query("SELECT COUNT(*) FROM expenses WHERE paidByPersonId = :personId")
+    fun expenseCountPaidBy(personId: Long): Flow<Int>
+
     /** What each member has fronted for the group. */
     @Query(
         """
@@ -118,10 +125,6 @@ interface GroupDao {
     )
     suspend fun owedByMember(groupId: Long): List<PersonAmount>
 
-    /**
-     * Records an expense and its shares together — a half-written expense would make the
-     * group's balances stop netting to zero, and settle-up would produce nonsense.
-     */
     /**
      * Records an expense and its shares together — a half-written expense would stop the
      * group's balances netting to zero, and settle-up would produce nonsense.

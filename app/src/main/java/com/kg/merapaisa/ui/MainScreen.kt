@@ -474,6 +474,7 @@ fun MainScreen(viewModel: MainViewModel) {
     }
     pendingDelete?.let { target ->
         val transactionCount by viewModel.getTransactionCount(target.id).collectAsState(initial = 0)
+        val groupExpenseCount by viewModel.getGroupExpenseCount(target.id).collectAsState(initial = 0)
         AlertDialog(
             onDismissRequest = { viewModel.confirmDelete(null) },
                 title = {
@@ -481,10 +482,20 @@ fun MainScreen(viewModel: MainViewModel) {
             },
             text = {
                 val entries = if (transactionCount == 1) "1 transaction" else "$transactionCount transactions"
+                // Deleting a person cascades away the group expenses they fronted, which moves
+                // what every other member of those groups owes. That is too large a consequence
+                // to leave out of the sentence asking for confirmation.
+                val groupNote = when (groupExpenseCount) {
+                    0 -> ""
+                    1 -> " It also removes 1 group expense they paid for, changing what the " +
+                        "other members of that group owe."
+                    else -> " It also removes $groupExpenseCount group expenses they paid for, " +
+                        "changing what the other members of those groups owe."
+                }
                 Text(
                     "This permanently deletes ${target.name}, their balance of " +
-                        "${formatMinor(target.balanceMinor, target.currency)}, and $entries. " +
-                        "This can't be undone.",
+                        "${formatMinor(target.balanceMinor, target.currency)}, and $entries." +
+                        "$groupNote This can't be undone.",
                     color = theme.textSecondary,
                     fontSize = 14.sp
                 )

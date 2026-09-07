@@ -36,7 +36,7 @@ fun AddExpenseDialog(
     // selfId is filled asynchronously and starts at 0, which is nobody. Keying on it stops the
     // field latching onto that placeholder and writing an expense whose payer does not exist.
     var paidBy by remember(selfId, members) {
-        mutableStateOf(members.firstOrNull { it.id == selfId }?.id ?: members.firstOrNull()?.id ?: 0L)
+        mutableLongStateOf(members.firstOrNull { it.id == selfId }?.id ?: members.firstOrNull()?.id ?: 0L)
     }
     var sharedWith by remember(members) { mutableStateOf(members.map { it.id }.toSet()) }
 
