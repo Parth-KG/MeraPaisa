@@ -1,9 +1,9 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="assets/hero-light.svg">
-  <img alt="MeraPaisa — who owes whom, in everyone's own currency" src="assets/hero-light.svg" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/hero-light.svg">
+  <img alt="MeraPaisa — who owes whom, in everyone's own currency" src="docs/assets/hero-light.svg" width="100%">
 </picture>
 
 <br>
@@ -19,9 +19,9 @@
 
 <table>
 <tr>
-<td align="center" width="33%"><img src="screenshots/balances.jpeg" width="235" alt="Balances screen showing an overall position of minus ₹104.60 owed and plus $1.05 owed to you, listed separately, above four people with per-person amounts"><br><sub><b>💸 Balances</b><br>one figure per currency, never summed</sub></td>
-<td align="center" width="33%"><img src="screenshots/split.jpeg" width="235" alt="Adjust split screen dividing ₹500 for dinner across three people, two shares locked and the third absorbing the remainder"><br><sub><b>➗ Split</b><br>edit one share, the rest redistribute</sub></td>
-<td align="center" width="33%"><img src="screenshots/groups.jpeg" width="235" alt="Groups tab showing a trip with five members and a position of minus ₹100, in the Amoled theme"><br><sub><b>👥 Groups</b><br>a trip, in Amoled — one of six themes</sub></td>
+<td align="center" width="33%"><img src="docs/screenshots/balances.jpeg" width="235" alt="Balances screen showing an overall position of minus ₹104.60 owed and plus $1.05 owed to you, listed separately, above four people with per-person amounts"><br><sub><b>💸 Balances</b><br>one figure per currency, never summed</sub></td>
+<td align="center" width="33%"><img src="docs/screenshots/split.jpeg" width="235" alt="Adjust split screen dividing ₹500 for dinner across three people, two shares locked and the third absorbing the remainder"><br><sub><b>➗ Split</b><br>edit one share, the rest redistribute</sub></td>
+<td align="center" width="33%"><img src="docs/screenshots/groups.jpeg" width="235" alt="Groups tab showing a trip with five members and a position of minus ₹100, in the Amoled theme"><br><sub><b>👥 Groups</b><br>a trip, in Amoled — one of six themes</sub></td>
 </tr>
 </table>
 
@@ -168,7 +168,7 @@ Needs **JDK 17** or newer. `minSdk 24`, `compileSdk 36`, AGP 8.13. Opening in An
 ./gradlew connectedDebugAndroidTest  # needs a device or emulator
 ```
 
-Debug builds install as `com.kg.merapaisa.debug`, alongside a release build rather than replacing it — so testing can't put a real ledger at risk. Release signing is described in [RELEASE.md](RELEASE.md).
+Debug builds install as `com.kg.merapaisa.debug`, alongside a release build rather than replacing it — so testing can't put a real ledger at risk. Release signing is described in [docs/RELEASE.md](docs/RELEASE.md).
 
 ## 📝 Status
 
