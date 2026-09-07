@@ -79,6 +79,29 @@ class MoneyTest {
     }
 
     @Test
+    fun theEditableFormatDropsDecimalsThatSayNothing() {
+        // Text fields agree with what formatMinor shows; only the CSV keeps the padding.
+        assertEquals("237", formatMinorPlain(23_700L, "INR", trimZeros = true))
+        assertEquals("237.4", formatMinorPlain(23_740L, "INR", trimZeros = true))
+        assertEquals("237.45", formatMinorPlain(23_745L, "INR", trimZeros = true))
+        assertEquals("0.05", formatMinorPlain(5L, "INR", trimZeros = true))
+        assertEquals("0.5", formatMinorPlain(50L, "INR", trimZeros = true))
+        assertEquals("0", formatMinorPlain(0L, "INR", trimZeros = true))
+        assertEquals("-2", formatMinorPlain(-200L, "INR", trimZeros = true))
+        // Zero-decimal currencies never had decimals to trim.
+        assertEquals("12", formatMinorPlain(1234L, "JPY", trimZeros = true))
+    }
+
+    @Test
+    fun trimmedTextStillParsesBackToTheSameAmount() {
+        // The trimmed form goes straight back into an editable field, so it has to survive
+        // a round trip or an untouched row would save as a different number.
+        listOf(0L, 5L, 50L, 200L, 23_740L, 23_745L, -23_740L, -5L).forEach { minor ->
+            assertEquals(minor, parseAmountToMinor(formatMinorPlain(minor, "INR", trimZeros = true)))
+        }
+    }
+
+    @Test
     fun formatsZeroDecimalCurrenciesWithoutDecimals() {
         // Stored in hundredths like everything else; only the display drops the decimals.
         assertEquals("¥12", formatMinor(1234L, "JPY"))

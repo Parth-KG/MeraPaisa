@@ -38,7 +38,7 @@ fun EditTransactionDialog(
     val theme = LocalAppTheme.current
     // A leading minus is how you flip which way this entry runs.
     var amount by remember(transaction.id) {
-        mutableStateOf(formatMinorPlain(transaction.amountMinor, currency))
+        mutableStateOf(formatMinorPlain(transaction.amountMinor, currency, trimZeros = true))
     }
     var note by remember(transaction.id) { mutableStateOf(transaction.note) }
 

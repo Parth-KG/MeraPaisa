@@ -86,7 +86,10 @@ fun GroupDetailScreen(
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                items(balances, key = { it.personId }) { b ->
+                // Balances and expenses share this LazyColumn, so they share one key space.
+                // Person ids and expense ids both start at 1, so a bare id collides and Compose
+                // throws. The prefix keeps the two ranges apart.
+                items(balances, key = { "balance-${it.personId}" }) { b ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -129,7 +132,7 @@ fun GroupDetailScreen(
                         )
                     }
                 }
-                items(expenses, key = { it.id }) { e ->
+                items(expenses, key = { "expense-${it.id}" }) { e ->
                     var showMenu by remember(e.id) { mutableStateOf(false) }
                     Box {
                         Row(
