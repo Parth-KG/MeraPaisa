@@ -134,9 +134,19 @@ fun EditPersonDialog(
                             selected = selectedCurrency == c,
                             enabled = !converting,
                             onClick = {
-                                if (c != selectedCurrency) {
-                                    pendingCurrency = c
-                                    showConvertAlert = true
+                                when {
+                                    c == selectedCurrency -> Unit
+                                    // Back to the currency the balance is already stored in:
+                                    // there is nothing to convert, and savePersonEdit skips the
+                                    // conversion anyway because the currency has not changed.
+                                    c == person.currency -> {
+                                        shouldConvert = false
+                                        selectedCurrency = c
+                                    }
+                                    else -> {
+                                        pendingCurrency = c
+                                        showConvertAlert = true
+                                    }
                                 }
                             },
                             label = { Text(currencySymbol(c), fontSize = 14.sp) }
@@ -197,7 +207,10 @@ fun EditPersonDialog(
         AlertDialog(
             onDismissRequest = { showConvertAlert = false },
                 title = { Text("Change Currency", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
-            text = { Text("Convert balance from $selectedCurrency to $pendingCurrency using live rates, or keep amount as-is?", color = theme.textSecondary) },
+            // person.currency, not selectedCurrency: savePersonEdit converts from the currency
+            // the balance is stored in. Naming the selected one meant that changing currency
+            // twice without saving described a conversion that was never going to happen.
+            text = { Text("Convert balance from ${person.currency} to $pendingCurrency using live rates, or keep amount as-is?", color = theme.textSecondary) },
             confirmButton = {
                 Button(
                     onClick = {

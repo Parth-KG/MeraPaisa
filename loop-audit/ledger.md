@@ -519,3 +519,31 @@ long enough to overflow the multiply. `CsvExport.escapeCsv` quotes commas, quote
 catches the stale-Uri `FileNotFoundException` the picker can hand back. Every `!!` in
 `app/src/main` is still guarded. No `GlobalScope`, `runBlocking`, or raw `Thread` in
 `app/src/main`. All of run 1's and run 2's fixes are still in place — no regressions.
+
+### Postscript to run 3 — offline, phone not attached
+
+Done after run 3 was committed, with the device off the USB bus. **Not a run, and not §5
+verified:** `assembleDebug`, 76/76 JVM unit tests and lint (25 issues, 0 errors — unchanged) all
+pass, but `installDebug`, the monkey scenario and all 35 instrumentation tests could not run.
+Everything below is compile-and-unit-test evidence only and **owes a device pass in run 4.**
+
+- `ui/dialogs/EditPersonDialog.kt:210` — **the convert prompt named the wrong source currency**,
+  the item run 3 deferred. It read "Convert balance from `$selectedCurrency` …", but
+  `savePersonEdit` converts from `snapshot.currency`. Change a person INR → USD without saving,
+  then USD → EUR, and the dialog described a USD → EUR conversion while the app was about to do
+  INR → EUR. *Changed:* the prompt now names `person.currency`.
+  Run 3 called this a one-token fix; it was not, and the second half matters. Selecting the
+  currency the balance is *already* stored in — INR → USD, then back to INR — would then have
+  read "from INR to INR" and offered a conversion that `savePersonEdit` skips outright, because
+  `currencyChanged` is false. So `EditPersonDialog.kt:137` no longer raises the alert in that
+  case: it just restores the selection and clears `shouldConvert`.
+  *Still to verify on the device:* both sequences above, and that a genuine single change still
+  offers and performs the conversion.
+- `ui/theme/Color.kt` — deleted. All six template colours (`Purple80`, `PurpleGrey80`, `Pink80`,
+  `Purple40`, `PurpleGrey40`, `Pink40`) were dead; nothing referenced them or the file, and the
+  build confirms it.
+- `ui/theme/Type.kt:12-27` — removed the commented-out block of template typography and replaced
+  the "Set of Material typography styles to start with" line with what the file actually is.
+
+No behaviour change is intended by the last two; the first changes what one dialog says and when
+it appears. Nothing else was touched.
