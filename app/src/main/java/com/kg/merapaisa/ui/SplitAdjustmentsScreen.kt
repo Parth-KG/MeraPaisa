@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.AppTheme
@@ -281,7 +282,9 @@ private fun SplitAdjustmentRow(
     onToggleLock: () -> Unit,
     theme: AppTheme
 ) {
-    var text by remember(amountInSourceMinor) { mutableStateOf(formatMinorPlain(amountInSourceMinor, sourceCurrency)) }
+    var text by remember(amountInSourceMinor) {
+        mutableStateOf(formatMinorPlain(amountInSourceMinor, sourceCurrency, trimZeros = true))
+    }
 
     Row(
         modifier = Modifier
@@ -292,15 +295,34 @@ private fun SplitAdjustmentRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(participant.name, color = theme.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text(
+                participant.name,
+                color = theme.textPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             if (participant.currency != sourceCurrency && convertedAmountMinor != null) {
                 Text(
                     "= ${formatMinor(convertedAmountMinor, participant.currency)}",
                     color = theme.textSecondary,
-                    fontSize = 11.sp
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
+
+        // The symbol leads so the amount grows into the row's slack instead of into the symbol.
+        // The field used to be a fixed 80.dp, which clipped anything past about six characters —
+        // and fewer than that once the phone's font scale is turned up.
+        Text(
+            currencySymbol(sourceCurrency),
+            color = theme.textSecondary,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(end = 3.dp)
+        )
 
         BasicTextField(
             value = text,
@@ -312,15 +334,15 @@ private fun SplitAdjustmentRow(
                 color = theme.textPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.End
+                textAlign = TextAlign.Start
             ),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             cursorBrush = SolidColor(theme.positive),
-            modifier = Modifier.width(80.dp).padding(end = 4.dp)
+            // Sizes to its content: the floor keeps an empty field tappable, the ceiling stops a
+            // pathological amount swallowing the name.
+            modifier = Modifier.widthIn(min = 56.dp, max = 140.dp).padding(end = 4.dp)
         )
-
-        Text(currencySymbol(sourceCurrency), color = theme.textSecondary, fontSize = 12.sp)
 
         IconButton(
             onClick = onToggleLock,

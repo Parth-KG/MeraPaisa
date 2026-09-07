@@ -60,7 +60,19 @@ internal fun sampleSizeFor(longEdgePx: Int, targetPx: Int = MAX_AVATAR_PX): Int 
     return sample
 }
 
-private fun decodeScaled(context: Context, source: Uri): Bitmap? {
+/**
+ * A picked Uri can go stale between the picker returning it and us reading it — the file
+ * deleted, the permission revoked, the provider gone. `openInputStream` throws
+ * `FileNotFoundException` in that case rather than returning null, and this runs on a
+ * background dispatcher where nothing would catch it. The contract is a null, not a crash.
+ */
+private fun decodeScaled(context: Context, source: Uri): Bitmap? = try {
+    decodeScaledOrThrow(context, source)
+} catch (e: Exception) {
+    null
+}
+
+private fun decodeScaledOrThrow(context: Context, source: Uri): Bitmap? {
     // A bounds pass deliberately returns no bitmap — the dimensions land in `bounds` instead.
     // Guarding this with `?: return null` on the decode result therefore failed every time,
     // which is why photos were never saved. Only the stream itself is worth null-checking.

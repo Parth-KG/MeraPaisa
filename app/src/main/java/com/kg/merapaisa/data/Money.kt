@@ -101,14 +101,23 @@ fun formatMinor(amountMinor: Long, currencyCode: String): String {
     return "$sign$symbol$body"
 }
 
-/** Digits only, no symbol — for text fields the user types back into. */
-fun formatMinorPlain(amountMinor: Long, currencyCode: String): String {
+/**
+ * Digits only, no symbol — for text fields the user types back into.
+ *
+ * [trimZeros] drops decimals that carry no information, so an editable field agrees with the
+ * amounts [formatMinor] shows everywhere else. The CSV leaves it off: a column that is always
+ * two decimals wide is worth more to a spreadsheet than it is to a reader.
+ */
+fun formatMinorPlain(amountMinor: Long, currencyCode: String, trimZeros: Boolean = false): String {
     val magnitude = amountMinor.absoluteValue
     val sign = if (amountMinor < 0) "-" else ""
     val body = if (currencyDecimals(currencyCode) == 0) {
         ((magnitude + 50) / 100).toString()
     } else {
-        "${magnitude / 100}.${(magnitude % 100).toString().padStart(2, '0')}"
+        val paise = (magnitude % 100).toString().padStart(2, '0')
+        val fraction = if (trimZeros) paise.trimEnd('0') else paise
+        if (fraction.isEmpty()) (magnitude / 100).toString()
+        else "${magnitude / 100}.$fraction"
     }
     return "$sign$body"
 }
