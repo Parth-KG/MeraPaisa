@@ -19,9 +19,9 @@
 
 <table>
 <tr>
-<td align="center" width="33%"><img src="screenshots/main.jpeg" width="235" alt="Balances screen with per-person amounts"><br><sub><b>💸 Balances</b><br>who owes whom, at a glance</sub></td>
-<td align="center" width="33%"><img src="screenshots/split.jpeg" width="235" alt="Bill split with per-person shares"><br><sub><b>➗ Split</b><br>edit one share, the rest redistribute</sub></td>
-<td align="center" width="33%"><img src="screenshots/TransactionHistory.jpeg" width="235" alt="Transaction history with notes and timestamps"><br><sub><b>📋 History</b><br>every entry, editable</sub></td>
+<td align="center" width="33%"><img src="screenshots/balances.jpeg" width="235" alt="Balances screen showing an overall position of minus ₹104.60 owed and plus $1.05 owed to you, listed separately, above four people with per-person amounts"><br><sub><b>💸 Balances</b><br>one figure per currency, never summed</sub></td>
+<td align="center" width="33%"><img src="screenshots/split.jpeg" width="235" alt="Adjust split screen dividing ₹500 for dinner across three people, two shares locked and the third absorbing the remainder"><br><sub><b>➗ Split</b><br>edit one share, the rest redistribute</sub></td>
+<td align="center" width="33%"><img src="screenshots/groups.jpeg" width="235" alt="Groups tab showing a trip with five members and a position of minus ₹100, in the Amoled theme"><br><sub><b>👥 Groups</b><br>a trip, in Amoled — one of six themes</sub></td>
 </tr>
 </table>
 
@@ -37,7 +37,7 @@ Android will warn you about installing outside the Play Store — expected for a
 
 Every release lists the APK's SHA-256; run `shasum -a 256` on the file if you'd rather verify than trust.
 
-> **Updating?** Install over the top. Don't uninstall first — uninstalling deletes the ledger.
+> **Updating?** Install over the top. Every schema change ships with a tested migration, so an update carries your ledger forward — but uninstalling deletes it, so don't uninstall first.
 
 ## 🤔 Why
 
@@ -53,6 +53,7 @@ MeraPaisa keeps all of that on your phone.
 | 🧮 **Net position** | What you're up or down overall, one figure per currency — never added together across currencies |
 | 🌍 **Multi-currency** | ₹, $, €, £, ¥ with live rates from [Frankfurter](https://www.frankfurter.app/) — balances stay in each person's currency, never silently converted |
 | ➗ **Bill splitting** | Equal or custom amounts, with Splitwise-style lock-on-edit redistribution |
+| 👥 **Groups** | A trip or a flatshare — log who paid for what, then square everyone up in the fewest payments |
 | ✅ **Settle up** | Close a debt in one tap; reopen it later without losing the record |
 | 📋 **Transaction history** | Notes, timestamps, per-entry edit and delete, rollback, and a clear-log option |
 | 📤 **Export & share** | Whole ledger to CSV, or one person's balance and recent activity as text for WhatsApp |
@@ -69,11 +70,17 @@ MeraPaisa keeps all of that on your phone.
 > **🧾 The balance is not a stored number**
 > There is no balance column to drift out of step with the history. A balance is the sum of that person's transactions, derived on read, so the number on screen and the entries behind it cannot disagree.
 
+> **🛡️ An update never changes what you're owed**
+> The database has been through six schema versions. Every one has a hand-written migration, tested against a seeded database before release — there is no destructive fallback anywhere, so no update can wipe a ledger. The version that removed the stored balance column had to prove first that the transactions summed to it, and wrote a reconciling entry where they didn't.
+
 > **🔒 Lock-on-edit redistribution**
 > Change one person's share and that row locks; the remaining unlocked rows split what's left. Leftover paisa go to the first person rather than quietly disappearing. If the numbers don't reconcile you get a warning, not a block — sometimes you really do mean it.
 
+> **👥 Squaring a group in the fewest payments**
+> Inside a group, who paid whom for any single expense stops mattering once you only care about ending square — all that survives is each member's net position. If A owes B and B owes C the same amount, B is a pass-through and A can just pay C. Matching the largest debtor against the largest creditor settles at least one person with every payment, so a group of *n* people never needs more than *n−1* transfers.
+
 > **🔐 No account, no backend**
-> Data lives in Room on the device and rides Android's own Auto Backup to your Google account. Reinstall on a new phone signed into the same account and everything is there — no sign-up screen, no sync server, nothing of yours on a machine I control. The only network call the app makes is for exchange rates, and only when you ask it to convert something.
+> Data lives in Room on the device and rides Android's own Auto Backup to your Google account. Reinstall on a new phone signed into the same account and everything is there — no sign-up screen, no sync server, nothing of yours on a machine I control. The app makes exactly one kind of network call, for exchange rates, and only when you ask it to convert something: the amount and the two currency codes go to Frankfurter, and nothing else about you does. No names, no notes, no analytics, no crash reporting. The manifest asks for one permission, `INTERNET`, and that is what it is for — not contacts, not storage, not location.
 
 <details>
 <summary><b>📖 How each part works</b></summary>
@@ -100,9 +107,25 @@ Each person has their own currency and balances stay in it. Your net position is
 4. Adjust per-person amounts on the next screen. Equal by default. Editing a row locks it and redistributes the remainder across the unlocked rows; the lock icon toggles this manually.
 5. An optional description attaches to every transaction the split creates.
 
+### 👥 Groups
+
+A group is a trip, a flatshare, a dinner — anything where several people keep paying for things on each other's behalf. You are always a member; a trip you are not part of is somebody else's ledger.
+
+Log an expense with a description, an amount, and who paid. Shares are equal by default and split so the parts always add back up to the whole — paise cannot be divided three ways, so the odd minor unit goes to the first member rather than quietly disappearing. Every member's position is what they paid out less what they were assigned, so the group always nets to zero.
+
+**Settle up** turns those positions into an actual list of payments — *"Alex pays Priya ₹430"* — and records each one when it happens. Deleting a group takes its expenses and shares with it.
+
 ### 📋 History, corrections and rollback
 
 Every person has a log with timestamps and notes. Tap an entry to correct its amount or note, or delete it outright — a mistyped figure doesn't have to live in the history forever. **Rollback** is the bulk version: it reverses a transaction and everything newer by writing compensating entries rather than deleting rows, so the correction stays visible as a correction. Clearing the log needs a confirmation and carries the balance across as an opening entry, so what you're owed never changes.
+
+### 🛡️ Schema changes and updates
+
+The ledger is the whole value of the app and there is no copy of it on a server, so an update has to be incapable of damaging it.
+
+Room's escape hatch for a changed schema is to drop the database and rebuild it. That is disabled here. Every one of the six schema versions has a migration written by hand, and each is tested by creating a database at the old version, seeding it with rows in the old shape, running the real migration and asserting on the result — including that the resulting schema is exactly what Room expects, so a subtly wrong migration fails a test rather than a phone.
+
+The interesting one is version 4, which removed the stored balance column. Dropping it is only safe if the transactions already sum to it, and in real ledgers they sometimes didn't — early versions wrote balances without logging an entry. So the migration compares each person's rows against their stored balance first and writes a single reconciling entry for any difference, dated before their earliest transaction. Nobody's balance moved. That is also why there is no balance column now: the two numbers could disagree, so one of them had to go.
 
 ### 📤 Export and sharing
 
@@ -128,7 +151,7 @@ Android's built-in Auto Backup handles this: the database and your preferences g
 
 Single `:app` module, split into `data` (entities, DAO, migrations, money), `repository` (the only thing that touches the ledger), `network`, `ui` and `widget`.
 
-63 tests — 47 on the JVM covering money arithmetic, CSV, summaries and theme contrast, and 16 instrumentation tests covering every schema migration and the settle/edit/delete paths against a real database.
+89 tests — 67 on the JVM covering money arithmetic, settle-up, per-currency totals, CSV, summaries and theme contrast, and 22 instrumentation tests covering every schema migration and the settle, reopen, rollback, edit and delete paths against a real database.
 
 ## 🚀 Build from source
 
