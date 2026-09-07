@@ -6,6 +6,24 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlin.math.abs
+
+/**
+ * The amount the service is asked about, in major units.
+ *
+ * Always a magnitude. The service answers a negative `amount` with HTTP 422 "invalid amount",
+ * and half of this app's balances are negative — those are the people you owe.
+ */
+internal fun requestAmountMajor(amountMinor: Long): Double = abs(amountMinor) / 100.0
+
+/**
+ * Puts back the sign the request could not carry, so converting what you owe still reads as
+ * owed rather than flipping to owing.
+ */
+internal fun convertedMinor(amountMinor: Long, convertedMagnitudeMajor: Double): Long {
+    val magnitudeMinor = Math.round(convertedMagnitudeMajor * 100)
+    return if (amountMinor < 0) -magnitudeMinor else magnitudeMinor
+}
 
 /**
  * Live rates from frankfurter.app. The only network in the app, kept away from the ViewModel
@@ -16,14 +34,18 @@ class ExchangeRateApi {
     /**
      * Converts minor units between two ISO 4217 codes. Returns null when no rate could be
      * fetched — callers must surface that rather than carrying on with the original amount.
+     *
+     * Only the magnitude is sent. The service answers a negative `amount` with HTTP 422
+     * ("invalid amount"), and a negative balance is simply one you owe rather than one you
+     * are owed — so passing the raw figure made conversion fail for half the ledger, and
+     * fail with a message blaming the user's connection. The sign is re-applied here.
      */
     suspend fun convert(amountMinor: Long, from: String, to: String): Long? {
         if (from == to) return amountMinor
-        val major = amountMinor / 100.0
         val converted = withTimeoutOrNull(REQUEST_TIMEOUT_MS) {
-            withContext(Dispatchers.IO) { fetch(major, from, to) }
-        }
-        return converted?.let { Math.round(it * 100) }
+            withContext(Dispatchers.IO) { fetch(requestAmountMajor(amountMinor), from, to) }
+        } ?: return null
+        return convertedMinor(amountMinor, converted)
     }
 
     private fun fetch(amountMajor: Double, from: String, to: String): Double? {
