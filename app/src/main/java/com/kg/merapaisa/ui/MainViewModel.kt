@@ -20,6 +20,7 @@ import com.kg.merapaisa.widget.WidgetLedgerNotifier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.flatMapLatest
@@ -89,10 +90,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun showAddDialog(show: Boolean) = _uiState.update { it.copy(showAddDialog = show) }
 
-    /** Detail for whichever group is open, recomputed whenever its expenses change. */
+    /**
+     * Detail for whichever group is open, recomputed whenever its expenses change.
+     *
+     * [distinctUntilChanged] is what keeps "whenever its expenses change" true. Every field of
+     * [MainUiState] shares one flow, so a tab switch, a numpad key or a dialog opening all
+     * re-emit the same `openGroupId` — and without the filter each of those restarted
+     * `groupDetail`, re-running its three Room queries for a group that had not changed.
+     */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val openGroup = _uiState
         .map { it.openGroupId }
+        .distinctUntilChanged()
         .flatMapLatest { id -> if (id == null) flowOf(null) else groupRepository.groupDetail(id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 

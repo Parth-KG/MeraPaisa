@@ -13,9 +13,11 @@ each in a fresh session. Read this file at the start of every run.
 - `keystore.properties` is gitignored by design. Confirm once it's ignored and
   that no key material is inlined in a build file, then never raise it again.
 - One physical Android device is connected over adb.
-- Under git on `main`. You may run `git status` and `git diff`. You may NOT
-  commit, stage, stash, checkout, branch, or reset — the human does all of
-  that.
+- Under git on `main`. You may run `git status` and `git diff` freely. At the
+  very END of a run, after verification passes, you may make exactly one
+  commit: `git add -A && git commit -m "audit run N"`. Nothing else — no
+  stash, checkout, branch, reset, rebase, push, or amend, and no commit
+  mid-run.
 
 ## Every run
 
@@ -27,6 +29,17 @@ previous run concluded, and do not skip a file because it seems familiar. If
 you worked on this code recently, ignore that; judge what is actually there.
 
 ### 2. Get real evidence
+Every adb command in this protocol targets `com.kg.merapaisa.debug` — that is
+what `installDebug` installs. `com.kg.merapaisa` is the release app holding
+the user's real financial data; never send it monkey events, force-stops,
+`pm clear`, or input. If a command in this file names the release package,
+that is a typo — use `.debug`.
+
+Never drive `adb shell input` in the top 120px of the screen. A tap or swipe
+there hits the notification shade, and a back-press from the USB sheet
+selects "Charging only", which kills adb and cannot be recovered without
+physically unplugging the cable. 
+ 
 First, confirm the device is unlocked:
 `adb shell dumpsys window | grep -E "mDreamingLockscreen|mShowingLockscreen"`
 If the keyguard is showing, STOP and tell the human. Do not proceed with a
