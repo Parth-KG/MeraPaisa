@@ -324,3 +324,198 @@ transactions-only sum it deletes, so "The current balance won't change" is true 
 with group activity. `GroupDetailScreen` prefixes its LazyColumn keys (`balance-`/`expense-`),
 so the shared key space does not collide. All of run 1's eight fixes are still in place — no
 regressions.
+
+## Run 3 — 2026-09-08
+
+Files read: 91 (53 Kotlin main, 9 Kotlin test, 5 Kotlin androidTest as found at start, 12
+XML/manifest/res, 4 Room schemas, 6 Gradle/catalog/properties/ProGuard, 2 backup rule files).
+Lint: 25 issues at start → 25 at end (0 errors throughout).
+Tests: 76/76 JVM unit at start → 76/76 at end. Instrumentation 32 → 35 (3 added, 0 failures).
+Debug APK 24,723,445 bytes — byte-identical to runs 1 and 2.
+
+**Device: RMX3785 (Android 15), unlocked all run** (`mIsShowing=false`, `mInputRestricted=false`).
+Cold start `am start -W` TotalTime 2719 ms / 2558 ms across two launches. Monkey seed 42, 300
+events, throttle 300, `--pct-syskeys 0`, run against **`com.kg.merapaisa.debug`** before and
+after the fix: both clean — no `FATAL EXCEPTION`, no `ANR in`, empty `logcat -b crash`, same pid
+across the run. One `Skipped 32 frames` at cold start, none during monkey. Rotation (pid
+preserved), process death (`kill -9` under `run-as`, new pid, task restored) and a no-INTERNET
+run (`svc wifi disable` + `svc data disable`; only an IMS-only `MOBILE[IWLAN]` network remained,
+which carries no `INTERNET` capability) all produced no crash. Network restored and revalidated
+at the end (`ping api.frankfurter.app` 9.5 ms).
+
+### Verified on the device — run 2's two unverified fixes
+
+Run 2 shipped both on build/lint/unit-test evidence only, having lost USB mid-run. Both hold.
+
+- `network/ExchangeRateApi.kt:43` — **the sign fix works against the live API from the phone.**
+  Exercised on-device through the real `ExchangeRateApi`, not a mock:
+  `convert(-50000, INR, USD) = -529` and `convert(+50000, INR, USD) = +529` — equal magnitude,
+  sign preserved in both directions; `convert(-1000000000, INR, USD) = -10582700`, so the
+  scientific-notation URL (`amount=1.0E7`) that run 2 cleared in theory also holds in practice
+  from the device. Cross-checked against the service the same day: `amount=500.0` → HTTP 200
+  `{"rates":{"USD":5.2913}}`, `amount=-500.0` (following redirects) → **HTTP 422
+  `{"message":"invalid amount"}`**, which is the failure run 2 removed.
+- `ui/MainViewModel.kt:104` — **`distinctUntilChanged` measured, with a number.** Built the
+  ViewModel's exact operator chain over a real Room database on the device with a
+  `setQueryCallback` counter, opened a group, then made 20 state changes that do not touch
+  `openGroupId`. **Without the filter: 21 subscriptions to `groupDetail` and 63 SQLite queries.
+  With it: 1 and 3.** One correction to run 2's wording: a tight loop of updates measures only
+  2 and 6, because `MutableStateFlow` conflates — the 21/63 figure needs the changes spaced at a
+  realistic typing cadence, which is what actually happens. The kept test spaces them 100 ms
+  apart for that reason. Caveat: this drives a faithful reconstruction of the chain against the
+  real `GroupRepository`, not the `MainViewModel` instance, because `AppDatabase.getDatabase` is
+  a singleton with no seam for a query callback.
+
+### Fixed
+
+- `MainActivity.kt:24`, `ui/AppLock.kt:53` — **rotation re-prompted for a fingerprint the user
+  had just given.** Run 2 drafted this fix and held it back for want of a device. Reproduced
+  first, on hardware, with the app lock on and the app already unlocked:
+  ```
+  before rotation:  Active / Settled / Groups / No one here yet      (unlocked ledger)
+  after  rotation:  Unlock Mera Paisa / Your ledger is locked /
+                    Touch the fingerprint sensor                     (biometric requestId 14)
+  pid 22152 → 22152                                                  (rotation, not process death)
+  ActivityTaskManager: Checking to restart ActivityRecord{…MainActivity}:
+      changed=0x…480; handles=0x3
+  ```
+  `changed` carries ORIENTATION|SCREEN_SIZE and `handles` is 0x3, so the Activity is destroyed
+  and rebuilt — and `locked`/`backgroundedAt` were plain Activity fields, rebuilt as `true`/`0`.
+  `SecurityStore.GRACE_MILLIS` could not help: `elapsedRealtime() - 0 > 30_000` is true on any
+  phone up more than half a minute.
+  *Changed:* both moved into a new `AppLockViewModel`, whose lifetime is exactly the lock's
+  semantics — survives a configuration change, dies with the process. Deliberately not a
+  `Bundle`, which the system may restore after process death and would then hand back an
+  unlocked ledger. `onStarted()` only ever locks, so a device whose uptime is under the grace
+  period cannot start unlocked.
+  *Evidence it's gone:* same rotation, same Activity restart (`changed=0x…480; handles=0x3`),
+  same pid 22964 → the ledger stayed on screen and **no new biometric request was issued**
+  (`dumpsys biometric` had no live session; `dumpsys fingerprint` stopped at the requestId of
+  the unlock itself). The security direction was checked separately and still holds: `kill -9`
+  under `run-as` → new pid 23664 → **locked again, prompt shown**. Cold start likewise locks.
+
+- `ui/SplitAdjustmentsScreen.kt:258` — **confirming a split before the conversion finished
+  recorded nothing at all, while the flow closed as though it had saved.** `Confirm split`
+  handed back `convertedAmounts`, which starts `emptyMap()` and is only filled by the
+  `LaunchedEffect` — and that effect waits `CONVERSION_SETTLE_MS` (400 ms, added in run 1)
+  before fetching a rate for anyone in a different currency, then waits on the network on top.
+  The button's `enabled` did not consider any of that. `recordSplit(emptyMap())` reaches
+  `PersonRepository.recordEntries`, which returns early on an empty list, so **no transaction is
+  written** and `cancelSplit()` closes the screen. In a foreign-currency split the window is at
+  least 400 ms and as much as the 12 s request timeout — easily hit by anyone who accepts the
+  even split and taps straight through.
+  *Reproduced on the device* with a Compose UI test holding the frame clock 50 ms into the
+  screen's life: `Got: {}` — an empty map, from a real click on a real `SplitAdjustmentsScreen`.
+  The same mechanism also served **stale** amounts: `convertedAmounts` kept the previous
+  result across an edit, so confirming during the re-conversion window recorded the figures the
+  user had just changed away from.
+  *Changed:* the conversion result now travels with the amounts it was computed from
+  (`ConvertedSplit`), so "is this still about what is on screen?" is one comparison. Confirm is
+  `enabled` only when a result exists for the current amounts, the click site guards on the same
+  value rather than trusting `enabled`, and a "Converting…" line sits with the existing warnings
+  so the button is not silently dead while the rate is fetched.
+  *Evidence it's gone:* the reproduction now passes, and a second test proves the guard did not
+  simply kill the feature — a same-currency split (no delay, no network) converts, enables, and
+  confirms `{7: 50000}` from a ₹1,000.00 two-way split, with "You" correctly dropped.
+
+### Added
+
+- `app/src/androidTest/.../ui/OpenGroupQueryCountTest.kt` — counts real SQLite executions behind
+  `MainViewModel.openGroup`. Guards run 2's `distinctUntilChanged`, which had no test.
+- `app/src/androidTest/.../ui/SplitConfirmTimingTest.kt` — 2 cases, the premature confirm and
+  the settled one. The split confirm path had no test of any kind.
+
+### Removed
+
+- A throwaway `LiveExchangeRateProbe` instrumentation test was used to exercise `convert`
+  against the live API from the device, then deleted. Its evidence is recorded above; leaving a
+  network-dependent test in the suite would have made the suite fail whenever the phone is
+  offline. The offline unit coverage run 2 added is unaffected.
+
+### Reverted
+
+- Nothing. Neither fix needed a retry.
+
+### Worth recording
+
+- **`adb shell pm clear com.kg.merapaisa.debug` is not usable on this device and is destructive.**
+  It threw `SecurityException: PID … does not have permission android.permission.CLEAR_APP_USER_DATA`
+  and *still* left the debug package uninstalled — `pm list packages` showed only
+  `com.kg.merapaisa` afterwards, and `run-as` then reported "unknown package". Recovered with
+  `./gradlew installDebug`. The release app was never touched (still versionName 2.0.1,
+  `lastUpdateTime=2026-09-06`, before this session). Run 2's ledger suggests `pm clear` as the
+  way to reset the app lock; on this phone it is not. Use
+  `adb shell run-as com.kg.merapaisa.debug rm -rf files/datastore databases` instead, or just
+  reinstall.
+- **`./gradlew connectedDebugAndroidTest` uninstalls the app when it finishes**, so any device
+  scenario has to be re-run after it with a fresh `installDebug`. Cost one confusing empty
+  monkey run this time.
+- Run 2's protocol defect is resolved: §2 now states that every adb command targets
+  `com.kg.merapaisa.debug` and that a line naming the release package is a typo. The monkey was
+  run against `.debug` accordingly.
+
+### Needs a human decision
+
+- **Carried from runs 1 and 2, unchanged:** a person can sit in Settled with a non-zero row.
+  Re-derived independently this run from `PersonDao.settle` and `getPersonsWithBalances`; the
+  arithmetic is right and the contradiction is a product call.
+- **Carried from runs 1 and 2, unchanged:** the CSV export's `balance` column does not reconcile
+  against its own `amount` rows for anyone with group activity.
+- **Carried from run 2, unchanged:** `BASE_URL` answers HTTP 301 to `api.frankfurter.dev/v1`.
+  Confirmed again this run. Conversion works; every request just costs a redirect.
+
+### Noted, left alone
+
+- `ui/dialogs/EditPersonDialog.kt:200` — **the convert prompt names the wrong source currency
+  after a second change.** It reads "Convert balance from `$selectedCurrency` to
+  `$pendingCurrency`", but `selectedCurrency` has already moved. Change a person INR → USD
+  (don't save), then USD → EUR: the dialog says "from USD to EUR" while `savePersonEdit`
+  converts from `snapshot.currency`, which is still INR. The conversion is correct; the sentence
+  describing it is not. One-token fix (`person.currency`), but it is a money-related string I
+  have not reproduced on the device, and this run already carries two device-verified changes —
+  left for run 4 with the reproduction above.
+- `ui/SplitPickerScreen.kt:147` — Next is `enabled = totalSelected >= 1` while its label says
+  "Select at least 2 people". With one person selected the button is live and advances, so the
+  label states a rule nothing enforces. Whether a one-person split should be allowed is a
+  product question.
+- `ui/theme/Color.kt` — all six template colours (`Purple80`, `PurpleGrey80`, `Pink80`,
+  `Purple40`, `PurpleGrey40`, `Pink40`) are dead; grep finds no reference outside the file that
+  declares them. `Theme.kt` says the template purple scheme is gone, which is why. Lint does not
+  flag them because `UnusedResources` only covers `res/`. Deleting them empties the file, so it
+  is a file deletion rather than an edit — cosmetic, and not something a device can verify.
+- `ui/theme/Type.kt:12-27` — a commented-out block of Android Studio template typography.
+- `ui/Sharing.kt:34` — every CSV export writes a new timestamped file into
+  `cacheDir/exports` and nothing ever removes them. It is `cacheDir`, so the OS reclaims it under
+  pressure, and one file per manual export is slow-growing.
+- `ui/MainScreen.kt:364` — the settings sheet reads the app-lock flag with
+  `collectAsState(initial = false)`, so the switch renders off for a frame before DataStore
+  answers. Cosmetic only: the toggle writes the value the user asked for, so a fast tap cannot
+  invert the setting.
+- `data/PersonDao.kt:72` — `@Insert(onConflict = REPLACE)` on `insertPerson`. Re-derived a third
+  time: both callers pass `id = 0`, so still a loaded gun rather than a live bug.
+- `data/AppDatabase.kt:25` — migrations start at 3→4 and exported schemas start at `3.json`.
+  Re-confirmed: `@Database(version = 6)`, schemas `3..6.json`, migrations 3→4, 4→5, 5→6 all
+  present, and **no `fallbackToDestructiveMigration`** — so the highest-priority Room failure
+  mode in the protocol does not apply here. An install still on version 1 or 2 fails loudly.
+- `ui/PfpView.kt:37` — `File(...).isFile` during composition, still guarded by `remember`.
+- `TransactionHistoryDialog.kt:60`, `SettleUpSheet.kt:58`, `SettingsDialog.kt:83` — `items()`
+  with no `key`. Re-checked a third time: no item body holds per-item state.
+- `proguard-rules.pro:5-7` — the three `-keep … { *; }` rules. Unchanged; still wants a release
+  build to verify removal.
+- WorkManager still initialises on the startup critical path via Glance's `androidx.startup`
+  provider. Unchanged from run 2; still a measure-first item.
+- `keystore.properties` confirmed gitignored (`git check-ignore` names line 26) and no key
+  material is inlined in a build file — `app/build.gradle.kts` only reads from the properties
+  object. Per protocol, not raised again.
+
+### Checked and found sound
+
+`evenShares` and `equalSplit` both add back up to the whole, for negative totals too.
+`redistribute` still clamps at `max(0L, share)`, which is run 2's noted totals-mismatch case and
+is unchanged. `settleUp` produces at most n-1 transfers and consumes creditors and debtors in
+lockstep. `Money.parseAmountToMinor` guards a lone ".", a second ".", non-digits, and whole parts
+long enough to overflow the multiply. `CsvExport.escapeCsv` quotes commas, quotes, CR and LF.
+`deleteProfilePhoto` refuses any path whose parent is not `filesDir`. `ProfilePhotos.decodeScaled`
+catches the stale-Uri `FileNotFoundException` the picker can hand back. Every `!!` in
+`app/src/main` is still guarded. No `GlobalScope`, `runBlocking`, or raw `Thread` in
+`app/src/main`. All of run 1's and run 2's fixes are still in place — no regressions.
