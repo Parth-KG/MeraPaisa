@@ -316,6 +316,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getTransactionCount(personId: Long) = repository.transactionCount(personId)
 
+    /** How much group history a delete would take with it, so the warning can say so. */
+    fun getGroupExpenseCount(personId: Long) = groupRepository.expensesPaidBy(personId)
+
     suspend fun convertCurrency(amountMinor: Long, from: String, to: String): Long? =
         exchangeRates.convert(amountMinor, from, to)
 

@@ -17,6 +17,7 @@ import androidx.glance.layout.*
 import androidx.glance.text.*
 import com.kg.merapaisa.AppTheme
 import com.kg.merapaisa.MainActivity
+import com.kg.merapaisa.SecurityStore
 import com.kg.merapaisa.ThemeStore
 import com.kg.merapaisa.data.AppDatabase
 import com.kg.merapaisa.data.PersonWithBalance
@@ -49,10 +50,19 @@ private fun paletteFor(themeName: String): WidgetPalette {
 class DebtWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val palette = paletteFor(ThemeStore.getTheme(context).first())
+
+        // The app puts the ledger behind the device's own authentication when the lock is on.
+        // A widget still listing names and amounts on the home screen would hand over exactly
+        // what that lock exists to withhold, so it shows nothing and the ledger is not read.
+        if (SecurityStore.isAppLockEnabled(context).first()) {
+            provideContent { LockedWidgetContent(palette) }
+            return
+        }
+
         val repository = PersonRepository(AppDatabase.getDatabase(context).personDao())
         val persons = repository.personsWithBalances().first()
             .filter { !it.isSettled && it.balanceMinor != 0L }
-        val palette = paletteFor(ThemeStore.getTheme(context).first())
 
         provideContent {
             WidgetContent(
@@ -61,6 +71,33 @@ class DebtWidget : GlanceAppWidget() {
                 palette = palette
             )
         }
+    }
+}
+
+/** Says the app is locked and nothing more — no name, no figure, not even a count. */
+@Composable
+fun LockedWidgetContent(palette: WidgetPalette) {
+    Column(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .background(palette.of { it.surface })
+            .padding(12.dp)
+            .clickable(onClick = actionStartActivity<MainActivity>()),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            "Mera Paisa",
+            style = TextStyle(
+                color = palette.of { it.textPrimary },
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+        )
+        Text(
+            "Locked — open the app to see your ledger",
+            style = TextStyle(color = palette.of { it.textSecondary }, fontSize = 12.sp)
+        )
     }
 }
 

@@ -31,3 +31,7 @@ keystore.properties
 # audit loop artifacts
 loop-audit/backups/
 loop-audit/*.json
+
+# audit artifacts
+loop-audit/backups/
+loop-audit/*.log
