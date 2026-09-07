@@ -43,6 +43,18 @@ data class SplitParticipant(
     val currency: String
 )
 
+/**
+ * A conversion result together with the source amounts it was computed from.
+ *
+ * Kept as one value rather than two states so the two can never be read half-updated, and so
+ * "is this result still about what is on screen?" is a single comparison. Confirming a result
+ * that predates the last edit would record the amounts the user just changed away from.
+ */
+private data class ConvertedSplit(
+    val forAmountsInSource: Map<Long, Long>,
+    val amounts: Map<Long, Long>
+)
+
 /** How long the amount fields must be quiet before a rate is fetched for them. */
 private const val CONVERSION_SETTLE_MS = 400L
 
@@ -118,7 +130,7 @@ fun SplitAdjustmentsScreen(
     var lockedIds by remember(participants) { mutableStateOf(setOf<Long>()) }
 
     // Converted amounts (in each person's own currency) — recalculated when amountsInSource changes
-    var convertedAmounts by remember { mutableStateOf<Map<Long, Long>>(emptyMap()) }
+    var converted by remember { mutableStateOf<ConvertedSplit?>(null) }
     var conversionError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(amountsInSource, participants) {
@@ -133,17 +145,21 @@ fun SplitAdjustmentsScreen(
             if (p.currency == sourceCurrency) {
                 result[p.id] = srcAmt
             } else {
-                val converted = viewModel.convertCurrency(srcAmt, sourceCurrency, p.currency)
-                if (converted == null) {
+                val convertedAmount = viewModel.convertCurrency(srcAmt, sourceCurrency, p.currency)
+                if (convertedAmount == null) {
                     conversionError = "Couldn't convert to ${p.currency} for ${p.name}. Check internet or remove this person."
                     result[p.id] = srcAmt   // fallback, but warning is shown
                 } else {
-                    result[p.id] = converted
+                    result[p.id] = convertedAmount
                 }
             }
         }
-        convertedAmounts = result
+        converted = ConvertedSplit(forAmountsInSource = amountsInSource, amounts = result)
     }
+
+    // Anything computed from an earlier set of amounts is stale and must not be shown or
+    // confirmed. Null means "not converted yet", which is also the state on first composition.
+    val convertedAmounts = converted?.takeIf { it.forAmountsInSource == amountsInSource }?.amounts
 
     val total = amountsInSource.values.sum()
     val totalsMatch = total == amountMinor
@@ -199,7 +215,7 @@ fun SplitAdjustmentsScreen(
                         participant = p,
                         sourceCurrency = sourceCurrency,
                         amountInSourceMinor = amountsInSource[p.id] ?: 0L,
-                        convertedAmountMinor = convertedAmounts[p.id],
+                        convertedAmountMinor = convertedAmounts?.get(p.id),
                         locked = p.id in lockedIds,
                         onAmountChange = { newAmt ->
                             amountsInSource = redistribute(
@@ -241,6 +257,14 @@ fun SplitAdjustmentsScreen(
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
+                if (convertedAmounts == null && conversionError == null) {
+                    Text(
+                        "Converting…",
+                        color = theme.textSecondary,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
                 if (conversionError != null) {
                     Text(
                         conversionError!!,
@@ -254,10 +278,11 @@ fun SplitAdjustmentsScreen(
             // Confirm
             Button(
                 onClick = {
-                    // Build final map, excluding "You"
-                    val finalMap = convertedAmounts
-                        .filterKeys { it != youId }
-                    onConfirm(finalMap)
+                    // Build final map, excluding "You". Guarded rather than trusted: `enabled`
+                    // already blocks this, and a null here would mean confirming amounts that
+                    // were never converted.
+                    val ready = convertedAmounts ?: return@Button
+                    onConfirm(ready.filterKeys { it != youId })
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -265,7 +290,7 @@ fun SplitAdjustmentsScreen(
                     .padding(20.dp, 8.dp, 20.dp, 16.dp)
                     .height(56.dp),
                 shape = RoundedCornerShape(14.dp),
-                enabled = conversionError == null,
+                enabled = conversionError == null && convertedAmounts != null,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.positive,
                     contentColor = theme.background,
