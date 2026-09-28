@@ -287,13 +287,18 @@ class RestorePlanTest {
 
     @Test
     fun `replace lays the backup down exactly as it was`() {
-        val plan = planRestore(emptyLedger(), backup(), RestoreMode.Replace, SELF_ID)
+        // One snapshot, compared against itself. `backup()` builds a fresh one on every call, and
+        // since v2.5 two separately built entries differ by their uid — so comparing the plan
+        // against a second call was comparing two different backups and only ever passed by
+        // accident of Transaction having nothing unique in it.
+        val source = backup()
+        val plan = planRestore(emptyLedger(), source, RestoreMode.Replace, SELF_ID)
 
-        assertEquals(backup().persons, plan.persons)
-        assertEquals(backup().transactions, plan.transactions)
-        assertEquals(backup().groups, plan.groups)
-        assertEquals(backup().expenses, plan.expenses)
-        assertEquals(backup().expenseShares, plan.expenseShares)
+        assertEquals(source.persons, plan.persons)
+        assertEquals(source.transactions, plan.transactions)
+        assertEquals(source.groups, plan.groups)
+        assertEquals(source.expenses, plan.expenses)
+        assertEquals(source.expenseShares, plan.expenseShares)
         assertTrue("replace starts from nothing, so it skips nothing", plan.alreadyPresent.isZero)
     }
 

@@ -64,13 +64,18 @@ fun extractPayloadBlob(input: String): String? {
     val text = input.trim()
     if (text.isEmpty()) return null
 
-    // Anything after the first '#' in a recognised link is the blob. Take the last '#' in case a
-    // chat app appended its own fragment-looking tracker.
+    // The blob runs from the marker to the first character that could not be part of one.
+    //
+    // The alphabet is known exactly, so that boundary is exact — and every way a chat app or a
+    // human mangles the end of a link falls outside it. A trailing full stop, a closing quote or
+    // bracket, and a tracking fragment appended after the payload were all being read as part of
+    // the blob, which failed later as "this link is damaged": a sentence that blames the sender
+    // for the app stopping one character too late.
     for (marker in listOf("$SHARE_HOST$SHARE_PATH#", "$SHARE_SCHEME://share#", "$SHARE_SCHEME://share?d=")) {
         val at = text.indexOf(marker, ignoreCase = true)
         if (at >= 0) {
             val rest = text.substring(at + marker.length)
-            return rest.takeWhile { !it.isWhitespace() && it != '&' }.ifEmpty { null }
+            return rest.takeWhile(::isBlobChar).ifEmpty { null }
         }
     }
 

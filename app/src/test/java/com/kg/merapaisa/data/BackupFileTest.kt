@@ -425,4 +425,56 @@ class CsvImportTest {
         val csv = "person,currency,balance,settled,timestamp,date,amount,note\r\nAsha,₹,0.00,no,1,x,1.00,n\r\n"
         assertEquals("INR", (readLedgerCsv(csv) as CsvImportResult.Ok).people.single().currency)
     }
+
+    // ---------------------------------------------------------------------------------------
+    // Fields added after the format shipped
+    //
+    // Two of these were missed in a row — simplifyDebts and isSettlement, both from v2.4 — and
+    // neither failed anything: a restore simply put every group back on the default plan with its
+    // repayments filed as purchases. The round trip has to be checked field by field, because
+    // "it restored" and "it restored correctly" are not the same test.
+    // ---------------------------------------------------------------------------------------
+
+    @Test
+    fun `a settlement is still a settlement after a round trip`() {
+        val snapshot = BackupSnapshot(
+            persons = listOf(Person(id = 1, name = "Me", currency = "INR", isSelf = true)),
+            transactions = emptyList(),
+            groups = listOf(Group(id = 1, name = "Goa", currency = "INR", createdAt = 1, simplifyDebts = false)),
+            groupMembers = emptyList(),
+            expenses = listOf(
+                Expense(id = 1, groupId = 1, description = "Hotel", amountMinor = 20_000, paidByPersonId = 1, timestamp = 1),
+                Expense(id = 2, groupId = 1, description = "Settlement", amountMinor = 5_000, paidByPersonId = 1, timestamp = 2, isSettlement = true)
+            ),
+            expenseShares = emptyList(),
+            appliedPayloads = emptyList()
+        )
+
+        val back = (decodeBackup(encodeBackup(snapshot, 1_700_000_000_000L, "2.5.0")) as BackupResult.Ok).snapshot
+
+        assertEquals("a purchase stays a purchase", false, back.expenses.first { it.id == 1L }.isSettlement)
+        assertEquals("a repayment stays a repayment", true, back.expenses.first { it.id == 2L }.isSettlement)
+        assertEquals("and the group keeps its plan", false, back.groups.single().simplifyDebts)
+    }
+
+    /** An older file has neither field, and must land where an older database upgrades to. */
+    @Test
+    fun `a backup written before those fields existed still restores sensibly`() {
+        val old = """{"format":"mera-paisa-backup","version":1,"exportedAt":1,"appVersion":"2.4.0",
+            "persons":[{"id":1,"name":"Me","balance":0,"pfpType":"initials","pfpValue":"ME","pfpColor":"#000000","sortOrder":0,"isSettled":false,"currency":"INR","isSelf":true,"lastSharedAt":0}],
+            "transactions":[],
+            "groups":[{"id":1,"name":"Goa","currency":"INR","createdAt":1,"archived":false}],
+            "groupMembers":[],
+            "expenses":[
+              {"id":1,"groupId":1,"description":"Hotel","amountMinor":20000,"paidByPersonId":1,"timestamp":1},
+              {"id":2,"groupId":1,"description":"Settlement","amountMinor":5000,"paidByPersonId":1,"timestamp":2}],
+            "expenseShares":[],
+            "appliedPayloads":[]}"""
+
+        val back = (decodeBackup(old) as BackupResult.Ok).snapshot
+
+        assertEquals("recognised from its description, as the migration does", true, back.expenses.first { it.id == 2L }.isSettlement)
+        assertEquals(false, back.expenses.first { it.id == 1L }.isSettlement)
+        assertEquals("groups predating the toggle netted down, so that is what they restore to", true, back.groups.single().simplifyDebts)
+    }
 }

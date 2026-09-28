@@ -81,7 +81,9 @@ fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String)
                     "personId" to t.personId.json(),
                     "amountMinor" to t.amountMinor.json(),
                     "timestamp" to t.timestamp.json(),
-                    "note" to t.note.json()
+                    "note" to t.note.json(),
+                    "uid" to t.uid.json(),
+                    "fromShare" to t.fromShare.json()
                 )
             }),
             "groups" to jsonArray(snapshot.groups.map { g ->
@@ -90,7 +92,10 @@ fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String)
                     "name" to g.name.json(),
                     "currency" to g.currency.json(),
                     "createdAt" to g.createdAt.json(),
-                    "archived" to g.archived.json()
+                    "archived" to g.archived.json(),
+                    // Missed when the toggle shipped in v2.4, so a restore silently put every
+                    // group back to "fewest payments" regardless of what it had been set to.
+                    "simplifyDebts" to g.simplifyDebts.json()
                 )
             }),
             "groupMembers" to jsonArray(snapshot.groupMembers.map { m ->
@@ -106,7 +111,11 @@ fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String)
                     "description" to e.description.json(),
                     "amountMinor" to e.amountMinor.json(),
                     "paidByPersonId" to e.paidByPersonId.json(),
-                    "timestamp" to e.timestamp.json()
+                    "timestamp" to e.timestamp.json(),
+                    // Missed when the flag shipped in v2.4, alongside simplifyDebts. Without it a
+                    // restore turned every repayment back into a purchase, putting settlements
+                    // back in the expense list — the exact confusion v2.4 existed to end.
+                    "isSettlement" to e.isSettlement.json()
                 )
             }),
             "expenseShares" to jsonArray(snapshot.expenseShares.map { s ->
@@ -168,7 +177,12 @@ fun decodeBackup(text: String): BackupResult {
             personId = o.long("personId") ?: return BackupResult.Damaged,
             amountMinor = o.long("amountMinor") ?: return BackupResult.Damaged,
             timestamp = o.long("timestamp") ?: return BackupResult.Damaged,
-            note = o.string("note") ?: return BackupResult.Damaged
+            note = o.string("note") ?: return BackupResult.Damaged,
+            // Absent in a backup written before v2.5. A fresh uid is the only honest answer — the
+            // entry has never been shared under any name, so inventing a stable-looking one from
+            // its contents would risk colliding with the other phone's idea of a different debt.
+            uid = o.string("uid") ?: newEntryUid(),
+            fromShare = o.bool("fromShare") ?: false
         )
     } ?: return BackupResult.Damaged
 
@@ -178,7 +192,10 @@ fun decodeBackup(text: String): BackupResult {
             name = o.string("name") ?: return BackupResult.Damaged,
             currency = o.string("currency") ?: return BackupResult.Damaged,
             createdAt = o.long("createdAt") ?: return BackupResult.Damaged,
-            archived = o.bool("archived") ?: return BackupResult.Damaged
+            archived = o.bool("archived") ?: return BackupResult.Damaged,
+            // Absent in a backup from v2.4 or earlier. True is what every group did before the
+            // toggle existed, so an older backup restores to the behaviour it actually had.
+            simplifyDebts = o.bool("simplifyDebts") ?: true
         )
     } ?: return BackupResult.Damaged
 
@@ -196,7 +213,12 @@ fun decodeBackup(text: String): BackupResult {
             description = o.string("description") ?: return BackupResult.Damaged,
             amountMinor = o.long("amountMinor") ?: return BackupResult.Damaged,
             paidByPersonId = o.long("paidByPersonId") ?: return BackupResult.Damaged,
-            timestamp = o.long("timestamp") ?: return BackupResult.Damaged
+            timestamp = o.long("timestamp") ?: return BackupResult.Damaged,
+            // Absent in a backup from v2.4 or earlier, where the description was the only signal a
+            // row carried. Falling back to it here is the same rule MIGRATION_7_8 applies to rows
+            // already in the database, so an old backup restores to the same state an old database
+            // upgrades to — rather than the two disagreeing about what a settlement is.
+            isSettlement = o.bool("isSettlement") ?: (o.string("description") == "Settlement")
         )
     } ?: return BackupResult.Damaged
 

@@ -115,6 +115,25 @@ interface GroupDao {
     @Query("SELECT COUNT(*) FROM expenses WHERE paidByPersonId = :personId")
     fun expenseCountPaidBy(personId: Long): Flow<Int>
 
+    /**
+     * Expenses this person has a share of but did not pay for.
+     *
+     * Deleting them hands those shares to whoever fronted the money — see
+     * [PersonDao.reassignGroupSharesToPayer] — so the payer ends up absorbing what can no longer be
+     * collected. That changes what somebody else is owed, which belongs in the sentence asking for
+     * confirmation just as much as the expenses being removed outright do.
+     */
+    @Query(
+        """
+        SELECT COUNT(*) FROM expense_shares
+        JOIN expenses ON expenses.id = expense_shares.expenseId
+        WHERE expense_shares.personId = :personId
+          AND expenses.paidByPersonId != :personId
+          AND expense_shares.shareMinor != 0
+        """
+    )
+    fun expenseCountSharedBy(personId: Long): Flow<Int>
+
     /** What each member has fronted for the group. */
     @Query(
         """

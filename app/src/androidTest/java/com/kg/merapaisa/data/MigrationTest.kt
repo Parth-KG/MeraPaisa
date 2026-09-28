@@ -394,6 +394,182 @@ class MigrationTest {
         }
     }
 
+    /**
+     * 8 -> 9 gives every entry a stable name, so two phones can line their ledgers up.
+     *
+     * Seeded with `insertV4Transaction` on purpose: nothing has been added to `transactions`
+     * between v4 and v8, so the v4 shape is still the v8 shape. That was checked against the
+     * exported 8.json rather than assumed — see the warning on the helpers below, which exists
+     * because exactly this assumption has been wrong twice.
+     */
+    @Test
+    fun migrate8To9_givesEveryExistingEntryAUid() {
+        helper.createDatabase(TEST_DB, 8).use { db ->
+            db.insertV7Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV4Transaction(personId = 1, amountMinor = 25_050, timestamp = 2_000, note = "dinner")
+            db.insertV4Transaction(personId = 1, amountMinor = -5_000, timestamp = 3_000, note = "part payment")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 9, true, MIGRATION_8_9).use { db ->
+            assertEquals(
+                "every row must come out with a uid",
+                0L,
+                db.longOf("SELECT COUNT(*) FROM transactions WHERE uid IS NULL OR uid = ''")
+            )
+        }
+    }
+
+    /**
+     * And they must all be different. A shared uid would make two unrelated debts look like one
+     * entry to reconcile, which is the one mistake this column exists to prevent.
+     */
+    @Test
+    fun migrate8To9_givesEveryEntryADifferentUid() {
+        helper.createDatabase(TEST_DB, 8).use { db ->
+            db.insertV7Person(id = 1, name = "Asha", currency = "INR")
+            // Identical in every visible way. A uid derived from the contents would collide here.
+            repeat(25) { db.insertV4Transaction(personId = 1, amountMinor = 2_000, timestamp = 1_000, note = "Chai") }
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 9, true, MIGRATION_8_9).use { db ->
+            assertEquals(25L, db.longOf("SELECT COUNT(*) FROM transactions"))
+            assertEquals(
+                "25 identical entries must still get 25 different uids",
+                25L,
+                db.longOf("SELECT COUNT(DISTINCT uid) FROM transactions")
+            )
+        }
+    }
+
+    /**
+     * Existing rows are nobody else's to delete.
+     *
+     * `fromShare` is 0 for every one of them, including entries that really did arrive by link
+     * before v2.5 — there is no record of which those were. Treating them as yours is the safe
+     * direction: reconcile will never offer to delete them on a sender's say-so.
+     */
+    @Test
+    fun migrate8To9_marksEveryExistingEntryAsYours() {
+        helper.createDatabase(TEST_DB, 8).use { db ->
+            db.insertV7Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV4Transaction(personId = 1, amountMinor = 1_000, timestamp = 1, note = "a")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 9, true, MIGRATION_8_9).use { db ->
+            assertEquals(
+                0L,
+                db.longOf("SELECT COUNT(*) FROM transactions WHERE fromShare != 0")
+            )
+        }
+    }
+
+    /** A new column changes what an entry is called, never what it is worth. */
+    @Test
+    fun migrate8To9_leavesEveryBalanceAlone() {
+        helper.createDatabase(TEST_DB, 8).use { db ->
+            db.insertV7Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV7Person(id = 2, name = "Ravi", currency = "USD")
+            db.insertV4Transaction(personId = 1, amountMinor = 25_050, timestamp = 2_000, note = "dinner")
+            db.insertV4Transaction(personId = 1, amountMinor = -5_000, timestamp = 3_000, note = "part payment")
+            db.insertV4Transaction(personId = 2, amountMinor = -1_234, timestamp = 4_000, note = "cab")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 9, true, MIGRATION_8_9).use { db ->
+            assertEquals(20_050L, db.derivedBalance(1))
+            assertEquals(-1_234L, db.derivedBalance(2))
+            assertEquals(2, db.transactionCount(1))
+            assertEquals("notes must survive untouched", 25_050L, db.amountOf(1, "dinner"))
+        }
+    }
+
+    /** An empty table is the fresh-install case, and the back-fill must not trip over it. */
+    @Test
+    fun migrate8To9_survivesAnEmptyLedger() {
+        helper.createDatabase(TEST_DB, 8).use { db ->
+            db.insertV7Person(id = 1, name = "Asha", currency = "INR")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 9, true, MIGRATION_8_9).use { db ->
+            assertEquals(0L, db.longOf("SELECT COUNT(*) FROM transactions"))
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // The whole chain, which is what a real upgrade actually runs
+    // -----------------------------------------------------------------------------------------
+
+    /**
+     * Version 3 to 9 in one go, through every migration in the order the app registers them.
+     *
+     * Every other test here is a *pair*: seed at n, migrate to n+1, check. That proves each step
+     * in isolation and proves nothing about the sequence, which is the only thing a real phone
+     * ever runs. Somebody still on the first release opens v2.5 and executes six migrations
+     * back to back against data seeded in the oldest shape — a path that, until now, had never
+     * been executed anywhere.
+     *
+     * It is also the test that would catch a migration registered out of order, or omitted from
+     * the list in [AppDatabase] while still existing as a value, which no pairwise test can see.
+     */
+    @Test
+    fun migrate3To9_theWholeChainAsARealUpgradeRunsIt() {
+        helper.createDatabase(TEST_DB, 3).use { db ->
+            db.insertV3Person(id = 1, name = "Asha", balance = 250.50, currency = "INR")
+            db.insertV3Person(id = 2, name = "Bilal", balance = -40.25, currency = "INR")
+            db.insertV3Transaction(personId = 1, amount = 300.00, timestamp = 1_000, note = "Dinner")
+            db.insertV3Transaction(personId = 1, amount = -49.50, timestamp = 2_000, note = "Part payment")
+            db.insertV3Transaction(personId = 2, amount = -40.25, timestamp = 3_000, note = "Cab")
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DB, 9, true,
+            MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
+        ).use { db ->
+            // The money survives, in minor units, with the paise intact.
+            assertEquals("Asha's balance must survive six migrations", 25_050L, db.derivedBalance(1))
+            assertEquals(-4_025L, db.derivedBalance(2))
+            assertEquals(2, db.transactionCount(1))
+            assertEquals(1, db.transactionCount(2))
+
+            // And everything v2.5 added is in place for rows that predate all of it.
+            assertEquals(
+                "every entry from 2023 still needs a uid",
+                0L,
+                db.longOf("SELECT COUNT(*) FROM transactions WHERE uid IS NULL OR uid = ''")
+            )
+            assertEquals(
+                "all of them distinct",
+                3L,
+                db.longOf("SELECT COUNT(DISTINCT uid) FROM transactions")
+            )
+            assertEquals(
+                "and none of them attributed to a sender",
+                0L,
+                db.longOf("SELECT COUNT(*) FROM transactions WHERE fromShare != 0")
+            )
+        }
+    }
+
+    /**
+     * The same chain with nothing in it. An empty ledger is what most upgrades actually carry,
+     * and a back-fill that assumes at least one row would fail on exactly those phones.
+     */
+    @Test
+    fun migrate3To9_survivesAnEmptyDatabase() {
+        helper.createDatabase(TEST_DB, 3).use { }
+
+        helper.runMigrationsAndValidate(
+            TEST_DB, 9, true,
+            MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
+        ).use { db ->
+            assertEquals(0L, db.longOf("SELECT COUNT(*) FROM transactions"))
+            // Exactly one person, and it is the row that is you: migration 5 -> 6 creates it, and
+            // an empty ledger is precisely the case where nothing else exists to hide a mistake in
+            // it. Groups need that row to exist, so "none" would be the wrong answer here.
+            assertEquals(1L, db.longOf("SELECT COUNT(*) FROM persons"))
+            assertEquals(1L, db.longOf("SELECT COUNT(*) FROM persons WHERE isSelf = 1"))
+        }
+    }
+
     // --- seeding helpers, written against the v3 shape ---
 
     private fun SupportSQLiteDatabase.insertV3Person(

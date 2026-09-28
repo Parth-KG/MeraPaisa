@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.ImportOutcome
 import com.kg.merapaisa.data.PersonWithBalance
+import com.kg.merapaisa.data.ReconcileItem
+import com.kg.merapaisa.data.ReconcilePlan
 import com.kg.merapaisa.data.SharePayload
 import com.kg.merapaisa.data.claimedNameForDisplay
 import com.kg.merapaisa.data.formatMinor
@@ -41,6 +43,7 @@ fun ImportLedgerDialog(
     persons: List<PersonWithBalance>,
     onTargetChange: (Long) -> Unit,
     onNewPersonNameChange: (String?) -> Unit,
+    onToggleItem: (String) -> Unit,
     onApply: () -> Unit,
     onPasteChange: (String) -> Unit,
     onPasteSubmit: () -> Unit,
@@ -55,6 +58,7 @@ fun ImportLedgerDialog(
             persons = persons,
             onTargetChange = onTargetChange,
             onNewPersonNameChange = onNewPersonNameChange,
+            onToggleItem = onToggleItem,
             onApply = onApply,
             onDismiss = onDismiss
         )
@@ -171,16 +175,24 @@ private fun ConfirmingDialog(
     persons: List<PersonWithBalance>,
     onTargetChange: (Long) -> Unit,
     onNewPersonNameChange: (String?) -> Unit,
+    onToggleItem: (String) -> Unit,
     onApply: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val theme = LocalAppTheme.current
     val payload = state.payload
     // Mirrored: what the sender is owed is what this phone will owe.
-    val netHere = -payload.netMinor
+    //
+    // Once there is a comparison to go on, the figure follows the tick boxes instead of the raw
+    // payload. Appending everything is only what happens when there is nothing to compare against.
+    val netHere = state.plan?.takeIf { it.comparable }?.netChangeFor(state.selected)
+        ?: -payload.netMinor
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        // Not dismissable once the write has started. The entries are already going in by then, so
+        // a back tap or a tap outside would hide the dialog without stopping anything — and the
+        // result would then reappear on its own, announcing a change the user had just waved away.
+        onDismissRequest = { if (!state.busy) onDismiss() },
         containerColor = theme.card,
         title = {
             Text("Ledger update", color = theme.textPrimary, fontWeight = FontWeight.Bold)
@@ -243,7 +255,9 @@ private fun ConfirmingDialog(
                 HorizontalDivider(color = theme.outline)
 
                 Text(
-                    "What this will record",
+                    // "contains" rather than "will record" once the tick boxes decide what is
+                    // recorded: this list is the link's contents, not the outcome.
+                    if (state.showsDifferences) "What the link contains" else "What this will record",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = theme.textPrimary
@@ -285,17 +299,30 @@ private fun ConfirmingDialog(
 
                 HorizontalDivider(color = theme.outline)
 
+                // With a comparison in play the figure is a *change* to a balance that already
+                // exists, and "you will owe ₹12" would read as the whole of it. Naming where the
+                // person lands afterwards is the one phrasing that cannot be misread — and it is
+                // the number the user can check against the list behind this dialog.
+                val target = persons.firstOrNull { it.id == state.targetPersonId }
+                val after = if (state.showsDifferences && target != null) target.balanceMinor + netHere else null
+
                 Text(
                     when {
+                        after != null && netHere == 0L ->
+                            "Nothing changes. ${target!!.name} stays at ${formatMinor(after, payload.currency)}"
+                        after != null ->
+                            "${target!!.name} ends up at ${formatMinor(after, payload.currency)}"
                         netHere < 0 -> "You will owe ${formatMinor(-netHere, payload.currency)}"
                         netHere > 0 -> "They will owe you ${formatMinor(netHere, payload.currency)}"
                         else -> "These cancel out"
                     },
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
+                    // Colours what is actually being stated: the resulting balance when there is
+                    // one, otherwise the change itself.
                     color = when {
-                        netHere < 0 -> theme.negative
-                        netHere > 0 -> theme.positive
+                        (after ?: netHere) < 0L -> theme.negative
+                        (after ?: netHere) > 0L -> theme.positive
                         else -> theme.textSecondary
                     }
                 )
@@ -376,6 +403,15 @@ private fun ConfirmingDialog(
                         color = theme.textSecondary
                     )
                 }
+
+                if (state.showsDifferences && state.plan != null) {
+                    DifferencesSection(
+                        plan = state.plan,
+                        selected = state.selected,
+                        currency = payload.currency,
+                        onToggleItem = onToggleItem
+                    )
+                }
             }
         },
         confirmButton = {
@@ -384,7 +420,9 @@ private fun ConfirmingDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            // Disabled while writing, for the same reason: "Don't record" cannot be offered at a
+            // moment when tapping it records anyway.
+            TextButton(onClick = onDismiss, enabled = !state.busy) {
                 Text("Don't record", color = theme.textSecondary)
             }
         }
@@ -403,6 +441,8 @@ private fun DoneDialog(state: ImportFlowState.Done, onDismiss: () -> Unit) {
             Text(
                 when (outcome) {
                     is ImportOutcome.Applied -> "Recorded"
+                    is ImportOutcome.Reconciled ->
+                        if (outcome.changedNothing) "Nothing to change" else "Ledgers match"
                     is ImportOutcome.AlreadyApplied -> "Already recorded"
                     is ImportOutcome.CurrencyMismatch -> "Not recorded"
                 },
@@ -417,6 +457,21 @@ private fun DoneDialog(state: ImportFlowState.Done, onDismiss: () -> Unit) {
                         "${outcome.entryCount} " +
                             (if (outcome.entryCount == 1) "entry" else "entries") +
                             " added to ${state.personName}."
+
+                    // Spelled out rather than totalled. Somebody who has just agreed to delete
+                    // entries off their own ledger should be told that it happened, not handed a
+                    // count of additions that quietly omits it.
+                    is ImportOutcome.Reconciled ->
+                        if (outcome.changedNothing) {
+                            "You and ${state.personName} already agree. Nothing was changed."
+                        } else {
+                            listOfNotNull(
+                                outcome.added.takeIf { it > 0 }?.let { countOf(it, "entry", "entries") + " added" },
+                                outcome.updated.takeIf { it > 0 }?.let { countOf(it, "entry", "entries") + " updated" },
+                                outcome.removed.takeIf { it > 0 }?.let { countOf(it, "entry", "entries") + " removed" }
+                            ).joinToString(", ").replaceFirstChar { it.uppercase() } +
+                                " for ${state.personName}."
+                        }
 
                     // Not framed as a failure: forwarding a message, or tapping it twice, is ordinary.
                     is ImportOutcome.AlreadyApplied ->
@@ -440,6 +495,186 @@ private fun DoneDialog(state: ImportFlowState.Done, onDismiss: () -> Unit) {
         }
     )
 }
+
+/**
+ * Where the two ledgers disagree, and what to do about each difference.
+ *
+ * Only shown when there is something to say — a link that is purely new entries is the ordinary
+ * case and gets no section at all, because "3 new entries, none of which conflict" is exactly what
+ * someone tapping a ledger link already assumes.
+ *
+ * Edits and deletions arrive unticked. They overwrite or destroy something already in the ledger,
+ * and nothing about a share link establishes that the sender is who they say — so accepting one is
+ * a decision, made here, by a person, every time.
+ */
+@Composable
+private fun DifferencesSection(
+    plan: ReconcilePlan,
+    selected: Set<String>,
+    currency: String,
+    onToggleItem: (String) -> Unit
+) {
+    val theme = LocalAppTheme.current
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        HorizontalDivider(color = theme.fillStrong)
+
+        Text(
+            "Compared with what you have",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = theme.textPrimary
+        )
+
+        if (plan.edited.isNotEmpty()) {
+            DifferenceGroup(
+                heading = "They changed " + countOf(plan.edited.size, "entry", "entries"),
+                explanation = "Tick to take their version. Left unticked, yours stays as it is."
+            ) {
+                plan.edited.take(MAX_ENTRIES_SHOWN).forEach { item ->
+                    DifferenceRow(
+                        checked = item.uid in selected,
+                        onToggle = { onToggleItem(item.uid) },
+                        title = item.theirNote.ifBlank { "No note" },
+                        detail = buildString {
+                            if (item.amountDiffers) {
+                                append(formatMinor(item.localAmountMinor, currency))
+                                append(" \u2192 ")
+                                append(formatMinor(item.theirAmountMinor, currency))
+                            }
+                            if (item.amountDiffers && item.noteDiffers) append(" \u00B7 ")
+                            if (item.noteDiffers) {
+                                append("note was ")
+                                append(item.localNote.ifBlank { "empty" })
+                            }
+                        },
+                        // Their date, not the one currently stored: accepting an edit takes their
+                        // version of the entry whole, the date included. Showing the local date
+                        // beside an amount that is about to change would name a row this tick is
+                        // going to alter in a way the row does not admit to.
+                        date = dateOf(item.theirTimestamp)
+                    )
+                }
+                MoreThanShown(plan.edited.size)
+            }
+        }
+
+        if (plan.deletedBySender.isNotEmpty()) {
+            DifferenceGroup(
+                heading = "They removed " + countOf(plan.deletedBySender.size, "entry", "entries"),
+                explanation = "Tick to remove it here too. This deletes it from your ledger."
+            ) {
+                plan.deletedBySender.take(MAX_ENTRIES_SHOWN).forEach { item ->
+                    DifferenceRow(
+                        checked = item.uid in selected,
+                        onToggle = { onToggleItem(item.uid) },
+                        title = item.note.ifBlank { "No note" },
+                        detail = formatMinor(item.amountMinor, currency),
+                        date = dateOf(item.timestamp)
+                    )
+                }
+                MoreThanShown(plan.deletedBySender.size)
+            }
+        }
+
+        // No tick boxes below this point: both are things to know, not decisions to make.
+        if (plan.onlyYours.isNotEmpty()) {
+            DifferenceGroup(
+                heading = countOf(plan.onlyYours.size, "entry", "entries") + " they have not seen",
+                explanation = "Yours, and not in their ledger. Send them a link to even it up."
+            ) {
+                plan.onlyYours.take(MAX_ENTRIES_SHOWN).forEach { item ->
+                    Text(
+                        "${item.note.ifBlank { "No note" }} \u00B7 ${formatMinor(item.amountMinor, currency)}",
+                        fontSize = 12.sp,
+                        color = theme.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                MoreThanShown(plan.onlyYours.size)
+            }
+        }
+
+        if (plan.unchanged.isNotEmpty()) {
+            Text(
+                countOf(plan.unchanged.size, "entry", "entries") + " already match, and stay as they are.",
+                fontSize = 12.sp,
+                color = theme.textSecondary
+            )
+        }
+    }
+}
+
+/**
+ * Says so when a section is showing fewer rows than its heading counts.
+ *
+ * The heading says "they removed 12 entries" and the list shows eight, and the four with no row
+ * have no tick box either — so they are staying whether or not that is what anyone wanted. Left
+ * unsaid, the heading is simply a lie about what the screen is offering. The payload preview above
+ * has always disclosed its own cap; these sections did not.
+ */
+@Composable
+private fun MoreThanShown(total: Int) {
+    if (total <= MAX_ENTRIES_SHOWN) return
+    val theme = LocalAppTheme.current
+    Text(
+        "and ${total - MAX_ENTRIES_SHOWN} more, left as they are",
+        fontSize = 11.sp,
+        color = theme.textSecondary
+    )
+}
+
+@Composable
+private fun DifferenceGroup(
+    heading: String,
+    explanation: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val theme = LocalAppTheme.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(theme.fillStrong)
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(heading, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = theme.textPrimary)
+        Text(explanation, fontSize = 11.sp, color = theme.textSecondary)
+        content()
+    }
+}
+
+@Composable
+private fun DifferenceRow(
+    checked: Boolean,
+    onToggle: () -> Unit,
+    title: String,
+    detail: String,
+    date: String
+) {
+    val theme = LocalAppTheme.current
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { onToggle() },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Checkbox(checked = checked, onCheckedChange = { onToggle() })
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                fontSize = 12.sp,
+                color = theme.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text("$detail \u00B7 $date", fontSize = 11.sp, color = theme.textSecondary)
+        }
+    }
+}
+
+private fun countOf(n: Int, one: String, many: String): String = "$n " + if (n == 1) one else many
 
 /** Enough to check a link at a glance without turning the dialog into a scroll marathon. */
 private const val MAX_ENTRIES_SHOWN = 8

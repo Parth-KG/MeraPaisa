@@ -198,4 +198,39 @@ class JsonTest {
         assertTrue("a backup should be readable by eye", text.contains("\n"))
         assertTrue(text.contains("  "))
     }
+
+    /**
+     * A deeply nested document must not take the app down with it.
+     *
+     * The parser is recursive descent, so nesting depth maps straight onto stack depth — and a
+     * backup file is read from wherever the user points the picker, which includes a file that is
+     * corrupt, truncated, or simply not a backup. A StackOverflowError is not a `Damaged` result;
+     * it is a crash on a screen whose entire job is to fail safely.
+     */
+    @Test
+    fun `deep nesting is refused rather than crashing the parser`() {
+        listOf(200, 2_000, 50_000).forEach { depth ->
+            val deep = "[".repeat(depth) + "]".repeat(depth)
+            val result = try {
+                decodeBackup(deep)
+            } catch (e: StackOverflowError) {
+                throw AssertionError("the JSON parser overflowed the stack at depth $depth")
+            } catch (e: Exception) {
+                throw AssertionError("the JSON parser threw at depth $depth: $e")
+            }
+            assertTrue("depth $depth", result is BackupResult.NotABackup || result is BackupResult.Damaged)
+        }
+    }
+
+    @Test
+    fun `deeply nested objects are refused too`() {
+        val depth = 50_000
+        val deep = """{"a":""".repeat(depth) + "1" + "}".repeat(depth)
+        val result = try {
+            decodeBackup(deep)
+        } catch (e: StackOverflowError) {
+            throw AssertionError("the JSON parser overflowed the stack on nested objects")
+        }
+        assertTrue(result is BackupResult.NotABackup || result is BackupResult.Damaged)
+    }
 }

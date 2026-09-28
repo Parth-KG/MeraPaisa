@@ -15,7 +15,7 @@ import androidx.room.RoomDatabase
         ExpenseShare::class,
         AppliedPayload::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -35,7 +35,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "mera_paisa_db"
                 ).addMigrations(
-                    MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8
+                    MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8,
+                    MIGRATION_8_9
                 ).build()
                 INSTANCE = instance
                 instance

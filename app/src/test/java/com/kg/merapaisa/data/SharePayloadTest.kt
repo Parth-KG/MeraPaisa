@@ -471,6 +471,46 @@ class ShareLinkTest {
         assertEquals("ABC", extractPayloadBlob("merapaisa://share?d=ABC&utm=whatsapp"))
     }
 
+    // ---------------------------------------------------------------------------------------
+    // Links as chat apps actually deliver them
+    //
+    // Every case below is a valid link that came back "damaged" — which reads to the user as the
+    // sender having made a broken link, when in fact the app stopped reading one character late.
+    // The blob alphabet is known exactly, so anything outside it ends the blob.
+    // ---------------------------------------------------------------------------------------
+
+    @Test
+    fun `a tracking fragment appended by a chat app is not part of the blob`() {
+        assertEquals("ABCdef123", extractPayloadBlob("https://parth-kg.github.io/MeraPaisa/s#ABCdef123#utm_source=wa"))
+    }
+
+    @Test
+    fun `a link at the end of a sentence is not swallowed with its full stop`() {
+        assertEquals(
+            "ABCdef123",
+            extractPayloadBlob("Here you go: https://parth-kg.github.io/MeraPaisa/s#ABCdef123.")
+        )
+    }
+
+    @Test
+    fun `a link in quotes or brackets still reads`() {
+        val expected = "ABCdef123"
+        assertEquals(expected, extractPayloadBlob("\"https://parth-kg.github.io/MeraPaisa/s#ABCdef123\""))
+        assertEquals(expected, extractPayloadBlob("(https://parth-kg.github.io/MeraPaisa/s#ABCdef123)"))
+        assertEquals(expected, extractPayloadBlob("<https://parth-kg.github.io/MeraPaisa/s#ABCdef123>"))
+    }
+
+    @Test
+    fun `padding on the end of a blob is kept, since the decoder tolerates it`() {
+        assertEquals("ABCdef12==", extractPayloadBlob("merapaisa://share#ABCdef12=="))
+    }
+
+    @Test
+    fun `a marker with nothing usable after it is still nothing`() {
+        assertEquals(null, extractPayloadBlob("https://parth-kg.github.io/MeraPaisa/s#"))
+        assertEquals(null, extractPayloadBlob("https://parth-kg.github.io/MeraPaisa/s#."))
+    }
+
     @Test
     fun `accepts a bare blob pasted on its own`() {
         assertEquals("ABCdef123456", extractPayloadBlob("  ABCdef123456  "))

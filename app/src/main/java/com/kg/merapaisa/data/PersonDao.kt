@@ -75,6 +75,14 @@ interface PersonDao {
     @Update
     suspend fun updatePerson(person: Person)
 
+    /**
+     * The bare row delete. **Call [deletePersonWithHistory] instead.**
+     *
+     * On its own this leaves a group inconsistent: `expense_shares` cascades on `personId`, so the
+     * person's share of an expense somebody else paid for vanishes while the expense stays, and the
+     * group's balances stop summing to zero. [deletePersonWithHistory] hands those shares to the
+     * payer first. This is kept only because that method needs it.
+     */
     @Delete
     suspend fun deletePerson(person: Person)
 
@@ -280,8 +288,61 @@ interface PersonDao {
 
     @androidx.room.Transaction
     suspend fun deletePersonWithHistory(person: Person) {
+        reassignGroupSharesToPayer(person.id)
         deleteTransactionsForPerson(person.id)
         deletePerson(person)
+    }
+
+    /**
+     * Every expense this person had a share of, that somebody else paid for.
+     *
+     * Their own expenses are excluded because those cascade away with them, taking their shares
+     * with them — there is nothing left to be inconsistent about.
+     */
+    @Query(
+        """
+        SELECT expenses.id AS expenseId, expenses.paidByPersonId AS payerId, expense_shares.shareMinor AS shareMinor
+        FROM expense_shares
+        JOIN expenses ON expenses.id = expense_shares.expenseId
+        WHERE expense_shares.personId = :personId AND expenses.paidByPersonId != :personId
+        """
+    )
+    suspend fun orphanedSharesOf(personId: Long): List<OrphanedShare>
+
+    @Query("SELECT shareMinor FROM expense_shares WHERE expenseId = :expenseId AND personId = :personId")
+    suspend fun shareOf(expenseId: Long, personId: Long): Long?
+
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun putShare(share: ExpenseShare)
+
+    /**
+     * Hands a departing member's share of other people's expenses to whoever fronted the money.
+     *
+     * `expense_shares` cascades on `personId`, so deleting someone used to silently remove their
+     * share of an expense that stayed behind — leaving a ₹300 dinner with ₹200 of shares against
+     * it. Every group balance is derived as *paid minus shared*, so the group stopped summing to
+     * zero, and `settleUp` documents that sum as the reason it can square everyone. It produced a
+     * plan that left somebody holding a figure nobody owed, and said nothing.
+     *
+     * Giving the share to the payer is the honest answer rather than a convenient one. The money
+     * was really spent and can no longer be collected from someone who is no longer tracked, so
+     * the person who put it up is the one out of pocket — which is what happens in life. It also
+     * leaves every *other* member's position exactly where it was, so deleting one person cannot
+     * quietly change what a third party owes.
+     */
+    @androidx.room.Transaction
+    suspend fun reassignGroupSharesToPayer(personId: Long) {
+        orphanedSharesOf(personId).forEach { orphan ->
+            if (orphan.shareMinor == 0L) return@forEach
+            val existing = shareOf(orphan.expenseId, orphan.payerId) ?: 0L
+            putShare(
+                ExpenseShare(
+                    expenseId = orphan.expenseId,
+                    personId = orphan.payerId,
+                    shareMinor = existing + orphan.shareMinor
+                )
+            )
+        }
     }
 
     // -----------------------------------------------------------------------------------------
@@ -357,6 +418,74 @@ interface PersonDao {
         )
 
         return ImportOutcome.Applied(entries.size, entries.sumOf { it.amountMinor })
+    }
+
+    /**
+     * Applies a reconciled link: the inserts, updates and deletions the user actually ticked.
+     *
+     * One transaction, for the same reason [applyPayload] is one: the dedupe read and the writes
+     * have to be atomic or a link tapped twice in quick succession can pass the check twice. It
+     * also means a plan that is half-applied cannot exist, which matters more here than it did
+     * before — a reconcile that added three entries and then failed before removing one would
+     * leave a ledger that matches neither phone.
+     *
+     * [write] is computed by `ReconcilePlan.writesFor` and arrives final: already mirrored, already
+     * clamped, already filtered to what was chosen. Nothing is decided in here.
+     */
+    @androidx.room.Transaction
+    suspend fun applyReconcile(
+        personId: Long,
+        payload: SharePayload,
+        write: ReconcileWrite,
+        now: Long
+    ): ImportOutcome {
+        getAppliedPayload(payload.payloadId)?.let { return ImportOutcome.AlreadyApplied(it.appliedAt) }
+
+        val person = getPersonNow(personId)
+        if (person != null && normaliseCurrency(person.currency) != payload.currency) {
+            return ImportOutcome.CurrencyMismatch(payload.currency, normaliseCurrency(person.currency))
+        }
+
+        // The balance moves by more than the inserts: replacing an amount moves it by the
+        // difference, and removing an entry moves it by the whole of what was there. Read before
+        // anything is written, because afterwards the old rows are gone.
+        var net = write.inserts.sumOf { it.amountMinor }
+        if (write.updates.isNotEmpty() || write.deleteIds.isNotEmpty()) {
+            val before = getTransactionsForPersonNow(personId).associateBy { it.id }
+            write.updates.forEach { net += it.amountMinor - (before[it.id]?.amountMinor ?: 0L) }
+            write.deleteIds.forEach { net -= before[it]?.amountMinor ?: 0L }
+        }
+
+        if (write.inserts.isNotEmpty()) insertTransactions(write.inserts)
+        if (write.updates.isNotEmpty()) updateTransactions(write.updates)
+        write.deleteIds.forEach { deleteTransaction(it) }
+
+        // Money moved, so they are live again — same rule as recordEntries. Deletions count: a
+        // removed entry changes the balance just as an added one does.
+        if (net != 0L) setSettled(personId, false)
+
+        // Recorded as applied only when it actually wrote something. A link the user looked at and
+        // ticked nothing on has not been applied — it has been considered — and filing it here
+        // would make re-opening it report "already applied" and offer no way to change their mind.
+        if (!write.isEmpty) {
+            insertAppliedPayload(
+                AppliedPayload(
+                    payloadId = payload.payloadId,
+                    appliedAt = now,
+                    personId = personId,
+                    senderName = payload.senderName,
+                    entryCount = write.inserts.size,
+                    netMinor = net
+                )
+            )
+        }
+
+        return ImportOutcome.Reconciled(
+            added = write.inserts.size,
+            updated = write.updates.size,
+            removed = write.deleteIds.size,
+            netMinor = net
+        )
     }
 
     // -----------------------------------------------------------------------------------------

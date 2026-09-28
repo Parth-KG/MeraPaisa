@@ -40,6 +40,9 @@ class GroupRepository(
     /** Group expenses this person fronted, which deleting them would take with it. */
     fun expensesPaidBy(personId: Long): Flow<Int> = groupDao.expenseCountPaidBy(personId)
 
+    /** Group expenses this person only shared. Deleting them passes those shares to the payer. */
+    fun expensesSharedBy(personId: Long): Flow<Int> = groupDao.expenseCountSharedBy(personId)
+
     /** Creates a group with you and the chosen people in it. */
     suspend fun createGroup(
         name: String,

@@ -382,6 +382,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** How much group history a delete would take with it, so the warning can say so. */
     fun getGroupExpenseCount(personId: Long) = groupRepository.expensesPaidBy(personId)
 
+    fun getGroupSharedCount(personId: Long) = groupRepository.expensesSharedBy(personId)
+
     suspend fun convertCurrency(amountMinor: Long, from: String, to: String): Long? =
         exchangeRates.convert(amountMinor, from, to)
 
@@ -562,14 +564,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun offerConfirmation(payload: SharePayload) {
+    /**
+     * The people this link could be filed against, read straight from the database.
+     *
+     * Not `persons.value`. A tapped link cold-starts the app, and the flow backing that property is
+     * still empty for the first moment afterwards — so the name match found nobody and the screen
+     * offered to *create* a second Rahul beside the one already there. Taking that offer splits a
+     * ledger in two, and from v2.5 it also means the new entries share no history with the old
+     * ones, so nothing will ever reconcile against them again. Found on a device, by reinstalling
+     * and tapping a link: the same link matched correctly when the app was already running.
+     */
+    private suspend fun personsForMatching(): List<PersonWithBalance> =
+        persons.value.ifEmpty { repository.personsForImport() }
+
+    private suspend fun offerConfirmation(payload: SharePayload) {
         val claimed = payload.senderName.trim()
+        val candidates = personsForMatching()
         // Currency is part of the match, not just the name. The import screen only offers people in
         // the payload's currency, so matching on name alone could preselect somebody who is not in
         // that list — leaving the dialog looking like nothing was chosen while "Record it" was live,
         // and ending in a currency refusal. A name match in the wrong currency falls through to
         // "add someone new", which creates them in the right one.
-        val match = persons.value.firstOrNull {
+        val match = candidates.firstOrNull {
             it.name.trim().equals(claimed, ignoreCase = true) &&
                 normaliseCurrency(it.currency) == payload.currency
         }
@@ -584,17 +600,62 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             )
         }
+        match?.id?.let { refreshReconcilePlan(it, payload) }
     }
 
-    fun setImportTarget(personId: Long) = _uiState.update {
+    /**
+     * Works out what the link would change for this person, and ticks the safe parts.
+     *
+     * Runs on every change of target rather than once, because the answer depends entirely on who
+     * the link is being filed against: the same payload is "three edits and a deletion" against the
+     * person it came from and "three new entries" against anybody else.
+     */
+    private fun refreshReconcilePlan(personId: Long, payload: SharePayload) {
+        if (!payload.canReconcile) return
+        viewModelScope.launch {
+            val plan = repository.previewReconcile(personId, payload, System.currentTimeMillis())
+            _uiState.update { state ->
+                val confirming = state.import as? ImportFlowState.Confirming ?: return@update state
+                // The target may have moved on while this was being computed; a plan for the wrong
+                // person would tick boxes against somebody else's entries.
+                if (confirming.targetPersonId != personId) return@update state
+                state.copy(
+                    import = confirming.copy(plan = plan, selected = plan.defaultSelection)
+                )
+            }
+        }
+    }
+
+    fun setImportTarget(personId: Long) {
+        val confirming = _uiState.value.import as? ImportFlowState.Confirming ?: return
+        _uiState.update {
+            it.copy(
+                import = confirming.copy(
+                    targetPersonId = personId,
+                    newPersonName = null,
+                    // Cleared rather than kept: the old plan belongs to the old person, and showing
+                    // it for a moment against the new one would be showing somebody the wrong
+                    // entries with ticks already in them.
+                    plan = null,
+                    selected = emptySet()
+                )
+            )
+        }
+        refreshReconcilePlan(personId, confirming.payload)
+    }
+
+    /** Ticks or unticks one difference. Nothing is written until the whole thing is confirmed. */
+    fun toggleReconcileItem(uid: String) = _uiState.update {
         val confirming = it.import as? ImportFlowState.Confirming ?: return@update it
-        it.copy(import = confirming.copy(targetPersonId = personId, newPersonName = null))
+        val next = if (uid in confirming.selected) confirming.selected - uid else confirming.selected + uid
+        it.copy(import = confirming.copy(selected = next))
     }
 
     /** Switches to creating someone new. Null name means "back to picking an existing person". */
     fun setImportNewPersonName(name: String?) = _uiState.update {
         val confirming = it.import as? ImportFlowState.Confirming ?: return@update it
-        it.copy(import = confirming.copy(newPersonName = name, targetPersonId = null))
+        // Somebody who does not exist yet has nothing to compare against, so there is no plan.
+        it.copy(import = confirming.copy(newPersonName = name, targetPersonId = null, plan = null, selected = emptySet()))
     }
 
     /**
@@ -619,14 +680,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             val name = persons.value.firstOrNull { it.id == personId }?.name
                 ?: confirming.newPersonName?.trim()
-                ?: confirming.payload.senderName
+                // Sanitised, like everywhere else this string is shown. It is chosen by whoever
+                // built the link, and the Done dialog renders it inside a sentence — which is
+                // exactly the shape of the v2.2.1 spoofing bug, on a screen that fix did not
+                // reach. Only used when the person list has not caught up yet.
+                ?: claimedNameForDisplay(confirming.payload.senderName)
 
-            val outcome = repository.importPayload(
-                personId = personId,
-                payload = confirming.payload,
-                now = System.currentTimeMillis()
-            )
-            _uiState.update { it.copy(import = ImportFlowState.Done(outcome, name)) }
+            val now = System.currentTimeMillis()
+            val outcome = if (confirming.payload.canReconcile && confirming.targetPersonId != null) {
+                // Decided by the payload and the target, never by whether the plan happens to have
+                // arrived. It is computed asynchronously, so a quick tap on a cold start used to
+                // fall through to appending — silently writing a second copy of every entry the
+                // ledger already had. A null selection tells the repository to use its own
+                // defaults rather than treating "not loaded" as "nothing ticked".
+                //
+                // The selection travels by uid, not by row id or list position, so a plan
+                // recomputed inside the repository still ticks the same entries.
+                repository.applyReconcile(
+                    personId = personId,
+                    payload = confirming.payload,
+                    selected = if (confirming.plan != null) confirming.selected else null,
+                    now = now
+                )
+            } else {
+                // Nothing to compare against — a new person, or a version 1 link with no uids.
+                // Appending is the whole of the correct behaviour here, not a fallback.
+                repository.importPayload(personId, confirming.payload, now)
+            }
+            _uiState.update { state ->
+                // Only if the flow is still the one that started this write. The dialog blocks
+                // dismissal while busy, but a second route to closing it — a later release adding
+                // one, or anything that resets the flow — must not be able to make a finished
+                // import pop back up on top of whatever the user moved on to.
+                val still = state.import as? ImportFlowState.Confirming
+                if (still?.payload?.payloadId != confirming.payload.payloadId) state
+                else state.copy(import = ImportFlowState.Done(outcome, name))
+            }
         }
     }
 

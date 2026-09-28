@@ -102,9 +102,16 @@ fun ShareLedgerSheet(
                     Switch(checked = state.fullHistory, onCheckedChange = onFullHistoryChange)
                     Column {
                         Text("Send everything", fontSize = 13.sp, color = theme.textPrimary)
+                        // Reworded for v2.5. The old line — "their app ignores anything it has
+                        // already applied" — described the dedupe-by-link behaviour and is no
+                        // longer what happens: a full send is now *compared* against their ledger,
+                        // and it is the only kind of link that can carry a correction or a
+                        // deletion. Someone reading the old sentence had no way to know that the
+                        // switch they were leaving alone was the one that makes edits travel.
                         Text(
-                            "Use this if a link never arrived. Their app ignores anything it has " +
-                                "already applied.",
+                            "Their app compares it with what they already have, so corrections " +
+                                "and deleted entries reach them. Without this, only new entries " +
+                                "are sent.",
                             fontSize = 11.sp,
                             color = theme.textSecondary
                         )

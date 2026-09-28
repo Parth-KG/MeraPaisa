@@ -496,6 +496,7 @@ fun MainScreen(viewModel: MainViewModel) {
     pendingDelete?.let { target ->
         val transactionCount by viewModel.getTransactionCount(target.id).collectAsState(initial = 0)
         val groupExpenseCount by viewModel.getGroupExpenseCount(target.id).collectAsState(initial = 0)
+        val groupSharedCount by viewModel.getGroupSharedCount(target.id).collectAsState(initial = 0)
         AlertDialog(
             onDismissRequest = { viewModel.confirmDelete(null) },
                 title = {
@@ -513,10 +514,21 @@ fun MainScreen(viewModel: MainViewModel) {
                     else -> " It also removes $groupExpenseCount group expenses they paid for, " +
                         "changing what the other members of those groups owe."
                 }
+                // The other half of the same consequence: expenses they merely shared stay, and
+                // their part of them passes to whoever paid, who then absorbs what can no longer
+                // be collected. Silently moving what a third person is owed is exactly as large a
+                // consequence as removing an expense outright.
+                val sharedNote = when (groupSharedCount) {
+                    0 -> ""
+                    1 -> " Their share of 1 group expense someone else paid for passes to whoever " +
+                        "paid it."
+                    else -> " Their share of $groupSharedCount group expenses other people paid " +
+                        "for passes to whoever paid them."
+                }
                 Text(
                     "This permanently deletes ${target.name}, their balance of " +
                         "${formatMinor(target.balanceMinor, target.currency)}, and $entries." +
-                        "$groupNote This can't be undone.",
+                        "$groupNote$sharedNote This can't be undone.",
                     color = theme.textSecondary,
                     fontSize = 14.sp
                 )
@@ -637,6 +649,7 @@ fun MainScreen(viewModel: MainViewModel) {
             persons = persons,
             onTargetChange = viewModel::setImportTarget,
             onNewPersonNameChange = viewModel::setImportNewPersonName,
+            onToggleItem = viewModel::toggleReconcileItem,
             onApply = viewModel::applyImport,
             onPasteChange = viewModel::setPasteText,
             onPasteSubmit = viewModel::submitPaste,

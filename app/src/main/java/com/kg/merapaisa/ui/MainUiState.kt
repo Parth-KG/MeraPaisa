@@ -3,6 +3,7 @@ package com.kg.merapaisa.ui
 import com.kg.merapaisa.data.BackupSnapshot
 import com.kg.merapaisa.data.ImportOutcome
 import com.kg.merapaisa.data.RestoreMode
+import com.kg.merapaisa.data.ReconcilePlan
 import com.kg.merapaisa.data.RestorePlan
 import com.kg.merapaisa.data.SharePayload
 
@@ -112,10 +113,31 @@ sealed interface ImportFlowState {
         val payload: SharePayload,
         val targetPersonId: Long? = null,
         val newPersonName: String? = null,
-        val busy: Boolean = false
+        val busy: Boolean = false,
+        /**
+         * How this link compares against what the chosen person already has.
+         *
+         * Null while it is still being worked out, and null for a brand-new person, who by
+         * definition has nothing to compare against. Recomputed whenever the target changes — the
+         * same payload against a different person is a different answer.
+         */
+        val plan: ReconcilePlan? = null,
+        /** The uids ticked to apply. Seeded from [ReconcilePlan.defaultSelection]. */
+        val selected: Set<String> = emptySet()
     ) : ImportFlowState {
         val canApply: Boolean
             get() = !busy && (targetPersonId != null || !newPersonName.isNullOrBlank())
+
+        /**
+         * Whether to show the comparison at all.
+         *
+         * A plan that is nothing but new entries is the ordinary case and says nothing worth a
+         * section — it is what importing a link has always meant. The comparison earns its space
+         * only when it has found something the user did not already assume.
+         */
+        val showsDifferences: Boolean
+            get() = plan != null && plan.comparable &&
+                (plan.needsDecision || plan.unchanged.isNotEmpty() || plan.onlyYours.isNotEmpty())
     }
 
     /** Finished, one way or another. [personName] is who it was filed against, for the message. */

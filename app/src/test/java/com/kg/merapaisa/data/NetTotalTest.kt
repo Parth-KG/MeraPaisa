@@ -67,4 +67,39 @@ class NetTotalTest {
         assertEquals(listOf(CurrencyTotal("GBP", -27_75)), totals)
         assertEquals("-£27.75", formatMinor(totals.single().amountMinor, "GBP"))
     }
+
+    /**
+     * A legacy row stores the symbol where a newer one stores the code, and both mean rupees.
+     *
+     * Grouped by the raw string they became two separate totals — shown one above the other on the
+     * main screen and the widget, both rendered with a ₹, as though the user tracked two different
+     * rupees. `normaliseCurrency` exists for exactly this and every other comparison in the app
+     * already goes through it.
+     */
+    @Test
+    fun `a legacy symbol and its code are one currency`() {
+        val totals = netTotalsByCurrency(
+            listOf(
+                person(1, "\u20B9", 30_000),
+                person(2, "INR", 12_000)
+            )
+        )
+
+        assertEquals("one rupee total, not two", 1, totals.size)
+        assertEquals("INR", totals.single().currency)
+        assertEquals(42_000L, totals.single().amountMinor)
+    }
+
+    /** And they must be able to cancel each other out rather than showing as +30 and -30. */
+    @Test
+    fun `a legacy symbol nets against its code`() {
+        val totals = netTotalsByCurrency(
+            listOf(
+                person(1, "\u20B9", 30_000),
+                person(2, "INR", -30_000)
+            )
+        )
+
+        assertEquals("they cancel, so nothing is reported", 0, totals.size)
+    }
 }

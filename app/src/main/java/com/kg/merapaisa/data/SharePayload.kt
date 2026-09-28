@@ -29,8 +29,44 @@ import java.util.zip.Inflater
 data class SharedEntry(
     val timestamp: Long,
     val amountMinor: Long,
-    val note: String
+    val note: String,
+    /**
+     * The sender's name for this debt, carried so the other phone can recognise it again later.
+     * See [Transaction.uid].
+     *
+     * Empty for a version 1 payload, which had no such thing. That emptiness is load-bearing: it
+     * is what tells the import screen it cannot reconcile this link and must fall back to
+     * appending, rather than silently matching every unidentified entry against every other.
+     */
+    val uid: String = ""
 )
+
+/**
+ * How much of the sender's ledger this link claims to be.
+ *
+ * The distinction exists because of what *absence* means. In a [Full] payload, an entry the
+ * receiver already has from this sender and which is not in the link has been deleted by them. In
+ * an [Incremental] one, absence means nothing whatsoever — it is simply older than the watermark.
+ *
+ * Reading absence as deletion in the wrong case would quietly delete entries off someone's ledger
+ * because their friend sent a short update, which is the worst outcome this feature could have. So
+ * the sender states which it is, and the receiver refuses to infer deletions from anything but
+ * [Full].
+ */
+enum class ShareScope {
+    /** Everything this sender holds for that person. The only scope that can prove a deletion. */
+    Full,
+
+    /** Only what is new since the last share. Says nothing about anything it omits. */
+    Incremental;
+
+    companion object {
+        /** Unknown codes read as [Incremental] — the reading that can never delete anything. */
+        fun fromCode(code: String): ShareScope = if (code == "f") Full else Incremental
+    }
+
+    val code: String get() = if (this == Full) "f" else "i"
+}
 
 /**
  * What one link carries: who sent it, in what currency, and the entries themselves.
@@ -42,10 +78,28 @@ data class SharePayload(
     val payloadId: String,
     val senderName: String,
     val currency: String,
-    val entries: List<SharedEntry>
+    val entries: List<SharedEntry>,
+    /** See [ShareScope]. Version 1 links are always read as [ShareScope.Incremental]. */
+    val scope: ShareScope = ShareScope.Incremental,
+    /**
+     * The format this payload actually arrived in, not the format this build writes.
+     *
+     * Kept because the difference is visible to the user: a version 1 link cannot be reconciled,
+     * and the screen has to say why rather than appearing to lose the feature at random.
+     */
+    val formatVersion: Int = SHARE_FORMAT_VERSION
 ) {
     /** What the entries come to. Positive means the sender says they are owed this much. */
     val netMinor: Long get() = entries.sumOf { it.amountMinor }
+
+    /**
+     * Whether this link can be compared against what is already here, rather than merely appended.
+     *
+     * Needs uids on every entry — one missing uid means one entry that can never be matched, and a
+     * partial reconcile that silently appends the remainder is worse than an honest append-all.
+     */
+    val canReconcile: Boolean
+        get() = formatVersion >= 2 && entries.all { it.uid.isNotEmpty() }
 }
 
 /**
@@ -63,8 +117,14 @@ sealed interface PayloadResult {
     data class TooNew(val version: Int) : PayloadResult
 }
 
-/** The format this build writes. Bump only when the field layout changes incompatibly. */
-const val SHARE_FORMAT_VERSION = 1
+/**
+ * The format this build writes. Bump only when the field layout changes incompatibly.
+ *
+ * Version 2 added a uid to every entry and a scope to the payload — see [Transaction.uid] and
+ * [ShareScope]. Version 1 is still read, because links live in chat threads for months and a
+ * friend who has not updated is not an error condition.
+ */
+const val SHARE_FORMAT_VERSION = 2
 
 /**
  * Caps on what [decodePayload] will accept. A link is untrusted input arriving from a chat app,
@@ -76,6 +136,9 @@ private const val MAX_INFLATED_BYTES = 256 * 1024
 private const val MAX_ENTRIES = 1000
 private const val MAX_NOTE_CHARS = 500
 private const val MAX_NAME_CHARS = 100
+
+/** [newEntryUid] makes 16; the slack is for a future format, and the cap is for a hostile one. */
+private const val MAX_UID_CHARS = 64
 
 /**
  * The largest single amount a payload may carry: nine whole digits and two decimals, which is
@@ -105,6 +168,10 @@ fun encodePayload(payload: SharePayload): String {
         append(FIELD)
         append(esc(payload.currency))
         append(FIELD)
+        // Version 2. The scope sits ahead of the entries so a reader knows how to interpret what
+        // is missing from them before it has read any.
+        append(payload.scope.code)
+        append(FIELD)
         payload.entries.forEachIndexed { i, e ->
             if (i > 0) append(RECORD)
             append(e.timestamp)
@@ -112,6 +179,8 @@ fun encodePayload(payload: SharePayload): String {
             append(e.amountMinor)
             append(UNIT)
             append(esc(e.note))
+            append(UNIT)
+            append(esc(e.uid))
         }
     }
     return base64UrlEncode(deflate(body.toByteArray(Charsets.UTF_8)))
@@ -128,15 +197,20 @@ fun decodePayload(encoded: String): PayloadResult {
     val raw = base64UrlDecode(trimmed) ?: return PayloadResult.Malformed
     val body = inflate(raw)?.toString(Charsets.UTF_8) ?: return PayloadResult.Malformed
 
-    // Five fields exactly: version, id, name, currency, entries. The entries field is last and
-    // may legitimately be empty, so the limit keeps it rather than dropping a trailing empty.
-    val fields = body.split(FIELD, limit = 5)
+    // Version 1 has five fields: version, id, name, currency, entries. Version 2 inserts scope
+    // before the entries, making six. Either way the entries field is last and may legitimately be
+    // empty, so the limit keeps it rather than dropping a trailing empty.
+    //
+    // Splitting to six is safe for a version 1 body because esc() escapes every FIELD character
+    // inside a note, so a v1 body contains exactly four of them and yields five parts here.
+    val fields = body.split(FIELD, limit = 6)
     if (fields.size < 5) return PayloadResult.Malformed
 
     // Version is read before anything else is trusted: a newer format may have moved the rest.
     val version = fields[0].toIntOrNull() ?: return PayloadResult.Malformed
     if (version > SHARE_FORMAT_VERSION) return PayloadResult.TooNew(version)
     if (version < 1) return PayloadResult.Malformed
+    if (fields.size != if (version >= 2) 6 else 5) return PayloadResult.Malformed
 
     val payloadId = unesc(fields[1]) ?: return PayloadResult.Malformed
     val senderName = unesc(fields[2]) ?: return PayloadResult.Malformed
@@ -145,13 +219,15 @@ fun decodePayload(encoded: String): PayloadResult {
     if (senderName.isEmpty() || senderName.length > MAX_NAME_CHARS) return PayloadResult.Malformed
     if (currency.length != 3 || !currency.all { it in 'A'..'Z' }) return PayloadResult.Malformed
 
-    val entriesField = fields[4]
+    val scope = if (version >= 2) ShareScope.fromCode(fields[4]) else ShareScope.Incremental
+    val entriesField = fields[if (version >= 2) 5 else 4]
+    val entryParts = if (version >= 2) 4 else 3
     val entries = if (entriesField.isEmpty()) emptyList() else {
         val records = entriesField.split(RECORD)
         if (records.size > MAX_ENTRIES) return PayloadResult.Malformed
         records.map { record ->
-            val parts = record.split(UNIT, limit = 3)
-            if (parts.size < 3) return PayloadResult.Malformed
+            val parts = record.split(UNIT, limit = entryParts)
+            if (parts.size < entryParts) return PayloadResult.Malformed
             val timestamp = parts[0].toLongOrNull() ?: return PayloadResult.Malformed
             val amountMinor = parts[1].toLongOrNull() ?: return PayloadResult.Malformed
             val note = unesc(parts[2]) ?: return PayloadResult.Malformed
@@ -161,9 +237,20 @@ fun decodePayload(encoded: String): PayloadResult {
             if (amountMinor < -MAX_ENTRY_MINOR || amountMinor > MAX_ENTRY_MINOR) {
                 return PayloadResult.Malformed
             }
-            SharedEntry(timestamp, amountMinor, note)
+            val uid = if (version >= 2) unesc(parts[3]) ?: return PayloadResult.Malformed else ""
+            if (uid.length > MAX_UID_CHARS) return PayloadResult.Malformed
+            SharedEntry(timestamp, amountMinor, note, uid)
         }
     }
+
+    // Two entries claiming the same uid cannot both be matched, and picking one would be a guess
+    // about somebody's money. A payload this app built can never contain them.
+    //
+    // Empty uids are exempt and are not an error: an entry without one simply cannot be matched,
+    // and `canReconcile` already refuses to reconcile any payload containing one. Refusing the
+    // whole link instead would reject a legitimate payload over a feature it is not using.
+    val identified = entries.map { it.uid }.filter { it.isNotEmpty() }
+    if (identified.toHashSet().size != identified.size) return PayloadResult.Malformed
 
     // A sum that overflows Long is not a balance anyone can hold; refuse rather than wrap.
     var net = 0L
@@ -173,7 +260,7 @@ fun decodePayload(encoded: String): PayloadResult {
         net = sum
     }
 
-    return PayloadResult.Ok(SharePayload(payloadId, senderName, currency, entries))
+    return PayloadResult.Ok(SharePayload(payloadId, senderName, currency, entries, scope, version))
 }
 
 /**
@@ -190,6 +277,9 @@ fun decodePayload(encoded: String): PayloadResult {
  */
 fun SharePayload.mirrored(): List<SharedEntry> =
     entries.map { it.copy(amountMinor = -it.amountMinor) }
+// The uid is deliberately *not* touched. Flipping the sign is what makes the two ledgers agree
+// about direction; keeping the uid is what lets them ever discover that they do. A mirror with a
+// fresh uid would import cleanly and then reconcile as a stranger for the rest of its life.
 
 // ---------------------------------------------------------------------------------------------
 // Field framing

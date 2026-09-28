@@ -121,10 +121,16 @@ fun groupBalances(
  * parts always add back up to the whole. Paise cannot be divided three ways.
  */
 fun evenShares(amountMinor: Long, memberIds: List<Long>): Map<Long, Long> {
-    if (memberIds.isEmpty()) return emptyMap()
-    val base = amountMinor / memberIds.size
-    var remainder = amountMinor - base * memberIds.size
-    return memberIds.associateWith { _ ->
+    // Distinct first, and before the arithmetic. The result is a map keyed by person, so a list
+    // naming somebody twice used to divide by a count the map could not hold: `associateWith`
+    // collapsed the duplicate while the division had already given away its share, and the parts
+    // stopped adding up to the whole. Nothing downstream checks that sum, so the group's balances
+    // would simply have been wrong by the difference, with every individual figure still plausible.
+    val members = memberIds.distinct()
+    if (members.isEmpty()) return emptyMap()
+    val base = amountMinor / members.size
+    var remainder = amountMinor - base * members.size
+    return members.associateWith { _ ->
         val extra = if (remainder != 0L) remainder.coerceIn(-1L, 1L) else 0L
         remainder -= extra
         base + extra

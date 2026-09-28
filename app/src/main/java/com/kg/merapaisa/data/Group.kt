@@ -98,3 +98,15 @@ data class ExpenseShare(
     val personId: Long,
     val shareMinor: Long
 )
+
+/**
+ * A share belonging to someone being deleted, on an expense somebody else paid for.
+ *
+ * See [PersonDao.reassignGroupSharesToPayer] for why these have to be moved rather than left to
+ * cascade away.
+ */
+data class OrphanedShare(
+    val expenseId: Long,
+    val payerId: Long,
+    val shareMinor: Long
+)

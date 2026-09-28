@@ -234,3 +234,34 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         db.execSQL("UPDATE `expenses` SET `isSettlement` = 1 WHERE `description` = 'Settlement'")
     }
 }
+
+/**
+ * 8 -> 9. Stable entry ids, and where an entry came from. What makes reconcile possible.
+ *
+ * Until now the only name an entry had was its local autoincrement id, which is a different number
+ * on each phone for the same debt. Two ledgers could disagree — an amount edited on one side, an
+ * entry deleted on the other — and there was no way to line them up and say so. `uid` gives both
+ * sides one name for the same debt; see [Transaction.uid].
+ *
+ * Existing rows are given a random uid each rather than one derived from their contents. Deriving
+ * it would be reproducible across phones, which sounds useful and is exactly wrong: two people who
+ * both recorded "Chai 20" on the same afternoon would mint the same uid for two genuinely
+ * different debts, and reconcile would then offer to merge them. `randomblob(8)` is SQLite's own
+ * CSPRNG, so this needs no round trip through Kotlin — the whole back-fill is one statement.
+ *
+ * `fromShare` is 0 for every existing row, and that is the honest answer rather than a convenient
+ * one. Entries imported before v2.5 are indistinguishable from typed ones now, so they are treated
+ * as yours: reconcile will never offer to delete them on the sender's say-so. It will offer to
+ * update one whose uid matches, which is safe, because that only ever happens after a v2 payload
+ * has taught both sides the same uid.
+ */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `transactions` ADD COLUMN `uid` TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE `transactions` ADD COLUMN `fromShare` INTEGER NOT NULL DEFAULT 0")
+        // Per row, not per statement: randomblob is re-evaluated for each one.
+        db.execSQL("UPDATE `transactions` SET `uid` = lower(hex(randomblob(8)))")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_uid` ON `transactions` (`uid`)")
+    }
+}

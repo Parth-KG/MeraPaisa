@@ -8,10 +8,15 @@ import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonDao
 import com.kg.merapaisa.data.PersonLedger
 import com.kg.merapaisa.data.PersonWithBalance
+import com.kg.merapaisa.data.ReconcilePlan
+import com.kg.merapaisa.data.ReconcileWrite
+import com.kg.merapaisa.data.ShareScope
 import com.kg.merapaisa.data.SharePayload
 import com.kg.merapaisa.data.SharedEntry
 import com.kg.merapaisa.data.Transaction
 import com.kg.merapaisa.data.mirrored
+import com.kg.merapaisa.data.reconcile
+import com.kg.merapaisa.data.writesFor
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -213,7 +218,11 @@ class PersonRepository(
             payloadId = UUID.randomUUID().toString().replace("-", "").take(16),
             senderName = senderName.trim().ifEmpty { "A friend" },
             currency = com.kg.merapaisa.data.normaliseCurrency(person.currency),
-            entries = entries.map { SharedEntry(it.timestamp, it.amountMinor, it.note) }
+            // The uid travels with each entry: it is what lets the other phone recognise this same
+            // debt the next time either side shares. See Transaction.uid.
+            entries = entries.map { SharedEntry(it.timestamp, it.amountMinor, it.note, it.uid) },
+            // Only a full share can prove a deletion, so only a full share is allowed to claim one.
+            scope = if (fullHistory) ShareScope.Full else ShareScope.Incremental
         )
         // The watermark to commit once the link has actually gone out, not before.
         return payload to entries.maxOf { it.timestamp }
@@ -255,10 +264,61 @@ class PersonRepository(
                 personId = personId,
                 amountMinor = it.amountMinor,
                 timestamp = if (it.timestamp > now) now else it.timestamp,
-                note = it.note
+                note = it.note,
+                // Their uid is kept, so this entry can be recognised again the next time either
+                // side shares. A version 1 link has none to keep and gets a fresh one, which is
+                // why an old link imports fine and still cannot be reconciled afterwards.
+                uid = it.uid.ifEmpty { com.kg.merapaisa.data.newEntryUid() },
+                fromShare = true
             )
         }
         return dao.applyPayload(personId, payload, entries, now)
             .also { if (it is ImportOutcome.Applied) notifier.onLedgerChanged() }
+    }
+
+    /**
+     * What this link would change, without changing anything.
+     *
+     * Read against the person the link is about to be filed against, so switching the target in the
+     * import screen has to recompute it — the same payload compared against a different person is a
+     * different answer, usually "all of this is new".
+     */
+    suspend fun previewReconcile(personId: Long, payload: SharePayload, now: Long): ReconcilePlan =
+        reconcile(
+            personId = personId,
+            // Mirrored here, once, so the comparison sees amounts as they will read on this phone.
+            // Handing `reconcile` raw entries would classify every agreed debt as an edit.
+            incoming = payload.mirrored(),
+            local = dao.getTransactionsForPersonNow(personId),
+            scope = payload.scope,
+            comparable = payload.canReconcile,
+            now = now
+        )
+
+    /**
+     * Applies the ticked items of a plan.
+     *
+     * The plan is recomputed here rather than trusted from the screen. A plan built when the dialog
+     * opened can be stale by the time it is confirmed — an entry added in another window, a restore
+     * finishing in the background — and applying a stale plan would write row ids that have since
+     * moved. The screen's selection is carried across by uid, which survives all of that.
+     */
+    suspend fun applyReconcile(
+        personId: Long,
+        payload: SharePayload,
+        /**
+         * The uids the user ticked, or null when they never saw a plan to tick.
+         *
+         * Null is not the same as empty. Empty means "they looked and chose nothing"; null means
+         * the screen was confirmed before the comparison finished loading, and the safe reading of
+         * that is the default selection — additions only, nothing overwritten or deleted.
+         */
+        selected: Set<String>?,
+        now: Long
+    ): ImportOutcome {
+        val plan = previewReconcile(personId, payload, now)
+        val write: ReconcileWrite = plan.writesFor(personId, selected ?: plan.defaultSelection)
+        return dao.applyReconcile(personId, payload, write, now)
+            .also { if (it is ImportOutcome.Reconciled && !it.changedNothing) notifier.onLedgerChanged() }
     }
 }

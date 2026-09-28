@@ -107,4 +107,99 @@ class GroupRepositoryTest {
         )
         assertTrue(repo.groupDetail(groupId).first().balances.all { it.amountMinor == 0L })
     }
+
+    // -----------------------------------------------------------------------------------------
+    // Deleting a member
+    //
+    // The delete confirmation counts the expenses a person *paid for*, because those cascade away
+    // and move everyone else's position. It says nothing about the expenses they merely had a
+    // share of — and those shares cascade away too, leaving an expense that is no longer fully
+    // shared out. Every balance in the group then quietly stops adding up to zero.
+    // -----------------------------------------------------------------------------------------
+
+    @Test
+    fun deletingAMemberLeavesEveryExpenseStillFullySharedOut() = runBlocking {
+        val asha = person("Asha")
+        val bilal = person("Bilal")
+        val groupId = repo.createGroup("Goa", "INR", listOf(asha, bilal))
+        val me = repo.self().id
+
+        // Asha fronts it; all three share it. Bilal did not pay for anything.
+        repo.addExpense(groupId, "Hotel", 300_00, asha, listOf(me, asha, bilal))
+
+        db.personDao().deletePersonWithHistory(db.personDao().getPersonNow(bilal)!!)
+
+        val expenses = db.groupDao().getAllExpensesForBackup()
+        val shares = db.groupDao().getAllExpenseSharesForBackup()
+        expenses.forEach { e ->
+            assertEquals(
+                "expense ${e.description} is no longer fully shared out",
+                e.amountMinor,
+                shares.filter { it.expenseId == e.id }.sumOf { it.shareMinor }
+            )
+        }
+    }
+
+    /**
+     * The same thing stated as the property everything downstream depends on: `settleUp` documents
+     * that balances sum to zero because every expense is fully shared out. If that stops being
+     * true, the payment plan it produces leaves somebody unsquared and nobody is told.
+     */
+    @Test
+    fun deletingAMemberLeavesTheGroupBalancesSummingToZero() = runBlocking {
+        val asha = person("Asha")
+        val bilal = person("Bilal")
+        val groupId = repo.createGroup("Goa", "INR", listOf(asha, bilal))
+        val me = repo.self().id
+        repo.addExpense(groupId, "Hotel", 300_00, asha, listOf(me, asha, bilal))
+
+        db.personDao().deletePersonWithHistory(db.personDao().getPersonNow(bilal)!!)
+
+        val members = db.groupDao().getMemberIds(groupId)
+        val expenses = db.groupDao().getAllExpensesForBackup()
+        val shares = db.groupDao().getAllExpenseSharesForBackup()
+        val balances = groupBalances(
+            memberIds = members,
+            paidByPerson = expenses.groupBy { it.paidByPersonId }.mapValues { (_, e) -> e.sumOf { it.amountMinor } },
+            sharesByPerson = shares.groupBy { it.personId }.mapValues { (_, s) -> s.sumOf { it.shareMinor } }
+        )
+
+        assertEquals("the group's positions must still cancel out", 0L, balances.sumOf { it.amountMinor })
+    }
+
+    /** And no third party may be moved by it: only the payer absorbs what cannot be collected. */
+    @Test
+    fun deletingAMemberDoesNotChangeWhatAnyoneElseOwes() = runBlocking {
+        val asha = person("Asha")
+        val bilal = person("Bilal")
+        val groupId = repo.createGroup("Goa", "INR", listOf(asha, bilal))
+        val me = repo.self().id
+        repo.addExpense(groupId, "Hotel", 300_00, asha, listOf(me, asha, bilal))
+
+        val mineBefore = db.groupDao().getAllExpenseSharesForBackup().filter { it.personId == me }.sumOf { it.shareMinor }
+        db.personDao().deletePersonWithHistory(db.personDao().getPersonNow(bilal)!!)
+        val mineAfter = db.groupDao().getAllExpenseSharesForBackup().filter { it.personId == me }.sumOf { it.shareMinor }
+
+        assertEquals("my share must not move because somebody else was deleted", mineBefore, mineAfter)
+        assertEquals(
+            "the payer absorbs the share that can no longer be collected",
+            200_00L,
+            db.groupDao().getAllExpenseSharesForBackup().filter { it.personId == asha }.sumOf { it.shareMinor }
+        )
+    }
+
+    /** Deleting the person who paid takes the expense with it, so nothing needs reassigning. */
+    @Test
+    fun deletingThePayerRemovesTheExpenseEntirely() = runBlocking {
+        val asha = person("Asha")
+        val bilal = person("Bilal")
+        val groupId = repo.createGroup("Goa", "INR", listOf(asha, bilal))
+        val me = repo.self().id
+        repo.addExpense(groupId, "Hotel", 300_00, asha, listOf(me, asha, bilal))
+
+        db.personDao().deletePersonWithHistory(db.personDao().getPersonNow(asha)!!)
+
+        assertEquals(0, db.groupDao().getAllExpensesForBackup().size)
+        assertEquals(0, db.groupDao().getAllExpenseSharesForBackup().size)
+    }
 }

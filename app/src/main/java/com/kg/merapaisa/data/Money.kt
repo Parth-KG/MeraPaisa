@@ -80,22 +80,42 @@ fun parseAmountToMinor(text: String): Long? {
  * A round amount is shown without them: most entries are whole rupees, and a column of
  * ".00" is noise that makes the amounts that *do* have paise harder to pick out.
  */
+/**
+ * The magnitude of an amount, as bits, safe for the one value that has no positive counterpart.
+ *
+ * `Long.MIN_VALUE.absoluteValue` is still `Long.MIN_VALUE`, so dividing it by 100 gives a negative
+ * body behind a minus sign: `-₹-92233720368547758.-8`. Negating it here leaves the same bit
+ * pattern, which read as unsigned is exactly 2^63 — the true magnitude — so unsigned division
+ * renders it correctly rather than approximately. Every other value divides identically either way.
+ *
+ * It cannot arrive from the keypad or a share link, both of which are bounded well below this. A
+ * restored backup is read straight from a file, and a figure the app cannot render is a worse
+ * answer than one it can.
+ */
+private inline fun magnitudeOf(amountMinor: Long): Long = if (amountMinor < 0) -amountMinor else amountMinor
+
+private inline fun wholeUnits(magnitude: Long): Long = java.lang.Long.divideUnsigned(magnitude, 100)
+
+private inline fun paiseOf(magnitude: Long): Long = java.lang.Long.remainderUnsigned(magnitude, 100)
+
+private inline fun roundedWholeUnits(magnitude: Long): Long =
+    java.lang.Long.divideUnsigned(magnitude + 50, 100)
+
 fun formatMinor(amountMinor: Long, currencyCode: String): String {
     val symbol = currencySymbol(currencyCode)
     val sign = if (amountMinor < 0) "-" else ""
-    val magnitude = amountMinor.absoluteValue
+    val magnitude = magnitudeOf(amountMinor)
 
     val body = if (currencyDecimals(currencyCode) == 0) {
         // Still stored in hundredths, so round to the nearest whole major unit for display.
-        ((magnitude + 50) / 100).toString()
+        roundedWholeUnits(magnitude).toString()
     } else {
         // Trailing zeros carry no information: 237.40 reads as 237.4, and 237.00 as 237.
-        val paise = magnitude % 100
-        val fraction = paise.toString().padStart(2, '0').trimEnd('0')
+        val fraction = paiseOf(magnitude).toString().padStart(2, '0').trimEnd('0')
         if (fraction.isEmpty()) {
-            (magnitude / 100).toString()
+            wholeUnits(magnitude).toString()
         } else {
-            "${magnitude / 100}.$fraction"
+            "${wholeUnits(magnitude)}.$fraction"
         }
     }
     return "$sign$symbol$body"
@@ -109,15 +129,15 @@ fun formatMinor(amountMinor: Long, currencyCode: String): String {
  * two decimals wide is worth more to a spreadsheet than it is to a reader.
  */
 fun formatMinorPlain(amountMinor: Long, currencyCode: String, trimZeros: Boolean = false): String {
-    val magnitude = amountMinor.absoluteValue
+    val magnitude = magnitudeOf(amountMinor)
     val sign = if (amountMinor < 0) "-" else ""
     val body = if (currencyDecimals(currencyCode) == 0) {
-        ((magnitude + 50) / 100).toString()
+        roundedWholeUnits(magnitude).toString()
     } else {
-        val paise = (magnitude % 100).toString().padStart(2, '0')
+        val paise = paiseOf(magnitude).toString().padStart(2, '0')
         val fraction = if (trimZeros) paise.trimEnd('0') else paise
-        if (fraction.isEmpty()) (magnitude / 100).toString()
-        else "${magnitude / 100}.$fraction"
+        if (fraction.isEmpty()) wholeUnits(magnitude).toString()
+        else "${wholeUnits(magnitude)}.$fraction"
     }
     return "$sign$body"
 }
