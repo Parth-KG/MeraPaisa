@@ -291,4 +291,44 @@ interface PersonDao {
 
         return ImportOutcome.Applied(entries.size, entries.sumOf { it.amountMinor })
     }
+
+    // -----------------------------------------------------------------------------------------
+    // Backup and restore
+    //
+    // These read and write raw rows with their ids intact, which nothing else in this DAO does.
+    // A backup is only a backup if the tables still join up afterwards, so restoring has to put
+    // rows back exactly where they were rather than letting autoGenerate invent new keys.
+    // -----------------------------------------------------------------------------------------
+
+    /** Every person including the self row, which the list queries deliberately hide. */
+    @Query("SELECT * FROM persons ORDER BY id ASC")
+    suspend fun getAllPersonsForBackup(): List<Person>
+
+    @Query("SELECT * FROM applied_payloads ORDER BY appliedAt ASC")
+    suspend fun getAllAppliedPayloadsForBackup(): List<AppliedPayload>
+
+    @Insert
+    suspend fun insertPersons(persons: List<Person>)
+
+    @Insert
+    suspend fun insertAppliedPayloads(records: List<AppliedPayload>)
+
+    /**
+     * Everyone, self included, for a Replace restore.
+     *
+     * The self row goes too, because the backup carries its own and keeping both would leave two
+     * rows claiming to be you — which `ensureSelf` would then pick between arbitrarily. Callers
+     * must run `ensureSelf()` afterwards so a backup without a self row still ends up with one.
+     *
+     * Cascades take transactions, group memberships, expenses and shares with it.
+     */
+    @Query("DELETE FROM persons")
+    suspend fun deleteAllPersons()
+
+    /** Self keeps no transactions of their own, but a restored backup may have given them some. */
+    @Query("DELETE FROM transactions")
+    suspend fun deleteAllTransactions()
+
+    @Query("DELETE FROM applied_payloads")
+    suspend fun deleteAllAppliedPayloads()
 }

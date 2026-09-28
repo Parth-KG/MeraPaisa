@@ -24,8 +24,8 @@ android {
         applicationId = "com.kg.merapaisa"
         minSdk = 24
         targetSdk = 36
-        versionCode = 8
-        versionName = "2.1.0"
+        versionCode = 9
+        versionName = "2.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -73,6 +73,9 @@ android {
 
     buildFeatures {
         compose = true
+        // The auto-backup worker stamps each file with the version that wrote it, so a restore
+        // can say what it came from.
+        buildConfig = true
     }
 
     // Exported Room schemas are the baseline every migration test validates against.
@@ -93,6 +96,9 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.datastore.preferences)
+    // Declared rather than newly added: Glance already brings this in for the widget. Pinning it
+    // keeps the scheduled backup on a version that cannot drift underneath us.
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))

@@ -2,6 +2,7 @@ package com.kg.merapaisa.ui
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.kg.merapaisa.CurrencyStore
 import com.kg.merapaisa.data.AppDatabase
@@ -15,7 +16,20 @@ import com.kg.merapaisa.data.PayloadResult
 import com.kg.merapaisa.data.SharePayload
 import com.kg.merapaisa.data.buildPersonSummary
 import com.kg.merapaisa.data.buildShareLink
+import com.kg.merapaisa.BackupStore
+import com.kg.merapaisa.BuildConfig
+import com.kg.merapaisa.backup.AutoExportWorker
+import com.kg.merapaisa.backup.BackupWriter
+import com.kg.merapaisa.data.BackupResult
+import com.kg.merapaisa.data.BackupSnapshot
+import com.kg.merapaisa.data.CsvImportResult
+import com.kg.merapaisa.data.RestoreMode
+import com.kg.merapaisa.data.backupFileName
 import com.kg.merapaisa.data.buildShareMessage
+import com.kg.merapaisa.data.decodeBackup
+import com.kg.merapaisa.data.readLedgerCsv
+import com.kg.merapaisa.repository.BackupRepository
+import com.kg.merapaisa.repository.toSnapshot
 import com.kg.merapaisa.data.decodePayload
 import com.kg.merapaisa.data.encodePayload
 import com.kg.merapaisa.data.extractPayloadBlob
@@ -37,7 +51,9 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Holds screen state and orchestrates. Database work belongs to [PersonRepository] and network
@@ -52,6 +68,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val groupRepository = GroupRepository(
         groupDao = AppDatabase.getDatabase(application).groupDao(),
         personDao = AppDatabase.getDatabase(application).personDao(),
+        notifier = WidgetLedgerNotifier(application)
+    )
+    private val backupRepository = BackupRepository(
+        db = AppDatabase.getDatabase(application),
+        personDao = AppDatabase.getDatabase(application).personDao(),
+        groupDao = AppDatabase.getDatabase(application).groupDao(),
         notifier = WidgetLedgerNotifier(application)
     )
     private val exchangeRates = ExchangeRateApi()
@@ -580,4 +602,276 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun dismissImport() = _uiState.update { it.copy(import = null) }
+
+    // =========================================================================================
+    // Backup and restore
+    // =========================================================================================
+
+    fun openBackupScreen() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(showSettingsDialog = false, backup = BackupFlowState.Menu()) }
+            refreshBackupMenu()
+        }
+    }
+
+    fun closeBackupScreen() = _uiState.update { it.copy(backup = null) }
+
+    /** Re-reads the folder and last-run details behind the menu. */
+    private suspend fun refreshBackupMenu() {
+        val context = getApplication<Application>()
+        val folder = BackupStore.folderUriNow(context)
+        val lastRun = BackupStore.lastRun(context).first()
+        val lastResult = BackupStore.lastResult(context).first()
+        _uiState.update {
+            it.copy(
+                backup = BackupFlowState.Menu(
+                    folderName = folder?.let(::folderLabel),
+                    lastRun = lastRun,
+                    lastResult = lastResult
+                )
+            )
+        }
+    }
+
+    /**
+     * Writes a full backup to the file the user picked.
+     *
+     * The JSON is built before the file is opened so that a failure to read the ledger cannot leave
+     * an empty file sitting where a backup is supposed to be.
+     */
+    fun writeBackupTo(uriString: String?) {
+        if (uriString == null) { viewModelScope.launch { refreshBackupMenu() }; return }
+        _uiState.update { it.copy(backup = BackupFlowState.Working) }
+
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            val result = runCatching {
+                val json = backupRepository.exportJson(System.currentTimeMillis(), BuildConfig.VERSION_NAME)
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uriString.toUri())?.use { out ->
+                        out.write(json.toByteArray(Charsets.UTF_8))
+                        out.flush()
+                    } ?: error("could not open the file for writing")
+                }
+                json.length
+            }
+            _uiState.update {
+                it.copy(
+                    backup = result.fold(
+                        onSuccess = { size ->
+                            BackupFlowState.Done(
+                                "Backup saved",
+                                "Everything is in that file — people, entries, groups and expenses. " +
+                                    "Keep it somewhere that is not this phone. (${size / 1024} KB)"
+                            )
+                        },
+                        onFailure = { e ->
+                            BackupFlowState.Unreadable(
+                                "Could not save the backup",
+                                e.message ?: "The file could not be written."
+                            )
+                        }
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * Reads a file the user picked and works out what restoring it would do.
+     *
+     * Understands both shapes. A JSON backup restores everything; a CSV restores people and
+     * entries only, which the preview then has to say out loud.
+     */
+    fun readRestoreFrom(uriString: String?) {
+        if (uriString == null) { viewModelScope.launch { refreshBackupMenu() }; return }
+        _uiState.update { it.copy(backup = BackupFlowState.Working) }
+
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            val text = runCatching {
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uriString.toUri())
+                        ?.use { it.readBytes().toString(Charsets.UTF_8) }
+                        ?: error("could not open the file")
+                }
+            }.getOrNull()
+
+            if (text == null) {
+                _uiState.update {
+                    it.copy(backup = BackupFlowState.Unreadable(
+                        "Could not read that file",
+                        "It may have been moved or deleted since you picked it."
+                    ))
+                }
+                return@launch
+            }
+            interpretRestoreFile(text)
+        }
+    }
+
+    /** JSON first, then CSV, then give up — with a sentence that says which it tried. */
+    private suspend fun interpretRestoreFile(text: String) {
+        when (val backup = decodeBackup(text)) {
+            is BackupResult.Ok ->
+                beginReview(RestoreSource.Json, backup.snapshot, backup.exportedAt, backup.appVersion)
+
+            is BackupResult.TooNew -> _uiState.update {
+                it.copy(backup = BackupFlowState.Unreadable(
+                    "This backup is too new",
+                    "It was written by a newer version of Mera Paisa. Update the app and try again. " +
+                        "Guessing at a format this build does not know could restore the wrong amounts."
+                ))
+            }
+
+            BackupResult.Damaged -> _uiState.update {
+                it.copy(backup = BackupFlowState.Unreadable(
+                    "This backup is damaged",
+                    "It is a Mera Paisa backup, but it is incomplete or has been edited into a " +
+                        "shape that no longer adds up. Nothing has been changed. Try an older backup."
+                ))
+            }
+
+            BackupResult.NotABackup -> when (val csv = readLedgerCsv(text)) {
+                is CsvImportResult.Ok ->
+                    beginReview(RestoreSource.Csv, csv.people.toSnapshot(), null, null)
+
+                is CsvImportResult.Damaged -> _uiState.update {
+                    it.copy(backup = BackupFlowState.Unreadable(
+                        "That CSV could not be read",
+                        "Line ${csv.line}: ${csv.reason}. Nothing has been changed."
+                    ))
+                }
+
+                CsvImportResult.NotALedgerCsv -> _uiState.update {
+                    it.copy(backup = BackupFlowState.Unreadable(
+                        "That is not a Mera Paisa file",
+                        "Pick a backup this app saved, or a ledger CSV it exported."
+                    ))
+                }
+            }
+        }
+    }
+
+    private suspend fun beginReview(
+        source: RestoreSource,
+        incoming: BackupSnapshot,
+        exportedAt: Long?,
+        appVersion: String?
+    ) {
+        val plan = backupRepository.plan(incoming, RestoreMode.Merge)
+        _uiState.update {
+            it.copy(backup = BackupFlowState.Reviewing(
+                source = source,
+                incoming = incoming,
+                exportedAt = exportedAt,
+                appVersion = appVersion,
+                mode = RestoreMode.Merge,
+                plan = plan
+            ))
+        }
+    }
+
+    /** Switching mode recomputes the plan, so the counts always describe the mode on screen. */
+    fun setRestoreMode(mode: RestoreMode) {
+        val reviewing = _uiState.value.backup as? BackupFlowState.Reviewing ?: return
+        if (reviewing.mode == mode || reviewing.busy) return
+        viewModelScope.launch {
+            val plan = backupRepository.plan(reviewing.incoming, mode)
+            _uiState.update {
+                val current = it.backup as? BackupFlowState.Reviewing ?: return@update it
+                it.copy(backup = current.copy(mode = mode, plan = plan))
+            }
+        }
+    }
+
+    fun applyRestore() {
+        val reviewing = _uiState.value.backup as? BackupFlowState.Reviewing ?: return
+        if (reviewing.busy) return
+        _uiState.update { it.copy(backup = reviewing.copy(busy = true)) }
+
+        viewModelScope.launch {
+            val result = runCatching { backupRepository.apply(reviewing.plan) }
+            _uiState.update {
+                it.copy(backup = result.fold(
+                    onSuccess = {
+                        val i = reviewing.plan.inserts
+                        val detail = buildString {
+                            if (reviewing.mode == RestoreMode.Replace) {
+                                append("Your ledger now matches the backup exactly. ")
+                            }
+                            append("Added ${i.people} ${if (i.people == 1) "person" else "people"}, ")
+                            append("${i.transactions} ${if (i.transactions == 1) "entry" else "entries"}")
+                            if (i.groups > 0) append(", ${i.groups} ${if (i.groups == 1) "group" else "groups"}")
+                            append(".")
+                            val skipped = reviewing.plan.alreadyPresent
+                            if (reviewing.mode == RestoreMode.Merge && !skipped.isZero) {
+                                append(" ${skipped.transactions} ${if (skipped.transactions == 1) "entry was" else "entries were"} already here and ${if (skipped.transactions == 1) "was" else "were"} left alone.")
+                            }
+                        }
+                        BackupFlowState.Done("Restored", detail)
+                    },
+                    onFailure = { e ->
+                        BackupFlowState.Unreadable(
+                            "The restore did not finish",
+                            "Nothing was changed — the whole restore runs as one database " +
+                                "transaction, so a failure leaves your ledger as it was. " +
+                                "(${e.message ?: e::class.simpleName})"
+                        )
+                    }
+                ))
+            }
+        }
+    }
+
+    // --- the weekly job ----------------------------------------------------------------------
+
+    /** Chooses the folder and starts the weekly job; a null uri means the picker was cancelled. */
+    fun setBackupFolder(uriString: String?) {
+        if (uriString == null) return
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            BackupStore.setFolderUri(context, uriString)
+            AutoExportWorker.schedule(context)
+            refreshBackupMenu()
+        }
+    }
+
+    fun turnOffAutomaticBackups() {
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            AutoExportWorker.cancel(context)
+            BackupStore.setFolderUri(context, null)
+            refreshBackupMenu()
+        }
+    }
+
+    /** Runs the weekly job's work immediately, so the folder can be proved to work now. */
+    fun backUpNow() {
+        val menu = _uiState.value.backup as? BackupFlowState.Menu ?: return
+        if (menu.busy) return
+        _uiState.update { it.copy(backup = menu.copy(busy = true)) }
+
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            val folder = BackupStore.folderUriNow(context)
+            val now = System.currentTimeMillis()
+            val message = if (folder == null) "No folder chosen." else {
+                val uri = folder.toUri()
+                val json = backupRepository.exportJson(now, BuildConfig.VERSION_NAME)
+                val written = BackupWriter.write(context, uri, backupFileName(BackupWriter.stamp(now)), json)
+                if (written == null) "Could not write to the backup folder. Pick it again."
+                else {
+                    val pruned = BackupWriter.prune(context, uri)
+                    "Backed up successfully." + if (pruned > 0) " $pruned older removed." else ""
+                }
+            }
+            BackupStore.recordRun(context, now, message)
+            refreshBackupMenu()
+        }
+    }
+
+    /** The tail of a tree uri is the closest thing to a folder name SAF will give us. */
+    private fun folderLabel(uri: String): String =
+        uri.substringAfterLast("%2F").substringAfterLast("/").ifBlank { "the folder you chose" }
 }

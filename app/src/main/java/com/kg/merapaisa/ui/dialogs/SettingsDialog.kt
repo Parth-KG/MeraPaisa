@@ -32,6 +32,7 @@ fun SettingsDialog(
     appLockAvailable: Boolean,
     onAppLockChange: (Boolean) -> Unit,
     onImportLink: () -> Unit,
+    onBackupRestore: () -> Unit,
     onDismiss: () -> Unit,
     onApply: (String) -> Unit
 ) {
@@ -95,6 +96,30 @@ fun SettingsDialog(
                         )
                         Text(
                             "Paste a ledger link someone sent you",
+                            color = theme.textSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onBackupRestore() }
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Back up & restore",
+                            color = theme.textPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "Save everything to a file, or bring a ledger back",
                             color = theme.textSecondary,
                             fontSize = 11.sp
                         )

@@ -44,6 +44,12 @@ import com.kg.merapaisa.ui.groups.GroupsEmptyState
 import com.kg.merapaisa.ui.dialogs.TransactionHistoryDialog
 import com.kg.merapaisa.ui.share.ImportLedgerDialog
 import com.kg.merapaisa.ui.share.ShareLedgerSheet
+import com.kg.merapaisa.ui.backup.BackupDialog
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.content.Intent
+import com.kg.merapaisa.data.backupFileName
+import com.kg.merapaisa.backup.BackupWriter
 import kotlinx.coroutines.launch
 import com.kg.merapaisa.SecurityStore
 import com.kg.merapaisa.ThemeStore
@@ -370,6 +376,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 appLockEnabled = appLockEnabled,
                 appLockAvailable = remember { canAuthenticate(context) },
                 onImportLink = viewModel::openPasteImport,
+                onBackupRestore = viewModel::openBackupScreen,
                 onAppLockChange = { enabled ->
                     scope.launch { SecurityStore.setAppLockEnabled(context, enabled) }
                 },
@@ -538,6 +545,51 @@ fun MainScreen(viewModel: MainViewModel) {
 
     // The incoming half. Rendered here rather than as its own screen so it sits above whatever
     // the user was already doing, and behind the app lock like everything else.
+    // System file pickers. They have to live in the composable — a ViewModel cannot launch one —
+    // so each hands the chosen uri straight back and does no work of its own.
+    val saveBackupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> viewModel.writeBackupTo(uri?.toString()) }
+
+    val openRestoreLauncher = rememberLauncherForActivityResult(
+        // Both shapes, because a restore accepts a full backup or a ledger CSV. Some file
+        // providers report JSON as octet-stream, so that is accepted rather than hiding the file
+        // the user is looking straight at.
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> viewModel.readRestoreFrom(uri?.toString()) }
+
+    val pickFolderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            // Without taking the permission persistably, the weekly job loses access to the folder
+            // the moment this process dies — which is exactly when it needs it.
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        }
+        viewModel.setBackupFolder(uri?.toString())
+    }
+
+    ui.backup?.let { backupState ->
+        BackupDialog(
+            state = backupState,
+            onSaveBackup = {
+                saveBackupLauncher.launch(backupFileName(BackupWriter.stamp(System.currentTimeMillis())))
+            },
+            onRestore = {
+                openRestoreLauncher.launch(arrayOf("application/json", "text/csv", "text/comma-separated-values", "text/plain", "application/octet-stream"))
+            },
+            onPickFolder = { pickFolderLauncher.launch(null) },
+            onTurnOffAuto = viewModel::turnOffAutomaticBackups,
+            onBackUpNow = viewModel::backUpNow,
+            onModeChange = viewModel::setRestoreMode,
+            onApply = viewModel::applyRestore,
+            onDismiss = viewModel::closeBackupScreen
+        )
+    }
+
     ui.import?.let { incoming ->
         ImportLedgerDialog(
             state = incoming,

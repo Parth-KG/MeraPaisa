@@ -1,6 +1,9 @@
 package com.kg.merapaisa.ui
 
+import com.kg.merapaisa.data.BackupSnapshot
 import com.kg.merapaisa.data.ImportOutcome
+import com.kg.merapaisa.data.RestoreMode
+import com.kg.merapaisa.data.RestorePlan
 import com.kg.merapaisa.data.SharePayload
 
 /** Which of the two lists is on screen. */
@@ -32,7 +35,9 @@ data class MainUiState(
     /** The share-link sheet, absent when it is not open. */
     val share: ShareFlowState? = null,
     /** An incoming share link being read or confirmed, absent when none is in flight. */
-    val import: ImportFlowState? = null
+    val import: ImportFlowState? = null,
+    /** Backup and restore, absent when that screen is closed. */
+    val backup: BackupFlowState? = null
 )
 
 /** The multi-step split flow, absent when it is not running. */
@@ -123,4 +128,66 @@ enum class UnreadableReason {
 
     /** A format this build does not know. Refused rather than guessed at. */
     NewerVersion
+}
+
+/**
+ * Backup and restore.
+ *
+ * [Reviewing] is the reason this is a state machine rather than a couple of buttons: a restore can
+ * delete a ledger, so what it is about to do has to be on screen, in counts, before it happens.
+ */
+sealed interface BackupFlowState {
+
+    /** The menu: save a backup, restore one, or set up the weekly job. */
+    data class Menu(
+        val folderName: String? = null,
+        val lastRun: Long = 0,
+        val lastResult: String? = null,
+        val busy: Boolean = false
+    ) : BackupFlowState
+
+    /** Reading or writing a file. Brief, but a large ledger on slow storage is not instant. */
+    data object Working : BackupFlowState
+
+    /**
+     * A file has been read and understood, and nothing has been written yet.
+     *
+     * [plan] is recomputed whenever [mode] changes, so the counts on screen always describe the
+     * mode currently selected rather than the one that was selected when the file was opened.
+     */
+    data class Reviewing(
+        val source: RestoreSource,
+        val incoming: BackupSnapshot,
+        val exportedAt: Long?,
+        val appVersion: String?,
+        val mode: RestoreMode,
+        val plan: RestorePlan,
+        val busy: Boolean = false
+    ) : BackupFlowState {
+        /**
+         * True when Replace would destroy groups the file cannot put back.
+         *
+         * A CSV carries no group data at all, so replacing from one deletes every group
+         * permanently. That is a sentence the user has to see before tapping, not a footnote.
+         */
+        val replaceWouldLoseGroups: Boolean
+            get() = mode == RestoreMode.Replace &&
+                incoming.groups.isEmpty() &&
+                plan.deletes.groups > 0
+    }
+
+    /** The file could not be used. Nothing was written. */
+    data class Unreadable(val title: String, val detail: String) : BackupFlowState
+
+    /** Finished, with a sentence describing what changed. */
+    data class Done(val title: String, val detail: String) : BackupFlowState
+}
+
+/** Which kind of file a restore came from, since the two can restore different amounts. */
+enum class RestoreSource {
+    /** A full backup: everything, groups included. */
+    Json,
+
+    /** The spreadsheet export: people and transactions only. */
+    Csv
 }

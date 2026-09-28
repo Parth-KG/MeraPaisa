@@ -136,4 +136,36 @@ interface GroupDao {
             ExpenseShare(expenseId = id, personId = personId, shareMinor = share)
         })
     }
+
+    // -----------------------------------------------------------------------------------------
+    // Backup and restore
+    //
+    // Raw reads and writes with ids intact. Every other query here is scoped to one group; a
+    // backup needs all of them at once, and needs them to still join up after being written back.
+    // -----------------------------------------------------------------------------------------
+
+    @Query("SELECT * FROM expense_groups ORDER BY id ASC")
+    suspend fun getAllGroupsForBackup(): List<Group>
+
+    @Query("SELECT * FROM group_members ORDER BY groupId ASC, personId ASC")
+    suspend fun getAllGroupMembersForBackup(): List<GroupMember>
+
+    @Query("SELECT * FROM expenses ORDER BY id ASC")
+    suspend fun getAllExpensesForBackup(): List<Expense>
+
+    @Query("SELECT * FROM expense_shares ORDER BY expenseId ASC, personId ASC")
+    suspend fun getAllExpenseSharesForBackup(): List<ExpenseShare>
+
+    @Insert
+    suspend fun insertGroups(groups: List<Group>)
+
+    @Insert
+    suspend fun insertExpenses(expenses: List<Expense>)
+
+    /**
+     * Deleting the groups is enough: members, expenses and shares all cascade from
+     * `expense_groups`, which is exactly the behaviour MigrationTest pins down.
+     */
+    @Query("DELETE FROM expense_groups")
+    suspend fun deleteAllGroups()
 }
