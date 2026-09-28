@@ -45,6 +45,9 @@ import com.kg.merapaisa.ui.dialogs.TransactionHistoryDialog
 import com.kg.merapaisa.ui.share.ImportLedgerDialog
 import com.kg.merapaisa.ui.share.ShareLedgerSheet
 import com.kg.merapaisa.ui.backup.BackupDialog
+import com.kg.merapaisa.ui.update.UpdateDialog
+import com.kg.merapaisa.BuildConfig
+import com.kg.merapaisa.update.UpdateInstaller
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.Intent
@@ -377,6 +380,8 @@ fun MainScreen(viewModel: MainViewModel) {
                 appLockAvailable = remember { canAuthenticate(context) },
                 onImportLink = viewModel::openPasteImport,
                 onBackupRestore = viewModel::openBackupScreen,
+                onCheckUpdates = viewModel::checkForUpdatesNow,
+                appVersion = BuildConfig.VERSION_NAME,
                 onAppLockChange = { enabled ->
                     scope.launch { SecurityStore.setAppLockEnabled(context, enabled) }
                 },
@@ -570,6 +575,25 @@ fun MainScreen(viewModel: MainViewModel) {
             )
         }
         viewModel.setBackupFolder(uri?.toString())
+    }
+
+    // The quiet once-a-day check. Runs on first composition only, and stays silent unless there
+    // is genuinely a newer release — an app that interrupts you to say nothing has changed is
+    // worse than one that never looks.
+    LaunchedEffect(Unit) { viewModel.checkForUpdatesQuietly() }
+
+    ui.update?.let { updateState ->
+        UpdateDialog(
+            state = updateState,
+            onDownload = viewModel::downloadUpdate,
+            onInstall = viewModel::installDownloadedUpdate,
+            onGrantPermission = {
+                context.startActivity(UpdateInstaller.installPermissionIntent(context))
+                viewModel.closeUpdate()
+            },
+            onDismiss = viewModel::dismissUpdate,
+            onClose = viewModel::closeUpdate
+        )
     }
 
     ui.backup?.let { backupState ->

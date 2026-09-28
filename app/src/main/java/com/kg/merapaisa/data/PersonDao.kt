@@ -166,6 +166,32 @@ interface PersonDao {
     @Update
     suspend fun updateTransaction(transaction: Transaction)
 
+    /** Room runs a list update as one transaction, so a currency conversion lands whole. */
+    @Update
+    suspend fun updateTransactions(transactions: List<Transaction>)
+
+    /**
+     * Rewrites every one of a person's entries at [rate], and relabels them.
+     *
+     * The balance is derived from these rows, so converting them *is* converting the balance —
+     * there is no separate figure to keep in step. `convertAll` guarantees the rewritten entries
+     * still sum to the converted total, which is what stops the log contradicting the balance it
+     * produces.
+     *
+     * One transaction: a failure halfway would leave a history half in each currency, with no
+     * record of which entries were which.
+     */
+    @androidx.room.Transaction
+    suspend fun convertPersonCurrency(personId: Long, toCurrency: String, rate: Double) {
+        val entries = getTransactionsForPersonNow(personId)
+        if (entries.isNotEmpty()) {
+            val converted = convertAll(entries.map { it.amountMinor }, rate)
+            updateTransactions(entries.mapIndexed { i, t -> t.copy(amountMinor = converted[i]) })
+        }
+        val person = getPersonNow(personId) ?: return
+        updatePerson(person.copy(currency = toCurrency))
+    }
+
     @Query("DELETE FROM transactions WHERE id = :transactionId")
     suspend fun deleteTransaction(transactionId: Int)
 

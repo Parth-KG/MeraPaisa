@@ -18,12 +18,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
+import com.kg.merapaisa.data.formatMinor
 import com.kg.merapaisa.data.Expense
 import com.kg.merapaisa.data.Group
 import com.kg.merapaisa.data.MemberBalance
 import com.kg.merapaisa.data.Person
-import com.kg.merapaisa.data.formatMinor
-import com.kg.merapaisa.data.formatSignedAmount
 
 /**
  * One group: where everybody stands, what has been spent, and a way to square it up.
@@ -102,7 +101,7 @@ fun GroupDetailScreen(
                         Text(nameOf(b.personId), color = theme.textPrimary, fontSize = 14.sp)
                         Text(
                             if (b.amountMinor == 0L) "square"
-                            else formatSignedAmount(b.amountMinor, group.currency),
+                            else formatMinor(b.amountMinor, group.currency),
                             color = when {
                                 b.amountMinor > 0 -> theme.positive
                                 b.amountMinor < 0 -> theme.negative

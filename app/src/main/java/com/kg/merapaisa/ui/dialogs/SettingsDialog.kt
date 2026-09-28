@@ -33,6 +33,8 @@ fun SettingsDialog(
     onAppLockChange: (Boolean) -> Unit,
     onImportLink: () -> Unit,
     onBackupRestore: () -> Unit,
+    onCheckUpdates: () -> Unit,
+    appVersion: String,
     onDismiss: () -> Unit,
     onApply: (String) -> Unit
 ) {
@@ -120,6 +122,30 @@ fun SettingsDialog(
                         )
                         Text(
                             "Save everything to a file, or bring a ledger back",
+                            color = theme.textSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onCheckUpdates() }
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Check for updates",
+                            color = theme.textPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "You're on $appVersion",
                             color = theme.textSecondary,
                             fontSize = 11.sp
                         )

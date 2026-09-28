@@ -160,8 +160,48 @@ fun isUsableAmount(text: String): Boolean {
 }
 
 /**
- * Like [formatMinor] but always carries an explicit sign, so which way a debt runs does not
- * depend on telling green from red.
+ * Like [formatMinor] but always carries an explicit sign, so which way a debt runs does not depend
+ * on telling green from red.
+ *
+ * For **plain text only** — the shared summary, where there is no colour to read. On screen the
+ * amount is already green or red, and a leading `+` there is noise; those call sites use
+ * [formatMinor] directly.
  */
 fun formatSignedAmount(amountMinor: Long, currencyCode: String): String =
     if (amountMinor > 0) "+${formatMinor(amountMinor, currencyCode)}" else formatMinor(amountMinor, currencyCode)
+
+/**
+ * Converts a whole list of amounts at one rate, keeping the parts consistent with the total.
+ *
+ * Changing someone's currency rewrites every entry in their history, because a log that mixes
+ * rupees and dollars with a correcting adjustment at the bottom is not a history anyone can read.
+ * That creates a problem the naive version gets wrong: rounding each entry independently gives a
+ * set of parts that need not add up to the rounded total. Convert 33.33 three times at 2.0 and you
+ * get 66.66 three times — 199.98 — while the balance of 99.99 converts to 199.98. Those agree here,
+ * but at other rates they do not, and the entries would then contradict the balance derived from
+ * them.
+ *
+ * So the total is converted once and treated as authoritative, and any residue is absorbed into the
+ * largest-magnitude entry — the one where a paise is least visible. Same principle as [evenShares]
+ * in SettleUp.kt, which gives leftover minor units to the earliest members rather than losing them.
+ *
+ * An empty list converts to an empty list. A list summing to zero stays summing to zero, so a
+ * settled person stays settled.
+ */
+fun convertAll(amounts: List<Long>, rate: Double): List<Long> {
+    if (amounts.isEmpty()) return emptyList()
+
+    val converted = amounts.map { Math.round(it * rate) }.toMutableList()
+    val target = Math.round(amounts.sum() * rate)
+    val residue = target - converted.sum()
+
+    if (residue != 0L) {
+        // Index of the largest magnitude; ties go to the earliest entry so the result is stable.
+        var pick = 0
+        for (i in converted.indices) {
+            if (Math.abs(converted[i]) > Math.abs(converted[pick])) pick = i
+        }
+        converted[pick] += residue
+    }
+    return converted
+}

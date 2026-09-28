@@ -210,7 +210,35 @@ fun EditPersonDialog(
             // person.currency, not selectedCurrency: savePersonEdit converts from the currency
             // the balance is stored in. Naming the selected one meant that changing currency
             // twice without saving described a conversion that was never going to happen.
-            text = { Text("Convert balance from ${person.currency} to $pendingCurrency using live rates, or keep amount as-is?", color = theme.textSecondary) },
+            // Says what it actually does now. Until v2.3 this converted the balance by writing one
+            // correcting entry, leaving a log of old-currency amounts plus an adjustment. It now
+            // rewrites every entry — which is clearer to read and impossible to undo, so both
+            // facts belong in the sentence asking for confirmation.
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Convert every entry from ${person.currency} to $pendingCurrency at today's " +
+                            "rate, so ${person.name}'s whole history reads in $pendingCurrency?",
+                        color = theme.textSecondary
+                    )
+                    Text(
+                        "This can't be undone — the original ${person.currency} amounts are replaced.",
+                        color = theme.negative,
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        "Group expenses aren't converted, so if ${person.name} is in a group their " +
+                            "balance will mix the two until that's handled.",
+                        color = theme.textSecondary,
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        "Or keep the amounts as they are and just relabel the currency.",
+                        color = theme.textSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+            },
             confirmButton = {
                 Button(
                     onClick = {

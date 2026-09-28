@@ -21,6 +21,11 @@ import com.kg.merapaisa.BackupStore
 import com.kg.merapaisa.BuildConfig
 import com.kg.merapaisa.backup.AutoExportWorker
 import com.kg.merapaisa.backup.BackupWriter
+import com.kg.merapaisa.update.UpdateCheck
+import com.kg.merapaisa.update.UpdateInstaller
+import com.kg.merapaisa.update.UpdateStatus
+import com.kg.merapaisa.update.UpdateStore
+import java.io.File
 import com.kg.merapaisa.data.BackupResult
 import com.kg.merapaisa.data.BackupSnapshot
 import com.kg.merapaisa.data.CsvImportResult
@@ -78,6 +83,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         notifier = WidgetLedgerNotifier(application)
     )
     private val exchangeRates = ExchangeRateApi()
+    private val updates = UpdateCheck()
 
     val groups = groupRepository.groupSummaries().stateIn(
         scope = viewModelScope,
@@ -295,25 +301,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _conversionError.value = null
             val currencyChanged = currency != snapshot.currency
 
-            if (convertBalance && currencyChanged && snapshot.balanceMinor != 0L) {
+            // Converting rewrites every entry rather than recording a correction. The balance is
+            // derived from those entries, so converting them is converting the balance — and it
+            // leaves a log that reads wholly in one currency instead of old amounts plus a
+            // mystery adjustment. Irreversible; the dialog says so.
+            //
+            // The condition no longer excludes a zero balance: someone settled can still have a
+            // history worth converting, and their entries would otherwise be left in the old
+            // currency under a new label.
+            if (convertBalance && currencyChanged) {
                 _converting.value = true
-                val converted = try {
-                    exchangeRates.convert(snapshot.balanceMinor, snapshot.currency, currency)
+                val rate = try {
+                    exchangeRates.rate(snapshot.currency, currency)
                 } finally {
                     _converting.value = false
                 }
-                if (converted == null) {
+                if (rate == null) {
                     _conversionError.value =
                         "Couldn't get a ${snapshot.currency} to $currency rate. " +
                         "Check your connection, or choose Keep as-is to relabel without converting."
                     return@launch
                 }
-                // Balance is derived, so record the difference the conversion makes.
-                repository.recordAmount(
-                    personId = snapshot.id,
-                    amountMinor = converted - snapshot.balanceMinor,
-                    note = "Converted ${snapshot.currency} to $currency"
-                )
+                repository.convertCurrency(snapshot.id, currency, rate)
             }
 
             // The edit is committed, so the photo it replaced is now unreferenced.
@@ -898,4 +907,113 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** The tail of a tree uri is the closest thing to a folder name SAF will give us. */
     private fun folderLabel(uri: String): String =
         uri.substringAfterLast("%2F").substringAfterLast("/").ifBlank { "the folder you chose" }
+
+    // =========================================================================================
+    // In-app updates
+    // =========================================================================================
+
+    /**
+     * The once-a-day background check, called on launch.
+     *
+     * Silent unless it finds something: no spinner, no "you're up to date", nothing at all if
+     * GitHub is unreachable. An app that interrupts you to say nothing has changed is worse than
+     * one that never checks.
+     */
+    fun checkForUpdatesQuietly() {
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            val now = System.currentTimeMillis()
+            if (!UpdateStore.isDue(context, now)) return@launch
+            UpdateStore.recordCheck(context, now)
+
+            val status = updates.check(BuildConfig.VERSION_NAME)
+            if (status !is UpdateStatus.Available) return@launch
+            // Already told "not now" for this exact version — do not ask again.
+            if (UpdateStore.dismissedVersion(context) == status.version) return@launch
+
+            _uiState.update { it.copy(update = status.toFlowState()) }
+        }
+    }
+
+    /** The explicit "Check for updates" in Settings, which reports every outcome. */
+    fun checkForUpdatesNow() {
+        _uiState.update { it.copy(showSettingsDialog = false, update = UpdateFlowState.Checking) }
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            UpdateStore.recordCheck(context, System.currentTimeMillis())
+            val status = updates.check(BuildConfig.VERSION_NAME)
+            _uiState.update {
+                it.copy(update = when (status) {
+                    is UpdateStatus.Available -> status.toFlowState()
+                    UpdateStatus.UpToDate -> UpdateFlowState.UpToDate
+                    is UpdateStatus.Unreachable -> UpdateFlowState.Unreachable(status.reason)
+                })
+            }
+        }
+    }
+
+    private fun UpdateStatus.Available.toFlowState() =
+        UpdateFlowState.Available(version, downloadUrl, sizeBytes, notes)
+
+    /**
+     * Downloads the update, then hands it to the system installer.
+     *
+     * The signature check lives in [UpdateInstaller] and runs before the installer is ever opened,
+     * so the system's confirmation prompt is only shown for a file signed by the same key as the
+     * running app.
+     */
+    fun downloadUpdate(version: String, url: String) {
+        val context = getApplication<Application>()
+        if (!UpdateInstaller.canInstall(context)) {
+            val current = _uiState.value.update as? UpdateFlowState.Available
+            _uiState.update {
+                it.copy(update = UpdateFlowState.NeedsPermission(version, url, current?.sizeBytes ?: 0L))
+            }
+            return
+        }
+
+        _uiState.update { it.copy(update = UpdateFlowState.Downloading(version, 0)) }
+        viewModelScope.launch {
+            val result = UpdateInstaller.download(context, url, version) { percent ->
+                _uiState.update { state ->
+                    val d = state.update as? UpdateFlowState.Downloading ?: return@update state
+                    state.copy(update = d.copy(percent = percent))
+                }
+            }
+            _uiState.update {
+                it.copy(update = when (result) {
+                    is UpdateInstaller.Result.Ready ->
+                        UpdateFlowState.ReadyToInstall(version, result.file.absolutePath)
+                    UpdateInstaller.Result.SignatureMismatch -> UpdateFlowState.SignatureMismatch
+                    is UpdateInstaller.Result.Failed -> UpdateFlowState.Failed(result.reason)
+                })
+            }
+        }
+    }
+
+    /** Opens the system installer for a file that has already passed the signature check. */
+    fun installDownloadedUpdate(path: String) {
+        val context = getApplication<Application>()
+        runCatching { UpdateInstaller.install(context, File(path)) }
+            .onFailure { e ->
+                _uiState.update { s ->
+                    s.copy(update = UpdateFlowState.Failed(e.message ?: "The installer would not open."))
+                }
+            }
+    }
+
+    /** "Not now" — remembered for this version only, so the next release still gets offered. */
+    fun dismissUpdate() {
+        val version = when (val u = _uiState.value.update) {
+            is UpdateFlowState.Available -> u.version
+            is UpdateFlowState.NeedsPermission -> u.version
+            else -> null
+        }
+        viewModelScope.launch {
+            if (version != null) UpdateStore.dismiss(getApplication(), version)
+            _uiState.update { it.copy(update = null) }
+        }
+    }
+
+    fun closeUpdate() = _uiState.update { it.copy(update = null) }
 }

@@ -15,8 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
+import com.kg.merapaisa.data.formatMinor
 import com.kg.merapaisa.data.GroupSummary
-import com.kg.merapaisa.data.formatSignedAmount
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -57,7 +57,7 @@ fun GroupRow(summary: GroupSummary, onClick: () -> Unit, onDelete: () -> Unit) {
 
         Box {
             Text(
-                if (balance == 0L) "—" else formatSignedAmount(balance, summary.group.currency),
+                if (balance == 0L) "—" else formatMinor(balance, summary.group.currency),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = when {

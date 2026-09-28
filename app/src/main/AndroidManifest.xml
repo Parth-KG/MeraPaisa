@@ -2,6 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!--
+      Lets the app hand a downloaded update to the system installer. The user still has to grant
+      it per-app in Settings and still confirms every install; this only makes the prompt possible.
+      UpdateInstaller refuses to offer any APK not signed with the same key as the running app.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:allowBackup="true"

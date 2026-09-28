@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only the export directory is shareable; nothing else in the app is exposed. -->
+<!-- Only these two cache directories are shareable; nothing else in the app is exposed. -->
 <paths>
     <cache-path name="exports" path="exports/" />
+    <!-- A downloaded update, handed to the system installer as a content:// URI. -->
+    <cache-path name="updates" path="updates/" />
 </paths>

@@ -47,6 +47,18 @@ class PersonRepository(
 
     suspend fun addPerson(person: Person): Long = dao.insertPerson(person).also { notifier.onLedgerChanged() }
 
+    /**
+     * Converts a person's whole history to [toCurrency] at [rate], leaving no adjustment entry.
+     *
+     * Irreversible: the original amounts are gone. Until v2.2 this instead wrote a single
+     * "Converted INR to USD" correction, which left a log where old entries read in one currency
+     * and a mystery adjustment reconciled it to another.
+     */
+    suspend fun convertCurrency(personId: Long, toCurrency: String, rate: Double) {
+        dao.convertPersonCurrency(personId, toCurrency, rate)
+        notifier.onLedgerChanged()
+    }
+
     suspend fun updatePerson(person: Person) {
         dao.updatePerson(person)
         notifier.onLedgerChanged()

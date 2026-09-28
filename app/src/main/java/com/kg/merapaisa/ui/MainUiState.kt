@@ -37,7 +37,9 @@ data class MainUiState(
     /** An incoming share link being read or confirmed, absent when none is in flight. */
     val import: ImportFlowState? = null,
     /** Backup and restore, absent when that screen is closed. */
-    val backup: BackupFlowState? = null
+    val backup: BackupFlowState? = null,
+    /** An update being checked for, offered, or downloaded. Absent when nothing is in flight. */
+    val update: UpdateFlowState? = null
 )
 
 /** The multi-step split flow, absent when it is not running. */
@@ -190,4 +192,51 @@ enum class RestoreSource {
 
     /** The spreadsheet export: people and transactions only. */
     Csv
+}
+
+/**
+ * Looking for, and installing, a new version.
+ *
+ * The app is sideloaded, so nothing else will ever tell you a release exists. This flow is
+ * deliberately quiet: it checks once a day in the background and only surfaces when there is
+ * genuinely something newer, or when you ask it directly from Settings.
+ */
+sealed interface UpdateFlowState {
+
+    /** Asking GitHub. Only shown when the user asked; the daily check stays silent. */
+    data object Checking : UpdateFlowState
+
+    /** Already on the newest release. Only shown for an explicit check. */
+    data object UpToDate : UpdateFlowState
+
+    /** Could not ask — no network, rate limited, or an answer that made no sense. */
+    data class Unreachable(val reason: String) : UpdateFlowState
+
+    /** A newer release exists. Nothing is downloaded until the user says so. */
+    data class Available(
+        val version: String,
+        val downloadUrl: String,
+        val sizeBytes: Long,
+        val notes: String
+    ) : UpdateFlowState
+
+    /** [percent] is -1 when the server does not report a length. */
+    data class Downloading(val version: String, val percent: Int) : UpdateFlowState
+
+    /** Downloaded and signature-checked. The system installer takes it from here. */
+    data class ReadyToInstall(val version: String, val path: String) : UpdateFlowState
+
+    /**
+     * The download was signed by a different key.
+     *
+     * Its own state, not a Failed with a message, because it means something quite different: not
+     * "try again" but "the file you received is not the app you are running". The only safe action
+     * is to stop and go to the releases page by hand.
+     */
+    data object SignatureMismatch : UpdateFlowState
+
+    data class Failed(val reason: String) : UpdateFlowState
+
+    /** Android will not let the app install anything until this is granted, per-app, in Settings. */
+    data class NeedsPermission(val version: String, val downloadUrl: String, val sizeBytes: Long) : UpdateFlowState
 }

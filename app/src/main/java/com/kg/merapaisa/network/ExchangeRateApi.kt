@@ -48,6 +48,24 @@ class ExchangeRateApi {
         return convertedMinor(amountMinor, converted)
     }
 
+    /**
+     * The plain rate from one currency to another, for converting many amounts at once.
+     *
+     * Changing someone's currency rewrites every entry in their history, and asking the service
+     * per entry would be dozens of requests for one answer that does not change between them. So
+     * the rate is fetched once and applied locally by `convertAll`.
+     *
+     * Asked for as a rate on one unit rather than derived from a converted balance — a balance of
+     * zero would give no ratio at all, and a person at zero can still have a history worth
+     * converting.
+     */
+    suspend fun rate(from: String, to: String): Double? {
+        if (from == to) return 1.0
+        return withTimeoutOrNull(REQUEST_TIMEOUT_MS) {
+            withContext(Dispatchers.IO) { fetch(1.0, from, to) }
+        }
+    }
+
     private fun fetch(amountMajor: Double, from: String, to: String): Double? {
         val url = URL("$BASE_URL?amount=$amountMajor&from=$from&to=$to")
         val connection = (url.openConnection() as HttpURLConnection).apply {
