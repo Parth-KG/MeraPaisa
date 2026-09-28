@@ -287,7 +287,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     },
                     modifier = Modifier
                         .size(65.dp)
-                        .background(theme.positive, RoundedCornerShape(16.dp))
+                        .background(theme.primary, RoundedCornerShape(16.dp))
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add", tint = theme.background)
                 }

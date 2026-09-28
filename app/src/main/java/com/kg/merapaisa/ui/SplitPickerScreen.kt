@@ -98,7 +98,7 @@ fun SplitPickerScreen(
                         Icon(
                             Icons.Default.PersonAdd,
                             contentDescription = null,
-                            tint = theme.positive,
+                            tint = theme.primary,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
@@ -174,7 +174,7 @@ private fun SplitPickerRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) theme.positive.copy(alpha = 0.1f) else Color.Transparent)
+            .background(if (selected) theme.primary.copy(alpha = 0.1f) else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(16.dp, 14.dp),
         verticalAlignment = Alignment.CenterVertically

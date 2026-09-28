@@ -22,8 +22,8 @@ import java.io.File
 @Composable
 fun PfpView(person: Person, size: Int) {
     val theme = LocalAppTheme.current
-    val color = remember(person.pfpColor, theme.positive) {
-        try { Color(android.graphics.Color.parseColor(person.pfpColor)) } catch (e: Exception) { theme.positive }
+    val color = remember(person.pfpColor, theme.primary) {
+        try { Color(android.graphics.Color.parseColor(person.pfpColor)) } catch (e: Exception) { theme.primary }
     }
     Box(
         modifier = Modifier

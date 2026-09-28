@@ -371,7 +371,7 @@ private fun SplitAdjustmentRow(
             ),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
-            cursorBrush = SolidColor(theme.positive),
+            cursorBrush = SolidColor(theme.primary),
             // Sizes to its content: the floor keeps an empty field tappable, the ceiling stops a
             // pathological amount swallowing the name.
             modifier = Modifier.widthIn(min = 56.dp, max = 140.dp).padding(end = 4.dp)
@@ -384,7 +384,7 @@ private fun SplitAdjustmentRow(
             Icon(
                 if (locked) Icons.Default.Lock else Icons.Default.LockOpen,
                 contentDescription = if (locked) "Unlock" else "Lock",
-                tint = if (locked) theme.positive else theme.textSecondary,
+                tint = if (locked) theme.primary else theme.textSecondary,
                 modifier = Modifier.size(18.dp)
             )
         }
