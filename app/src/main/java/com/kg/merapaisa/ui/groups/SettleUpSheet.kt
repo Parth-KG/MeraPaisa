@@ -17,7 +17,7 @@ import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.MemberBalance
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.Transfer
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.settleUp
 
 /**
@@ -73,7 +73,7 @@ fun SettleUpSheet(
                                         fontWeight = FontWeight.Medium
                                     )
                                     Text(
-                                        formatMinor(t.amountMinor, currency),
+                                        amountString(t.amountMinor, currency),
                                         color = theme.positive,
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold

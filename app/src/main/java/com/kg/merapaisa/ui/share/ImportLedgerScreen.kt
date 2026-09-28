@@ -22,7 +22,7 @@ import com.kg.merapaisa.data.ReconcileItem
 import com.kg.merapaisa.data.ReconcilePlan
 import com.kg.merapaisa.data.SharePayload
 import com.kg.merapaisa.data.claimedNameForDisplay
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.ImportFlowState
 import com.kg.merapaisa.ui.UnreadableReason
 import java.text.SimpleDateFormat
@@ -282,7 +282,7 @@ private fun ConfirmingDialog(
                         }
                         val here = -entry.amountMinor
                         Text(
-                            formatMinor(here, payload.currency),
+                            amountString(here, payload.currency),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = if (here < 0) theme.negative else theme.positive
@@ -309,11 +309,11 @@ private fun ConfirmingDialog(
                 Text(
                     when {
                         after != null && netHere == 0L ->
-                            "Nothing changes. ${target!!.name} stays at ${formatMinor(after, payload.currency)}"
+                            "Nothing changes. ${target!!.name} stays at ${amountString(after, payload.currency)}"
                         after != null ->
-                            "${target!!.name} ends up at ${formatMinor(after, payload.currency)}"
-                        netHere < 0 -> "You will owe ${formatMinor(-netHere, payload.currency)}"
-                        netHere > 0 -> "They will owe you ${formatMinor(netHere, payload.currency)}"
+                            "${target!!.name} ends up at ${amountString(after, payload.currency)}"
+                        netHere < 0 -> "You will owe ${amountString(-netHere, payload.currency)}"
+                        netHere > 0 -> "They will owe you ${amountString(netHere, payload.currency)}"
                         else -> "These cancel out"
                     },
                     fontSize = 14.sp,
@@ -359,7 +359,7 @@ private fun ConfirmingDialog(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(person.name, fontSize = 13.sp, color = theme.textPrimary)
                             Text(
-                                "now at ${formatMinor(person.balanceMinor, person.currency)}",
+                                "now at ${amountString(person.balanceMinor, person.currency)}",
                                 fontSize = 11.sp,
                                 color = theme.textSecondary
                             )
@@ -538,9 +538,9 @@ private fun DifferencesSection(
                         title = item.theirNote.ifBlank { "No note" },
                         detail = buildString {
                             if (item.amountDiffers) {
-                                append(formatMinor(item.localAmountMinor, currency))
+                                append(amountString(item.localAmountMinor, currency))
                                 append(" \u2192 ")
-                                append(formatMinor(item.theirAmountMinor, currency))
+                                append(amountString(item.theirAmountMinor, currency))
                             }
                             if (item.amountDiffers && item.noteDiffers) append(" \u00B7 ")
                             if (item.noteDiffers) {
@@ -569,7 +569,7 @@ private fun DifferencesSection(
                         checked = item.uid in selected,
                         onToggle = { onToggleItem(item.uid) },
                         title = item.note.ifBlank { "No note" },
-                        detail = formatMinor(item.amountMinor, currency),
+                        detail = amountString(item.amountMinor, currency),
                         date = dateOf(item.timestamp)
                     )
                 }
@@ -585,7 +585,7 @@ private fun DifferencesSection(
             ) {
                 plan.onlyYours.take(MAX_ENTRIES_SHOWN).forEach { item ->
                     Text(
-                        "${item.note.ifBlank { "No note" }} \u00B7 ${formatMinor(item.amountMinor, currency)}",
+                        "${item.note.ifBlank { "No note" }} \u00B7 ${amountString(item.amountMinor, currency)}",
                         fontSize = 12.sp,
                         color = theme.textSecondary,
                         maxLines = 1,

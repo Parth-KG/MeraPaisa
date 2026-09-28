@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.ui.MoveDebtFlowState
 
@@ -56,7 +56,7 @@ fun MoveDebtDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    "${state.fromName} owes you ${formatMinor(state.availableMinor, state.currency)}. " +
+                    "${state.fromName} owes you ${amountString(state.availableMinor, state.currency)}. " +
                         "Move part of that onto somebody else.",
                     fontSize = 13.sp,
                     color = theme.textSecondary
@@ -68,7 +68,7 @@ fun MoveDebtDialog(
                     readOnly = true,
                     label = { Text("Amount") },
                     placeholder = { Text("0") },
-                    prefix = { Text(formatMinor(0, state.currency).filterNot { it.isDigit() }) },
+                    prefix = { Text(amountString(0, state.currency).filterNot { it.isDigit() }) },
                     isError = typed != null && typed > state.availableMinor,
                     supportingText = {
                         if (typed != null && typed > state.availableMinor) {
@@ -117,7 +117,7 @@ fun MoveDebtDialog(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(person.name, fontSize = 13.sp, color = theme.textPrimary)
                             Text(
-                                "now at ${formatMinor(person.balanceMinor, person.currency)}",
+                                "now at ${amountString(person.balanceMinor, person.currency)}",
                                 fontSize = 11.sp,
                                 color = theme.textSecondary
                             )

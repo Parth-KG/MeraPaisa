@@ -19,7 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.Expense
 import com.kg.merapaisa.data.Group
 import com.kg.merapaisa.data.MemberBalance
@@ -114,7 +114,7 @@ fun GroupDetailScreen(
                                 fontSize = 14.sp
                             )
                             Text(
-                                formatMinor(t.amountMinor, group.currency),
+                                amountString(t.amountMinor, group.currency),
                                 color = theme.textPrimary,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold
@@ -169,7 +169,7 @@ fun GroupDetailScreen(
                         Text(nameOf(b.personId), color = theme.textPrimary, fontSize = 14.sp)
                         Text(
                             if (b.amountMinor == 0L) "square"
-                            else formatMinor(b.amountMinor, group.currency),
+                            else amountString(b.amountMinor, group.currency),
                             color = when {
                                 b.amountMinor > 0 -> theme.positive
                                 b.amountMinor < 0 -> theme.negative
@@ -217,7 +217,7 @@ fun GroupDetailScreen(
                                 Text("paid by ${nameOf(e.paidByPersonId)}", color = theme.textSecondary, fontSize = 12.sp)
                             }
                             Text(
-                                formatMinor(e.amountMinor, group.currency),
+                                amountString(e.amountMinor, group.currency),
                                 color = theme.textPrimary,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold
@@ -267,7 +267,7 @@ fun GroupDetailScreen(
                                     )
                                 }
                                 Text(
-                                    formatMinor(e.amountMinor, group.currency),
+                                    amountString(e.amountMinor, group.currency),
                                     color = theme.textSecondary,
                                     fontSize = 14.sp
                                 )

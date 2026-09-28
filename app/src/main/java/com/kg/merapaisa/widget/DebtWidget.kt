@@ -19,7 +19,7 @@ import com.kg.merapaisa.AppTheme
 import com.kg.merapaisa.MainActivity
 import com.kg.merapaisa.SecurityStore
 import com.kg.merapaisa.ThemeStore
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.AppDatabase
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.repository.PersonRepository
@@ -131,7 +131,7 @@ fun WidgetContent(
             // Where you stand overall, one figure per currency — never added together.
             totals.take(2).forEach { total ->
                 Text(
-                    formatMinor(total.amountMinor, total.currency),
+                    amountString(total.amountMinor, total.currency),
                     style = TextStyle(
                         color = if (total.amountMinor > 0) {
                             palette.of { it.positive }
@@ -188,7 +188,7 @@ fun WidgetContent(
                     )
                     Text(
                         // Signed, so the direction of the debt does not rest on colour alone.
-                        formatMinor(person.balanceMinor, person.currency),
+                        amountString(person.balanceMinor, person.currency),
                         style = TextStyle(
                             color = if (person.balanceMinor > 0) {
                                 palette.of { it.positive }

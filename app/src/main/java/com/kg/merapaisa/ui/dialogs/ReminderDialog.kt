@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.buildActivityLog
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.MainViewModel
 import com.kg.merapaisa.ui.shareText
 
@@ -79,7 +79,7 @@ fun ReminderDialog(
 }
 
 private fun buildReminderText(person: PersonWithBalance): String {
-    val absAmt = formatMinor(kotlin.math.abs(person.balanceMinor), person.currency)
+    val absAmt = amountString(kotlin.math.abs(person.balanceMinor), person.currency)
     return when {
         person.balanceMinor > 0 ->
             "Hey ${person.name}, friendly reminder — you owe me $absAmt."

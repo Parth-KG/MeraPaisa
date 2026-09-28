@@ -18,7 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.CurrencyTotal
 
 /**
@@ -63,7 +63,7 @@ fun NetTotalCard(totals: List<CurrencyTotal>, modifier: Modifier = Modifier) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    formatMinor(total.amountMinor, total.currency),
+                    amountString(total.amountMinor, total.currency),
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (total.amountMinor > 0) theme.positive else theme.negative
@@ -90,7 +90,7 @@ fun NetTotalCard(totals: List<CurrencyTotal>, modifier: Modifier = Modifier) {
                             color = theme.textSecondary
                         )
                         Text(
-                            formatMinor(total.amountMinor, total.currency),
+                            amountString(total.amountMinor, total.currency),
                             fontSize = 19.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (total.amountMinor > 0) theme.positive else theme.negative

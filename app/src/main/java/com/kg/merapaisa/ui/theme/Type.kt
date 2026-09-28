@@ -1,10 +1,13 @@
 package com.kg.merapaisa.ui.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.R
 
@@ -139,6 +142,26 @@ object MeraPaisaType {
         letterSpacing = 0.1.sp
     )
 }
+
+/**
+ * The currency symbol, set against the digits it belongs to.
+ *
+ * Smaller and quieter, because "₹" is a unit rather than part of the figure, and reading a column
+ * of amounts should mean reading the digits. It keeps the same baseline: raising it into a
+ * superscript is a price-tag mannerism and makes a ledger look like a shop window.
+ *
+ * Built here rather than at the call site so that the one relative size lives with the rest of the
+ * type scale.
+ */
+fun amountSymbolSpan(colour: Color) = SpanStyle(fontSize = 0.7.em, color = colour)
+
+/**
+ * The slot a whole amount leaves open in a column, so the decimal points below it still line up.
+ *
+ * Drawn rather than padded: with tabular figures ".00" is exactly as wide as any other fraction,
+ * so rendering it transparent reserves precisely the right space without measuring anything.
+ */
+fun amountBlankFractionSpan() = SpanStyle(color = Color.Transparent)
 
 /**
  * The same styles handed to Material, so an unstyled component picks up the app's type instead of

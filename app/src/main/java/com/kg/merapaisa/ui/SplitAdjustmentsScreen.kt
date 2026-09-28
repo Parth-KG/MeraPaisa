@@ -32,8 +32,8 @@ import com.kg.merapaisa.AppTheme
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.currencySymbol
-import com.kg.merapaisa.data.formatMinor
 import com.kg.merapaisa.data.formatMinorPlain
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.parseAmountToMinor
 import com.kg.merapaisa.ui.MainViewModel
 
@@ -189,7 +189,7 @@ fun SplitAdjustmentsScreen(
 
             // Total amount header
             Text(
-                "${formatMinor(amountMinor, sourceCurrency)} total",
+                "${amountString(amountMinor, sourceCurrency)} total",
                 color = theme.textSecondary,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(horizontal = 24.dp)
@@ -243,7 +243,7 @@ fun SplitAdjustmentsScreen(
                 ) {
                     Text("Total", color = theme.textSecondary, fontSize = 14.sp)
                     Text(
-                        "${formatMinor(total, sourceCurrency)} of ${formatMinor(amountMinor, sourceCurrency)}",
+                        "${amountString(total, sourceCurrency)} of ${amountString(amountMinor, sourceCurrency)}",
                         color = if (totalsMatch) theme.textPrimary else theme.negative,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
@@ -338,7 +338,7 @@ private fun SplitAdjustmentRow(
             )
             if (participant.currency != sourceCurrency && convertedAmountMinor != null) {
                 Text(
-                    "= ${formatMinor(convertedAmountMinor, participant.currency)}",
+                    "= ${amountString(convertedAmountMinor, participant.currency)}",
                     color = theme.textSecondary,
                     fontSize = 11.sp,
                     maxLines = 1,

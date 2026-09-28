@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.PersonWithBalance
 
 @Composable
@@ -51,7 +51,7 @@ fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: ()
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                formatMinor(person.balanceMinor, person.currency),
+                amountString(person.balanceMinor, person.currency),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = if (person.balanceMinor > 0) theme.positive else if (person.balanceMinor < 0) theme.negative else theme.textSecondary

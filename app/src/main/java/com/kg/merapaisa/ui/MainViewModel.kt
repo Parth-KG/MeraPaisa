@@ -40,7 +40,7 @@ import com.kg.merapaisa.repository.toSnapshot
 import com.kg.merapaisa.data.decodePayload
 import com.kg.merapaisa.data.encodePayload
 import com.kg.merapaisa.data.extractPayloadBlob
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.deleteProfilePhoto
 import com.kg.merapaisa.network.ExchangeRateApi
@@ -499,8 +499,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Reads from the recipient's side, which is the side that has to act on it. */
     private fun netPhrase(netMinor: Long, currency: String): String = when {
-        netMinor > 0 -> "you owe ${formatMinor(netMinor, currency)}"
-        netMinor < 0 -> "they owe you ${formatMinor(-netMinor, currency)}"
+        netMinor > 0 -> "you owe ${amountString(netMinor, currency)}"
+        netMinor < 0 -> "they owe you ${amountString(-netMinor, currency)}"
         else -> "nothing outstanding"
     }
 
@@ -1180,7 +1180,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     is MoveDebtResult.MoreThanOwed -> state.copy(
                         moveDebt = m.copy(busy = false, problem =
                             "That is more than ${m.fromName} owes you " +
-                                "(${formatMinor(result.availableMinor, m.currency)}).")
+                                "(${amountString(result.availableMinor, m.currency)}).")
                     )
                     is MoveDebtResult.NothingToMove -> state.copy(
                         moveDebt = m.copy(busy = false, problem =

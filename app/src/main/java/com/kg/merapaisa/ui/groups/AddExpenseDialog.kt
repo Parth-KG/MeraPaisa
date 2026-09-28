@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.currencySymbol
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.evenShares
 import com.kg.merapaisa.data.parseAmountToMinor
 
@@ -109,7 +109,7 @@ fun AddExpenseDialog(
                             })
                             Text(m.name, color = theme.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
                             if (share != null) {
-                                Text(formatMinor(share, currency), color = theme.textSecondary, fontSize = 13.sp)
+                                Text(amountString(share, currency), color = theme.textSecondary, fontSize = 13.sp)
                             }
                         }
                     }

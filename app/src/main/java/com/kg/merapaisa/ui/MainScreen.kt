@@ -28,7 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.parseAmountToMinor
 import com.kg.merapaisa.ui.dialogs.AddPersonDialog
 import com.kg.merapaisa.ui.dialogs.EditPersonDialog
@@ -527,7 +527,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 }
                 Text(
                     "This permanently deletes ${target.name}, their balance of " +
-                        "${formatMinor(target.balanceMinor, target.currency)}, and $entries." +
+                        "${amountString(target.balanceMinor, target.currency)}, and $entries." +
                         "$groupNote$sharedNote This can't be undone.",
                     color = theme.textSecondary,
                     fontSize = 14.sp

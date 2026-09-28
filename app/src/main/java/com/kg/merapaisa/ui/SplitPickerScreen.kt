@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.AppTheme
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 
 @Composable
 fun SplitPickerScreen(
@@ -126,7 +126,7 @@ fun SplitPickerScreen(
                 items(allPersons, key = { it.id }) { person ->
                     SplitPickerRow(
                         label = person.name,
-                        sublabel = formatMinor(kotlin.math.abs(person.balanceMinor), person.currency),
+                        sublabel = amountString(kotlin.math.abs(person.balanceMinor), person.currency),
                         selected = person.id in selectedIds,
                         theme = theme,
                         onClick = { onTogglePerson(person.id) }

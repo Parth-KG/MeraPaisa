@@ -9,7 +9,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.ShareFlowState
 
 /**
@@ -138,7 +138,7 @@ fun ShareLedgerSheet(
  * aloud.
  */
 private fun netSentence(netMinor: Long, currency: String, personName: String): String = when {
-    netMinor > 0 -> "$personName will record owing you ${formatMinor(netMinor, currency)}"
-    netMinor < 0 -> "$personName will record you owing them ${formatMinor(-netMinor, currency)}"
+    netMinor > 0 -> "$personName will record owing you ${amountString(netMinor, currency)}"
+    netMinor < 0 -> "$personName will record you owing them ${amountString(-netMinor, currency)}"
     else -> "These cancel out — nothing will be outstanding either way"
 }

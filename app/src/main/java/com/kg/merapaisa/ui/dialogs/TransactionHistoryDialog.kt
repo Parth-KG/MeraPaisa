@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
-import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.MainViewModel
 import androidx.compose.foundation.clickable
 
@@ -70,7 +70,7 @@ fun TransactionHistoryDialog(person: PersonWithBalance, viewModel: MainViewModel
                                 Text(date, color = theme.textSecondary, fontSize = 12.sp)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        formatMinor(t.amountMinor, person.currency),
+                                        amountString(t.amountMinor, person.currency),
                                         color = if (t.amountMinor > 0) theme.positive else theme.negative,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.SemiBold
