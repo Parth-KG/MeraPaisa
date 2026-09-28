@@ -33,6 +33,8 @@ fun SettingsDialog(
     onAppLockChange: (Boolean) -> Unit,
     onImportLink: () -> Unit,
     onBackupRestore: () -> Unit,
+    onExportCsv: () -> Unit,
+    canExport: Boolean,
     onCheckUpdates: () -> Unit,
     appVersion: String,
     onDismiss: () -> Unit,
@@ -98,6 +100,35 @@ fun SettingsDialog(
                         )
                         Text(
                             "Paste a ledger link someone sent you",
+                            color = theme.textSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+
+                // Moved here from the main screen's top bar, where it was an unlabelled share
+                // icon beside Settings. Exporting is a filing job that belongs with backup, not
+                // something to reach for while reading a balance. Disabled rather than hidden
+                // when there is nothing to write, so it does not appear and vanish.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable(enabled = canExport) { onExportCsv() }
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Export as CSV",
+                            color = if (canExport) theme.textPrimary else theme.textSecondary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            if (canExport) "Every person and entry, as a spreadsheet"
+                            else "Nothing to export yet",
                             color = theme.textSecondary,
                             fontSize = 11.sp
                         )

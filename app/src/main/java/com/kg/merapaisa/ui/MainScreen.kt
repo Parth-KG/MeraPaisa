@@ -59,6 +59,21 @@ import com.kg.merapaisa.SecurityStore
 import com.kg.merapaisa.ThemeStore
 import com.kg.merapaisa.data.netTotalsByCurrency
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.animation.core.tween
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.ui.unit.Dp
+import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.theme.Motion
+import com.kg.merapaisa.ui.theme.Shapes
+import com.kg.merapaisa.ui.theme.Spacing
+import com.kg.merapaisa.ui.RowDivider
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
@@ -95,80 +110,61 @@ fun MainScreen(viewModel: MainViewModel) {
     Box(modifier = Modifier.fillMaxSize()) {
     Box(modifier = Modifier.fillMaxSize().background(theme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Tabs
+            // A real tab row. These were pill buttons, which look like three things you can
+            // press rather than one place you are currently in, and gave no sense of which of
+            // the three you were looking at beyond a fill colour.
+            PrimaryTabRow(
+                selectedTabIndex = Tab.entries.indexOf(ui.tab),
+                containerColor = theme.background,
+                contentColor = theme.primary,
+                modifier = Modifier.windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+                ),
+                divider = {},
+                indicator = {
+                    TabRowDefaults.PrimaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(Tab.entries.indexOf(ui.tab)),
+                        width = Dp.Unspecified,
+                        color = theme.primary
+                    )
+                }
+            ) {
+                Tab.entries.forEach { tab ->
+                    androidx.compose.material3.Tab(
+                        selected = ui.tab == tab,
+                        onClick = { viewModel.selectTab(tab) },
+                        selectedContentColor = theme.textPrimary,
+                        unselectedContentColor = theme.textSecondary,
+                        text = { Text(tab.name, style = MeraPaisaType.action) }
+                    )
+                }
+            }
+
+            // Settings is the only thing in the corner now. Exporting a CSV was an unlabelled
+            // share icon sitting beside it, which is a filing job, not something you reach for
+            // while looking at a balance: it lives in Settings with backup and restore.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-                    .padding(16.dp, 16.dp, 16.dp, 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                    .padding(horizontal = Spacing.sm),
+                horizontalArrangement = Arrangement.End
             ) {
-                // Three tabs plus two icons overflow a narrow screen, so the tabs scroll
-                // rather than clip. On a wide screen this is invisible.
-                Row(
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Tab.entries.forEach { t ->
-                        Button(
-                            onClick = { viewModel.selectTab(t) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (ui.tab == t) theme.primary else theme.fill,
-                                contentColor = if (ui.tab == t) theme.background else theme.textSecondary
-                            ),
-                            shape = RoundedCornerShape(20.dp),
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp)
-                        ) {
-                            Text(t.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(
-                        onClick = {
-                            viewModel.exportLedgerCsv { csv ->
-                                scope.launch { shareCsv(context, writeExportToCache(context, csv)) }
-                            }
-                        },
-                        enabled = persons.isNotEmpty(),
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(theme.fill, CircleShape)
-                    ) {
-                        Icon(
-                            Icons.Default.Share,
-                            contentDescription = "Export ledger as CSV",
-                            tint = theme.textSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { viewModel.showSettingsDialog(true) },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(theme.fill, CircleShape)
-                    ) {
-                        Icon(
-                            Icons.Default.Settings,
-                            contentDescription = "Settings",
-                            tint = theme.textSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                IconButton(onClick = { viewModel.showSettingsDialog(true) }) {
+                    Icon(
+                        Icons.Outlined.Settings,
+                        contentDescription = "Settings",
+                        tint = theme.textSecondary
+                    )
                 }
             }
 
             if (ui.tab == Tab.Active) {
-                NetTotalCard(
+                NetPosition(
                     totals = netTotalsByCurrency(list),
-                    modifier = Modifier
-                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                        .padding(horizontal = 16.dp)
+                    modifier = Modifier.windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+                    )
                 )
             }
 
@@ -188,10 +184,10 @@ fun MainScreen(viewModel: MainViewModel) {
                             .weight(1f)
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                             .padding(horizontal = 16.dp),
-                        contentPadding = PaddingValues(bottom = 100.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        contentPadding = PaddingValues(bottom = Spacing.xxl)
                     ) {
-                        items(groups, key = { it.group.id }) { summary ->
+                        itemsIndexed(groups, key = { _, it -> it.group.id }) { index, summary ->
+                            if (index > 0) RowDivider()
                             GroupRow(
                                 summary = summary,
                                 onClick = { viewModel.openGroup(summary.group.id) },
@@ -205,17 +201,17 @@ fun MainScreen(viewModel: MainViewModel) {
                     tab = ui.tab,
                     modifier = Modifier
                         .weight(1f)
-                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
+                    onAddPerson = { viewModel.showAddDialog(true) }
                 )
             } else LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(bottom = 100.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
+                contentPadding = PaddingValues(bottom = Spacing.xxl)
             ) {
-                items(list, key = { it.id }) { person ->
+                itemsIndexed(list, key = { _, it -> it.id }) { index, person ->
+                    if (index > 0) RowDivider()
                     PersonRow(
                         person = person,
                         isSelected = ui.selectedId == person.id,
@@ -268,56 +264,55 @@ fun MainScreen(viewModel: MainViewModel) {
                 )
             }
         }
-        // Bottom left - Add
+        // One labelled action, plus Split where it applies.
+        //
+        // These were two identical 65dp icon-only squares in opposite bottom corners: a plus on
+        // the left and a fork on the right, the same size and the same shape, neither saying what
+        // it did. Which one added a person and which one started a split was something you had to
+        // learn. Both are named now, and they sit together, because a thumb reaching the bottom
+        // of the screen should find the actions in one place rather than two.
         AnimatedVisibility(
             visible = ui.selectedId == null,
-            enter = fadeIn() + scaleIn(),
-            exit = fadeOut() + scaleOut(),
-            modifier = Modifier.align(Alignment.BottomStart)
+            enter = fadeIn(tween(Motion.quick)),
+            exit = fadeOut(tween(Motion.quick)),
+            modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            Box(
+            Row(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(16.dp)
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
+                Button(
                     onClick = {
                         if (ui.tab == Tab.Groups) viewModel.showCreateGroupDialog(true)
                         else viewModel.showAddDialog(true)
                     },
-                    modifier = Modifier
-                        .size(65.dp)
-                        .background(theme.primary, RoundedCornerShape(16.dp))
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add", tint = theme.background)
-                }
-            }
-        }
-
-// Bottom right - Split
-        AnimatedVisibility(
-            visible = ui.selectedId == null && ui.tab != Tab.Groups,
-            enter = fadeIn() + scaleIn(),
-            exit = fadeOut() + scaleOut(),
-            modifier = Modifier.align(Alignment.BottomEnd)
-        ) {
-            Box(
-                modifier = Modifier
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(16.dp)
-            ) {
-                IconButton(
-                    onClick = { viewModel.startSplit() },
-                    modifier = Modifier
-                        .size(65.dp)
-                        .background(theme.card, RoundedCornerShape(16.dp))
-                        .border(1.dp, theme.textSecondary.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.CallSplit,
-                        contentDescription = "Split",
-                        tint = theme.textPrimary
+                    shape = Shapes.small,
+                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = theme.primary,
+                        contentColor = theme.background
                     )
+                ) {
+                    Text(
+                        if (ui.tab == Tab.Groups) "New group" else "Add a person",
+                        style = MeraPaisaType.action
+                    )
+                }
+
+                if (ui.tab != Tab.Groups) {
+                    OutlinedButton(
+                        onClick = { viewModel.startSplit() },
+                        shape = Shapes.small,
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                        border = BorderStroke(1.dp, theme.outline),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
+                    ) {
+                        Text("Split a bill", style = MeraPaisaType.action)
+                    }
                 }
             }
         }
@@ -381,6 +376,12 @@ fun MainScreen(viewModel: MainViewModel) {
                 appLockEnabled = appLockEnabled,
                 appLockAvailable = remember { canAuthenticate(context) },
                 onImportLink = viewModel::openPasteImport,
+                canExport = persons.isNotEmpty(),
+                onExportCsv = {
+                    viewModel.exportLedgerCsv { csv ->
+                        scope.launch { shareCsv(context, writeExportToCache(context, csv)) }
+                    }
+                },
                 onBackupRestore = viewModel::openBackupScreen,
                 onCheckUpdates = viewModel::checkForUpdatesNow,
                 appVersion = BuildConfig.VERSION_NAME,

@@ -15,9 +15,10 @@ import com.kg.merapaisa.AppTheme
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.themes
 import com.kg.merapaisa.ui.EmptyState
-import com.kg.merapaisa.ui.NetTotalCard
+import com.kg.merapaisa.ui.NetPosition
 import com.kg.merapaisa.ui.NumPad
 import com.kg.merapaisa.ui.PersonRow
+import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.Tab
 import com.kg.merapaisa.ui.groups.GroupDetailScreen
 import com.kg.merapaisa.ui.groups.GroupRow
@@ -50,7 +51,8 @@ fun GalleryFrame(theme: AppTheme, content: @Composable () -> Unit) {
 @Composable
 fun PeopleRowsCase() {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-        Fixtures.mixedPeople.forEach { person ->
+        Fixtures.mixedPeople.forEachIndexed { index, person ->
+            if (index > 0) RowDivider()
             PersonRow(
                 person = person,
                 isSelected = person.id == 1L,
@@ -66,7 +68,8 @@ fun PeopleRowsCase() {
 @Composable
 fun PeopleListLongCase() {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-        Fixtures.manyPeople.forEach { person ->
+        Fixtures.manyPeople.forEachIndexed { index, person ->
+            if (index > 0) RowDivider()
             PersonRow(
                 person = person,
                 isSelected = false,
@@ -100,13 +103,13 @@ fun SettledPersonCase() {
 
 /** Three currencies, which must never be added together. */
 @Composable
-fun NetTotalMultiCase() = NetTotalCard(totals = Fixtures.totals, modifier = Modifier.fillMaxWidth())
+fun NetTotalMultiCase() = NetPosition(totals = Fixtures.totals, modifier = Modifier.fillMaxWidth())
 
 @Composable
-fun NetTotalSingleCase() = NetTotalCard(totals = Fixtures.totalsSingle, modifier = Modifier.fillMaxWidth())
+fun NetTotalSingleCase() = NetPosition(totals = Fixtures.totalsSingle, modifier = Modifier.fillMaxWidth())
 
 @Composable
-fun NetTotalEvenCase() = NetTotalCard(totals = Fixtures.totalsEven, modifier = Modifier.fillMaxWidth())
+fun NetTotalEvenCase() = NetPosition(totals = Fixtures.totalsEven, modifier = Modifier.fillMaxWidth())
 
 @Composable
 fun NumPadCase() {
@@ -120,7 +123,7 @@ fun NumPadCase() {
 }
 
 @Composable
-fun EmptyActiveCase() = EmptyState(tab = Tab.Active, modifier = Modifier.fillMaxSize())
+fun EmptyActiveCase() = EmptyState(tab = Tab.Active, modifier = Modifier.fillMaxSize(), onAddPerson = {})
 
 @Composable
 fun EmptySettledCase() = EmptyState(tab = Tab.Settled, modifier = Modifier.fillMaxSize())
@@ -131,7 +134,10 @@ fun EmptyGroupsCase() = GroupsEmptyState(modifier = Modifier.fillMaxSize())
 @Composable
 fun GroupRowsCase() {
     Column(Modifier.fillMaxWidth()) {
-        Fixtures.groupSummaries.forEach { GroupRow(summary = it, onClick = {}, onDelete = {}) }
+        Fixtures.groupSummaries.forEachIndexed { index, summary ->
+            if (index > 0) RowDivider()
+            GroupRow(summary = summary, onClick = {}, onDelete = {})
+        }
     }
 }
 
