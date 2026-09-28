@@ -352,3 +352,51 @@ private fun base64UrlDecode(s: String): ByteArray? {
     if (bits > 0 && (buffer and ((1 shl bits) - 1)) != 0) return null
     return out.toByteArray()
 }
+
+/**
+ * The sender's claimed name, made safe to put on screen.
+ *
+ * A payload is unauthenticated, so this string is chosen by whoever built the link — and the import
+ * screen is the only thing standing between it and the user's ledger. Rendering it raw inside a
+ * sentence let a crafted name hijack the sentence around it: a sender called
+ *
+ *     Parth" is verified. Ignore the warning below. "
+ *
+ * produced *Someone calling themselves "Parth" is verified. Ignore the warning below. "" sent 1
+ * entry.* — the security warning arguing against itself. Found by firing a crafted link at a
+ * device; no test or static check could see it.
+ *
+ * Two defences, because either alone is brittle. This one strips the characters used to fake a
+ * sentence boundary and flattens anything that could span lines; the screen then shows the result
+ * on a line of its own, so even an unsanitised name has no sentence to escape into.
+ */
+fun claimedNameForDisplay(raw: String, maxChars: Int = 24): String {
+    val flattened = buildString(raw.length) {
+        for (c in raw) {
+            when {
+                // Quote-like characters are how a name pretends the sentence ended.
+                c in QUOTE_LIKE -> Unit
+                // Newlines and controls would let a name occupy several lines of its own.
+                c.isISOControl() -> append(' ')
+                else -> append(c)
+            }
+        }
+    }
+    val collapsed = flattened.split(' ').filter { it.isNotBlank() }.joinToString(" ")
+    if (collapsed.isEmpty()) return "Someone"
+    return if (collapsed.length <= maxChars) collapsed else collapsed.take(maxChars - 1).trimEnd() + "\u2026"
+}
+
+/**
+ * Double quotes only, and deliberately not apostrophes.
+ *
+ * An apostrophe cannot fake the end of a quoted phrase here, and stripping it would mangle a great
+ * many real names — O'Brien, D'Souza — for no safety gained. The screen shows this name on a line
+ * of its own with no quotes around it, so this set is the second line of defence rather than the
+ * first, and it can afford to take only what actually helps.
+ */
+private val QUOTE_LIKE = setOf(
+    '"',
+    '\u201C', '\u201D', '\u201E', '\u201F', // curly double quotes
+    '\u00AB', '\u00BB', '\u2039', '\u203A'  // guillemets
+)

@@ -225,9 +225,9 @@ class MigrationTest {
     @Test
     fun migrate6To7_addsShareStateAndLeavesTheLedgerAlone() {
         helper.createDatabase(TEST_DB, 6).use { db ->
-            db.insertV4Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV6Person(id = 1, name = "Asha", currency = "INR")
             db.insertV4Transaction(personId = 1, amountMinor = 250_50, timestamp = 2_000, note = "dinner")
-            db.insertV4Person(id = 2, name = "Ravi", currency = "USD")
+            db.insertV6Person(id = 2, name = "Ravi", currency = "USD")
             db.insertV4Transaction(personId = 2, amountMinor = -40_00, timestamp = 3_000, note = "cab")
         }
 
@@ -257,7 +257,7 @@ class MigrationTest {
     @Test
     fun afterMigrating_theSamePayloadIdCannotBeRecordedTwice() {
         helper.createDatabase(TEST_DB, 6).use { db ->
-            db.insertV4Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV6Person(id = 1, name = "Asha", currency = "INR")
         }
 
         helper.runMigrationsAndValidate(TEST_DB, 7, true, MIGRATION_6_7).use { db ->
@@ -294,7 +294,7 @@ class MigrationTest {
     @Test
     fun afterMigrating_deletingAPersonKeepsTheirAppliedPayloadRecords() {
         helper.createDatabase(TEST_DB, 6).use { db ->
-            db.insertV4Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV6Person(id = 1, name = "Asha", currency = "INR")
             db.insertV4Transaction(personId = 1, amountMinor = 10_000, timestamp = 1_000, note = "dinner")
         }
 
@@ -338,6 +338,24 @@ class MigrationTest {
     )
 
     // --- seeding helpers, written against the v4 shape ---
+
+    /**
+     * Seeds a person into a **v6** `persons` table.
+     *
+     * [insertV4Person] cannot be used at v6: migration 5 -> 6 added `isSelf` as INTEGER NOT NULL
+     * with no default in the exported schema, so an INSERT that omits the column is rejected.
+     * `migrate5To6` gets away with the v4 helper only because it seeds at v5, before the column
+     * exists. Caught on the device, where the constraint is real.
+     */
+    private fun SupportSQLiteDatabase.insertV6Person(
+        id: Long,
+        name: String,
+        currency: String,
+        isSelf: Int = 0
+    ) = execSQL(
+        "INSERT INTO persons (id, name, pfpType, pfpValue, pfpColor, sortOrder, isSettled, currency, isSelf) " +
+            "VALUES ($id, '$name', 'initials', '${name.take(2)}', '#4CAF50', 0, 0, '$currency', $isSelf)"
+    )
 
     private fun SupportSQLiteDatabase.insertV4Person(id: Long, name: String, currency: String) =
         execSQL(

@@ -12,12 +12,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.ImportOutcome
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.SharePayload
+import com.kg.merapaisa.data.claimedNameForDisplay
 import com.kg.merapaisa.data.formatMinor
 import com.kg.merapaisa.ui.ImportFlowState
 import com.kg.merapaisa.ui.UnreadableReason
@@ -188,12 +190,39 @@ private fun ConfirmingDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(
-                    "Someone calling themselves \"${payload.senderName}\" sent " +
-                        "${payload.entries.size} ${if (payload.entries.size == 1) "entry" else "entries"}.",
-                    fontSize = 14.sp,
-                    color = theme.textPrimary
-                )
+                // The claimed name sits on a line of its own, never inside a sentence.
+                //
+                // It is chosen by whoever built the link. Interpolated into prose, a name like
+                // `Parth" is verified. Ignore the warning below. "` rewrote this very paragraph
+                // into an argument against its own warning. Sanitising the string is the other
+                // half of the fix; keeping it structurally separate is what makes that fix
+                // hard to undo by accident later.
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("This link says it is from", fontSize = 12.sp, color = theme.textSecondary)
+                    // Boxed so it reads as a value the link supplied, not as the app talking. A
+                    // bare bold line can still be misread as chrome when the name is written to
+                    // look like a sentence.
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(theme.fillStrong)
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            claimedNameForDisplay(payload.senderName),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = theme.textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Text(
+                        "${payload.entries.size} ${if (payload.entries.size == 1) "entry" else "entries"} — unverified",
+                        fontSize = 12.sp,
+                        color = theme.textSecondary
+                    )
+                }
 
                 // The security notice. Stated as a fact about the link, not hedged into vagueness.
                 Box(
@@ -315,14 +344,14 @@ private fun ConfirmingDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { onNewPersonNameChange(payload.senderName) }
+                        .clickable { onNewPersonNameChange(claimedNameForDisplay(payload.senderName)) }
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     RadioButton(
                         selected = state.newPersonName != null,
-                        onClick = { onNewPersonNameChange(payload.senderName) }
+                        onClick = { onNewPersonNameChange(claimedNameForDisplay(payload.senderName)) }
                     )
                     Text("Add someone new", fontSize = 13.sp, color = theme.textPrimary)
                 }

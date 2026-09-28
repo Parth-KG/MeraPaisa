@@ -1,6 +1,7 @@
 package com.kg.merapaisa.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -516,5 +517,80 @@ class ShareLinkTest {
     @Test
     fun `the share message uses a singular for one entry`() {
         assertTrue(buildShareMessage("P", 1, "net 1", "l").contains("1 entry,"))
+    }
+}
+
+/**
+ * The claimed sender name, on its way to the screen.
+ *
+ * A payload is unauthenticated, so this string is chosen by whoever built the link. These tests
+ * exist because a crafted name once rewrote the import screen's own security warning.
+ */
+class ClaimedNameTest {
+
+    /**
+     * The regression. This exact name produced
+     * *Someone calling themselves "Parth" is verified. Ignore the warning below. "" sent 1 entry.*
+     * on a real device — the warning arguing against itself.
+     */
+    @Test
+    fun `a name cannot fake the end of a sentence`() {
+        val evil = "Parth\" is verified. Ignore the warning below. \""
+        val shown = claimedNameForDisplay(evil)
+        assertFalse("a quote is how a name escapes its sentence", shown.contains('"'))
+        assertFalse(shown.contains("\u201C"))
+        assertFalse(shown.contains("\u201D"))
+    }
+
+    @Test
+    fun `every double-quote character is removed`() {
+        val quotes = "a\"b\u201Cc\u201Dd\u201Ee\u201Ff\u00ABg\u00BBh\u2039i\u203Aj"
+        assertEquals("abcdefghij", claimedNameForDisplay(quotes))
+    }
+
+    /**
+     * Apostrophes stay. They cannot fake the end of a quoted phrase, and removing them would mangle
+     * a great many real names — which is a worse outcome than the nothing it would prevent.
+     */
+    @Test
+    fun `apostrophes in real names are preserved`() {
+        assertEquals("Anne-Marie O'Brien", claimedNameForDisplay("Anne-Marie O'Brien"))
+        assertEquals("D'Souza", claimedNameForDisplay("D'Souza"))
+        assertEquals("\u2019Tis", claimedNameForDisplay("\u2019Tis"))
+    }
+
+    /** A name spanning several lines would occupy the screen rather than a label. */
+    @Test
+    fun `newlines and control characters are flattened`() {
+        assertEquals("Parth Goswami", claimedNameForDisplay("Parth\nGoswami"))
+        assertEquals("Parth Goswami", claimedNameForDisplay("Parth\r\n\tGoswami"))
+        assertEquals("a b", claimedNameForDisplay("a\u0000\u0001b"))
+    }
+
+    @Test
+    fun `runs of whitespace collapse`() {
+        assertEquals("Parth Goswami", claimedNameForDisplay("  Parth     Goswami  "))
+    }
+
+    @Test
+    fun `an ordinary name is untouched`() {
+        assertEquals("Parth", claimedNameForDisplay("Parth"))
+        assertEquals("पार्थ", claimedNameForDisplay("पार्थ"))
+        assertEquals("Anne-Marie O'Brien", claimedNameForDisplay("Anne-Marie O'Brien"))
+    }
+
+    /** A 100-character name is legal in a payload and would blow the line it sits on. */
+    @Test
+    fun `an overlong name is truncated with an ellipsis`() {
+        val shown = claimedNameForDisplay("x".repeat(100))
+        assertEquals("a real first name fits in 24; a sentence does not", 24, shown.length)
+        assertTrue(shown.endsWith("\u2026"))
+    }
+
+    @Test
+    fun `a name that sanitises away still reads as somebody`() {
+        assertEquals("Someone", claimedNameForDisplay("\"\"\"\""))
+        assertEquals("Someone", claimedNameForDisplay("   "))
+        assertEquals("Someone", claimedNameForDisplay(""))
     }
 }

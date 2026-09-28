@@ -16,6 +16,7 @@ import com.kg.merapaisa.data.PayloadResult
 import com.kg.merapaisa.data.SharePayload
 import com.kg.merapaisa.data.buildPersonSummary
 import com.kg.merapaisa.data.buildShareLink
+import com.kg.merapaisa.data.claimedNameForDisplay
 import com.kg.merapaisa.BackupStore
 import com.kg.merapaisa.BuildConfig
 import com.kg.merapaisa.backup.AutoExportWorker
@@ -520,6 +521,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * cost a tap to notice, not apply itself.
      */
     private fun beginConfirming(payload: SharePayload) {
+        viewModelScope.launch {
+            // Already applied? Say so now rather than after a preview that promises a change which
+            // will not happen. Found on a device: re-opening a used link showed the full
+            // "you will owe ₹240" screen, and only the tap revealed it was a no-op.
+            val already = repository.appliedPayload(payload.payloadId)
+            if (already != null) {
+                val name = persons.value.firstOrNull { it.id == already.personId }?.name
+                    ?: claimedNameForDisplay(already.senderName)
+                _uiState.update {
+                    it.copy(import = ImportFlowState.Done(
+                        ImportOutcome.AlreadyApplied(already.appliedAt),
+                        name
+                    ))
+                }
+                return@launch
+            }
+            offerConfirmation(payload)
+        }
+    }
+
+    private fun offerConfirmation(payload: SharePayload) {
         val claimed = payload.senderName.trim()
         // Currency is part of the match, not just the name. The import screen only offers people in
         // the payload's currency, so matching on name alone could preselect somebody who is not in
@@ -535,7 +557,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 import = ImportFlowState.Confirming(
                     payload = payload,
                     targetPersonId = match?.id,
-                    newPersonName = if (match == null) claimed else null
+                    // Sanitised: this becomes a person's name if accepted, and it is
+                    // attacker-chosen text. Matching above still uses the raw value.
+                    newPersonName = if (match == null) claimedNameForDisplay(claimed) else null
                 )
             )
         }

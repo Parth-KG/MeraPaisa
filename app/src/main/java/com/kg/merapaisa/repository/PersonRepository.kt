@@ -1,5 +1,6 @@
 package com.kg.merapaisa.repository
 
+import com.kg.merapaisa.data.AppliedPayload
 import com.kg.merapaisa.data.ImportOutcome
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonDao
@@ -176,6 +177,15 @@ class PersonRepository(
     suspend fun markShared(personId: Long, upTo: Long) {
         dao.setLastSharedAt(personId, upTo)
     }
+
+    /**
+     * The record of this link having been applied before, if there is one.
+     *
+     * Read before the import screen offers a preview, not only when the user taps. Otherwise a
+     * link that will do nothing still gets a full "this will record ..." screen, and the one thing
+     * that screen exists to tell the truth about is what is going to happen.
+     */
+    suspend fun appliedPayload(payloadId: String): AppliedPayload? = dao.getAppliedPayload(payloadId)
 
     /**
      * Applies a decoded link to [personId], mirroring every sign on the way in.
