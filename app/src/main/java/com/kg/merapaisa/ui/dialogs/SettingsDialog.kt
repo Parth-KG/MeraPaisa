@@ -31,6 +31,7 @@ fun SettingsDialog(
     appLockEnabled: Boolean,
     appLockAvailable: Boolean,
     onAppLockChange: (Boolean) -> Unit,
+    onImportLink: () -> Unit,
     onDismiss: () -> Unit,
     onApply: (String) -> Unit
 ) {
@@ -73,6 +74,35 @@ fun SettingsDialog(
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
+                // An action rather than a setting, so it acts at once and closes the dialog instead
+                // of waiting for Apply. Until assetlinks.json is live at the domain root, a tapped
+                // link does not reach the app, which makes this the only way one can get in.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onImportLink() }
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Record a shared update",
+                            color = theme.textPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "Paste a ledger link someone sent you",
+                            color = theme.textSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = theme.outline)
+
                 Text("Theme", color = theme.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 Spacer(modifier = Modifier.height(8.dp))
 

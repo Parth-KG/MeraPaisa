@@ -20,7 +20,7 @@ import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.formatSignedAmount
 
 @Composable
-fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: () -> Unit, onClick: () -> Unit,onSendReminder: () -> Unit, onDelete: () -> Unit, onEditClick: () -> Unit, onSettleToggle: () -> Unit, onShareSummary: () -> Unit) {
+fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: () -> Unit, onClick: () -> Unit,onSendReminder: () -> Unit, onDelete: () -> Unit, onEditClick: () -> Unit, onSettleToggle: () -> Unit, onShareSummary: () -> Unit, onShareLedger: () -> Unit) {
     val theme = LocalAppTheme.current
     var showMenu by remember { mutableStateOf(false) }
 
@@ -81,6 +81,12 @@ fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: ()
                     DropdownMenuItem(
                         text = { Text("Share summary", color = theme.textPrimary) },
                         onClick = { showMenu = false; onShareSummary() }
+                    )
+                    // Distinct from "Share summary": that sends text a human reads, this sends a
+                    // link their app records, so both ledgers end up agreeing.
+                    DropdownMenuItem(
+                        text = { Text("Share ledger update", color = theme.textPrimary) },
+                        onClick = { showMenu = false; onShareLedger() }
                     )
                     DropdownMenuItem(
                         text = { Text("Edit", color = theme.textPrimary) },

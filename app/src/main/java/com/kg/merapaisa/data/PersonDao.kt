@@ -216,4 +216,79 @@ interface PersonDao {
         deleteTransactionsForPerson(person.id)
         deletePerson(person)
     }
+
+    // -----------------------------------------------------------------------------------------
+    // Two-sided ledger over share links
+    // -----------------------------------------------------------------------------------------
+
+    /**
+     * Everything for this person newer than the last share, which is what the next link carries.
+     *
+     * Strictly greater than, so the entry that ended the previous payload is not sent twice. The
+     * watermark stores that entry's own timestamp rather than the moment of sharing, so an entry
+     * back-dated between two shares is still picked up.
+     */
+    @Query(
+        "SELECT * FROM transactions WHERE personId = :personId AND timestamp > :since " +
+            "ORDER BY timestamp ASC"
+    )
+    suspend fun getTransactionsSinceNow(personId: Long, since: Long): List<Transaction>
+
+    @Query("UPDATE persons SET lastSharedAt = :timestamp WHERE id = :personId")
+    suspend fun setLastSharedAt(personId: Long, timestamp: Long)
+
+    @Query("SELECT * FROM applied_payloads WHERE payloadId = :payloadId LIMIT 1")
+    suspend fun getAppliedPayload(payloadId: String): AppliedPayload?
+
+    @Insert
+    suspend fun insertAppliedPayload(record: AppliedPayload)
+
+    @Query("SELECT * FROM persons WHERE id = :personId LIMIT 1")
+    suspend fun getPersonNow(personId: Long): Person?
+
+    /**
+     * Applies a decoded link to one person, or refuses and says why.
+     *
+     * The dedupe read and the writes share one transaction deliberately: without that, tapping a
+     * forwarded link twice in quick succession could pass the "already applied?" check twice and
+     * write the entries twice. The primary key on `applied_payloads` is the backstop if it ever
+     * does, but the transaction is what makes the common case correct rather than lucky.
+     *
+     * [entries] arrives already mirrored and already bounded by the caller — this method does not
+     * flip signs, so a caller that forgets to would write a debt pointing the wrong way. That is
+     * why mirroring lives in one place, `SharePayload.mirrored()`, and is tested on its own.
+     */
+    @androidx.room.Transaction
+    suspend fun applyPayload(
+        personId: Long,
+        payload: SharePayload,
+        entries: List<Transaction>,
+        now: Long
+    ): ImportOutcome {
+        getAppliedPayload(payload.payloadId)?.let { return ImportOutcome.AlreadyApplied(it.appliedAt) }
+
+        val person = getPersonNow(personId)
+        if (person != null && normaliseCurrency(person.currency) != payload.currency) {
+            return ImportOutcome.CurrencyMismatch(payload.currency, normaliseCurrency(person.currency))
+        }
+
+        if (entries.isNotEmpty()) {
+            insertTransactions(entries)
+            // Money moved, so they are live again — same rule as recordEntries.
+            if (entries.any { it.amountMinor != 0L }) setSettled(personId, false)
+        }
+
+        insertAppliedPayload(
+            AppliedPayload(
+                payloadId = payload.payloadId,
+                appliedAt = now,
+                personId = personId,
+                senderName = payload.senderName,
+                entryCount = entries.size,
+                netMinor = entries.sumOf { it.amountMinor }
+            )
+        )
+
+        return ImportOutcome.Applied(entries.size, entries.sumOf { it.amountMinor })
+    }
 }

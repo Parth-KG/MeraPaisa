@@ -23,5 +23,12 @@ data class Person(
      * the -1L sentinel the split flow used to special-case. You are hidden from the people
      * list, since you do not owe yourself anything.
      */
-    val isSelf: Boolean = false
+    val isSelf: Boolean = false,
+    /**
+     * Timestamp of the newest transaction included in the last share link sent for this person,
+     * so the next link carries only what is new. 0 means nothing has been shared yet, which is
+     * why it defaults to 0 rather than to now: a fresh person's first link should offer their
+     * whole history, not an empty payload.
+     */
+    val lastSharedAt: Long = 0
 )

@@ -1,5 +1,8 @@
 package com.kg.merapaisa.ui
 
+import com.kg.merapaisa.data.ImportOutcome
+import com.kg.merapaisa.data.SharePayload
+
 /** Which of the two lists is on screen. */
 enum class Tab { Active, Settled, Groups }
 
@@ -25,7 +28,11 @@ data class MainUiState(
     val historyPersonId: Long? = null,
     val pendingDeleteId: Long? = null,
     val pendingReminderId: Long? = null,
-    val split: SplitFlowState? = null
+    val split: SplitFlowState? = null,
+    /** The share-link sheet, absent when it is not open. */
+    val share: ShareFlowState? = null,
+    /** An incoming share link being read or confirmed, absent when none is in flight. */
+    val import: ImportFlowState? = null
 )
 
 /** The multi-step split flow, absent when it is not running. */
@@ -38,3 +45,82 @@ data class SplitFlowState(
     val selectedIds: Set<Long> = emptySet(),
     val includeMe: Boolean = false
 )
+
+/**
+ * The outgoing side of a share link: what the next link for this person would contain, shown before
+ * anything is sent.
+ *
+ * [senderName] is editable here because the self row ships called "You", which tells the recipient
+ * nothing. Confirming the sheet saves it, so it is asked once rather than every time.
+ */
+data class ShareFlowState(
+    val personId: Long,
+    val personName: String,
+    val currency: String,
+    val senderName: String,
+    val entryCount: Int,
+    val netMinor: Long,
+    /** Ignore the watermark and send everything — the way back from a link that never arrived. */
+    val fullHistory: Boolean = false,
+    val busy: Boolean = false
+) {
+    val hasNothingToSend: Boolean get() = entryCount == 0
+}
+
+/**
+ * The incoming side. A link arrives from outside the app, so this models being unable to read it as
+ * a first-class state rather than an error to swallow — a user who tapped a link and saw nothing
+ * happen would have no idea whether their ledger changed.
+ */
+sealed interface ImportFlowState {
+
+    /**
+     * The user is pasting a link by hand.
+     *
+     * Not a fallback for completeness: Android only routes a tapped `https://` link into the app
+     * once `assetlinks.json` is live at the domain root, so until then this is the *only* path an
+     * incoming link can take. It also covers a chat app that refuses to linkify, and a link
+     * forwarded as plain text.
+     */
+    data class Pasting(val text: String = "") : ImportFlowState
+
+    /** Still decoding. Brief, but a link can arrive before the database is open. */
+    data object Reading : ImportFlowState
+
+    /** The link could not be read. Nothing has been written. */
+    data class Unreadable(val reason: UnreadableReason) : ImportFlowState
+
+    /**
+     * Decoded, and waiting for the user to say where it goes and whether to apply it.
+     *
+     * Nothing is written until this is confirmed. That is not politeness: the payload is
+     * unauthenticated, so the user confirming *is* the only check that the link is genuine.
+     *
+     * Exactly one of [targetPersonId] and [newPersonName] is set — file it against someone who
+     * already exists, or create someone for it.
+     */
+    data class Confirming(
+        val payload: SharePayload,
+        val targetPersonId: Long? = null,
+        val newPersonName: String? = null,
+        val busy: Boolean = false
+    ) : ImportFlowState {
+        val canApply: Boolean
+            get() = !busy && (targetPersonId != null || !newPersonName.isNullOrBlank())
+    }
+
+    /** Finished, one way or another. [personName] is who it was filed against, for the message. */
+    data class Done(val outcome: ImportOutcome, val personName: String) : ImportFlowState
+}
+
+/** Why a link could not be read, each needing a different sentence on screen. */
+enum class UnreadableReason {
+    /** Nothing payload-shaped was found — a stray tap, or the wrong thing pasted. */
+    NotALink,
+
+    /** Payload-shaped but did not survive: clipped by a chat app, or edited by hand. */
+    Damaged,
+
+    /** A format this build does not know. Refused rather than guessed at. */
+    NewerVersion
+}

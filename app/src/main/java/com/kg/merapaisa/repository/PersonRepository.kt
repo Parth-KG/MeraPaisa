@@ -1,10 +1,15 @@
 package com.kg.merapaisa.repository
 
+import com.kg.merapaisa.data.ImportOutcome
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonDao
 import com.kg.merapaisa.data.PersonLedger
 import com.kg.merapaisa.data.PersonWithBalance
+import com.kg.merapaisa.data.SharePayload
+import com.kg.merapaisa.data.SharedEntry
 import com.kg.merapaisa.data.Transaction
+import com.kg.merapaisa.data.mirrored
+import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -90,5 +95,106 @@ class PersonRepository(
     suspend fun clearTransactions(personId: Long) {
         dao.clearTransactionsForPerson(personId)
         notifier.onLedgerChanged()
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // Two-sided ledger over share links
+    // -----------------------------------------------------------------------------------------
+
+    /** The row that is you, created on first use. Its name is what a share link says it is from. */
+    suspend fun self(): Person = dao.ensureSelf()
+
+    /**
+     * Renames the self row.
+     *
+     * This exists because the self row ships called "You", which is fine on your own screen and
+     * useless on anyone else's — a link whose sender is "You" gives the recipient nothing to match
+     * against. The share sheet captures a real name and saves it here, once.
+     */
+    suspend fun renameSelf(name: String) {
+        val me = dao.ensureSelf()
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || trimmed == me.name) return
+        dao.updatePerson(me.copy(name = trimmed))
+    }
+
+    /**
+     * Everyone a link could be filed against, for the import screen's picker.
+     *
+     * Balances come along because the picker needs them: choosing where ₹340 lands is a lot
+     * easier next to what each person already stands at. Excludes the self row, which
+     * `getPersonsWithBalancesNow` already filters out — you cannot owe yourself.
+     */
+    suspend fun personsForImport(): List<PersonWithBalance> =
+        dao.getPersonsWithBalancesNow(dao.ensureSelf().id)
+
+    /**
+     * The entries the next link for this person would carry.
+     *
+     * [fullHistory] ignores the watermark, which is how someone recovers from a share that never
+     * arrived — the alternative would be a debt neither ledger can reconcile and no way back.
+     */
+    suspend fun entriesToShare(personId: Long, fullHistory: Boolean): List<Transaction> {
+        val since = if (fullHistory) 0L else dao.getPersonNow(personId)?.lastSharedAt ?: 0L
+        return dao.getTransactionsSinceNow(personId, since)
+    }
+
+    /**
+     * Builds the payload for [personId], newest entries only unless [fullHistory].
+     *
+     * The id is 16 hex characters rather than a full UUID: 64 bits is far more than enough to keep
+     * two of this user's own links apart, and every character saved is a character of link that a
+     * chat app cannot wrap or truncate.
+     */
+    suspend fun buildPayload(
+        personId: Long,
+        senderName: String,
+        fullHistory: Boolean
+    ): Pair<SharePayload, Long>? {
+        val person = dao.getPersonNow(personId) ?: return null
+        val entries = entriesToShare(personId, fullHistory)
+        if (entries.isEmpty()) return null
+        val payload = SharePayload(
+            payloadId = UUID.randomUUID().toString().replace("-", "").take(16),
+            senderName = senderName.trim().ifEmpty { "A friend" },
+            currency = com.kg.merapaisa.data.normaliseCurrency(person.currency),
+            entries = entries.map { SharedEntry(it.timestamp, it.amountMinor, it.note) }
+        )
+        // The watermark to commit once the link has actually gone out, not before.
+        return payload to entries.maxOf { it.timestamp }
+    }
+
+    /**
+     * Moves the watermark, so the next link carries only what comes after this one.
+     *
+     * Called when the share sheet is opened rather than when the message is confirmed sent —
+     * Android does not tell us whether the user went through with it. Advancing optimistically can
+     * therefore skip entries if they back out, which is exactly what `fullHistory` is the escape
+     * hatch for. The other way round would double-send by default, and a debt counted twice is
+     * worse than one that needs re-sending.
+     */
+    suspend fun markShared(personId: Long, upTo: Long) {
+        dao.setLastSharedAt(personId, upTo)
+    }
+
+    /**
+     * Applies a decoded link to [personId], mirroring every sign on the way in.
+     *
+     * Timestamps are clamped to [now]. A payload is untrusted input and a crafted one can claim
+     * the year 5000; left alone, such an entry would sit at the top of the history forever and
+     * poison the watermark for every later share. Clamping only ever moves a timestamp backwards
+     * to the present, so a genuine entry is untouched.
+     */
+    suspend fun importPayload(personId: Long, payload: SharePayload, now: Long): ImportOutcome {
+        val entries = payload.mirrored().map {
+            Transaction(
+                personId = personId,
+                amountMinor = it.amountMinor,
+                timestamp = if (it.timestamp > now) now else it.timestamp,
+                note = it.note
+            )
+        }
+        return dao.applyPayload(personId, payload, entries, now)
+            .also { if (it is ImportOutcome.Applied) notifier.onLedgerChanged() }
     }
 }

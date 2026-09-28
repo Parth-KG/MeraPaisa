@@ -181,3 +181,34 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_expense_shares_personId` ON `expense_shares` (`personId`)")
     }
 }
+
+/**
+ * 6 -> 7. Two-sided ledger over share links.
+ *
+ * Adds the table that makes applying a link idempotent, and a per-person watermark recording
+ * where the last share got to so the next one carries only what is new.
+ *
+ * `lastSharedAt` defaults to 0 rather than to now. An existing install has never shared anything,
+ * so its first link should offer the whole history — defaulting to the current time would silently
+ * send an empty payload and look like the feature was broken.
+ *
+ * Note the absent foreign key on `applied_payloads.personId`: see [AppliedPayload] for why a
+ * cascade here would let a forwarded link apply twice.
+ */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `persons` ADD COLUMN `lastSharedAt` INTEGER NOT NULL DEFAULT 0")
+
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `applied_payloads` (" +
+                "`payloadId` TEXT NOT NULL, " +
+                "`appliedAt` INTEGER NOT NULL, " +
+                "`personId` INTEGER NOT NULL, " +
+                "`senderName` TEXT NOT NULL, " +
+                "`entryCount` INTEGER NOT NULL, " +
+                "`netMinor` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`payloadId`))"
+        )
+    }
+}

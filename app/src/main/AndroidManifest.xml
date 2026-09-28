@@ -15,11 +15,47 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.MeraPaisa.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--
+              Share links. The payload rides in the URL fragment, which is never sent to the
+              host, so parth-kg.github.io only ever serves the "install Mera Paisa" fallback
+              page and cannot see anyone's ledger. See data/ShareLink.kt.
+
+              autoVerify needs /.well-known/assetlinks.json at the DOMAIN ROOT, meaning
+              https://parth-kg.github.io/.well-known/assetlinks.json, NOT a copy under
+              /MeraPaisa/. Until that file is live Android treats this as an ordinary web
+              link and shows a chooser or opens the browser instead of coming straight here.
+              The import screen also accepts a pasted link for exactly that reason.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="parth-kg.github.io"
+                    android:pathPrefix="/MeraPaisa/s"
+                    android:scheme="https" />
+            </intent-filter>
+
+            <!-- Needs no hosting at all, so it works the moment this build is installed. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="share"
+                    android:scheme="merapaisa" />
             </intent-filter>
         </activity>
         <!-- Hands exported files to the share sheet as content:// URIs. -->

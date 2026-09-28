@@ -10,7 +10,17 @@ import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
 import com.kg.merapaisa.data.appendAmountKey
 import com.kg.merapaisa.data.buildLedgerCsv
+import com.kg.merapaisa.data.ImportOutcome
+import com.kg.merapaisa.data.PayloadResult
+import com.kg.merapaisa.data.SharePayload
 import com.kg.merapaisa.data.buildPersonSummary
+import com.kg.merapaisa.data.buildShareLink
+import com.kg.merapaisa.data.buildShareMessage
+import com.kg.merapaisa.data.decodePayload
+import com.kg.merapaisa.data.encodePayload
+import com.kg.merapaisa.data.extractPayloadBlob
+import com.kg.merapaisa.data.formatMinor
+import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.deleteProfilePhoto
 import com.kg.merapaisa.network.ExchangeRateApi
 import com.kg.merapaisa.repository.GroupDetail
@@ -341,4 +351,233 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun rollbackToTransaction(person: PersonWithBalance, target: Transaction) {
         viewModelScope.launch { repository.rollbackTo(person.id, target.timestamp) }
     }
+
+    // =========================================================================================
+    // Two-sided ledger over share links — outgoing
+    // =========================================================================================
+
+    /**
+     * Opens the share sheet for [personId], having worked out what the next link would carry.
+     *
+     * Nothing is sent and no watermark moves here. This only reads, so backing out of the sheet
+     * leaves no trace — which matters because the sheet is also where an empty payload is
+     * explained ("nothing new since you last shared").
+     */
+    fun openShareSheet(personId: Long) {
+        viewModelScope.launch {
+            val person = persons.value.firstOrNull { it.id == personId }
+            val entries = repository.entriesToShare(personId, fullHistory = false)
+            // Blank rather than "You": the sheet asks for a real name the first time, because
+            // "You" means nothing on the recipient's phone.
+            //
+            // Read before the update rather than inside it. `update` is inline, so a suspend call
+            // in its block compiles — but it retries the block on contention, which would mean
+            // re-querying the database for every retry.
+            val myName = repository.self().name.takeUnless { it == "You" } ?: ""
+
+            _uiState.update {
+                it.copy(
+                    share = ShareFlowState(
+                        personId = personId,
+                        personName = person?.name ?: "",
+                        currency = normaliseCurrency(person?.currency ?: "INR"),
+                        senderName = myName,
+                        entryCount = entries.size,
+                        netMinor = entries.sumOf { e -> e.amountMinor }
+                    )
+                )
+            }
+        }
+    }
+
+    fun closeShareSheet() = _uiState.update { it.copy(share = null) }
+
+    fun setShareSenderName(name: String) = _uiState.update {
+        it.copy(share = it.share?.copy(senderName = name))
+    }
+
+    /** Flips between "only what is new" and the whole history, recounting what would be sent. */
+    fun setShareFullHistory(full: Boolean) {
+        val current = _uiState.value.share ?: return
+        viewModelScope.launch {
+            val entries = repository.entriesToShare(current.personId, fullHistory = full)
+            _uiState.update {
+                it.copy(
+                    share = it.share?.copy(
+                        fullHistory = full,
+                        entryCount = entries.size,
+                        netMinor = entries.sumOf { e -> e.amountMinor }
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * Builds the link and hands the finished message back through [onReady] for the share sheet.
+     *
+     * The watermark advances here, before we know whether the user actually sent the message —
+     * Android does not report that. Advancing optimistically can skip entries if they back out,
+     * which "send full history" exists to undo. The other order would double-send by default, and
+     * a debt counted twice is worse than one that needs re-sending.
+     *
+     * The Context stays in the UI layer: this returns a String and never touches an Intent.
+     */
+    fun prepareShareMessage(onReady: (String) -> Unit) {
+        val current = _uiState.value.share ?: return
+        if (current.busy || current.hasNothingToSend) return
+        _uiState.update { it.copy(share = it.share?.copy(busy = true)) }
+
+        viewModelScope.launch {
+            val senderName = current.senderName.trim().ifEmpty { "A friend" }
+            repository.renameSelf(senderName)
+
+            val built = repository.buildPayload(current.personId, senderName, current.fullHistory)
+            if (built == null) {
+                _uiState.update { it.copy(share = it.share?.copy(busy = false, entryCount = 0)) }
+                return@launch
+            }
+            val (payload, upTo) = built
+            repository.markShared(current.personId, upTo)
+
+            val message = buildShareMessage(
+                senderName = senderName,
+                entryCount = payload.entries.size,
+                netText = netPhrase(payload.netMinor, payload.currency),
+                link = buildShareLink(encodePayload(payload))
+            )
+            _uiState.update { it.copy(share = null) }
+            onReady(message)
+        }
+    }
+
+    /** Reads from the recipient's side, which is the side that has to act on it. */
+    private fun netPhrase(netMinor: Long, currency: String): String = when {
+        netMinor > 0 -> "you owe ${formatMinor(netMinor, currency)}"
+        netMinor < 0 -> "they owe you ${formatMinor(-netMinor, currency)}"
+        else -> "nothing outstanding"
+    }
+
+    // =========================================================================================
+    // Two-sided ledger over share links — incoming
+    // =========================================================================================
+
+    /**
+     * Handles a link arriving from outside the app: tapped in a chat, or pasted by hand.
+     *
+     * Decodes and stops. Nothing is written until the user confirms, because the payload is
+     * unauthenticated and their confirmation is the only thing standing in for a signature.
+     */
+    fun onShareLinkReceived(raw: String) {
+        _uiState.update { it.copy(import = ImportFlowState.Reading) }
+
+        val blob = extractPayloadBlob(raw)
+        if (blob == null) {
+            _uiState.update {
+                it.copy(import = ImportFlowState.Unreadable(UnreadableReason.NotALink))
+            }
+            return
+        }
+
+        when (val result = decodePayload(blob)) {
+            is PayloadResult.TooNew -> _uiState.update {
+                it.copy(import = ImportFlowState.Unreadable(UnreadableReason.NewerVersion))
+            }
+            PayloadResult.Malformed -> _uiState.update {
+                it.copy(import = ImportFlowState.Unreadable(UnreadableReason.Damaged))
+            }
+            is PayloadResult.Ok -> beginConfirming(result.payload)
+        }
+    }
+
+    /**
+     * Preselects the person the link most likely refers to, matching on name.
+     *
+     * A suggestion only — the user can change it, and must confirm either way. Matching on an
+     * unverified name is a convenience, never a decision: a crafted link naming someone should
+     * cost a tap to notice, not apply itself.
+     */
+    private fun beginConfirming(payload: SharePayload) {
+        val claimed = payload.senderName.trim()
+        // Currency is part of the match, not just the name. The import screen only offers people in
+        // the payload's currency, so matching on name alone could preselect somebody who is not in
+        // that list — leaving the dialog looking like nothing was chosen while "Record it" was live,
+        // and ending in a currency refusal. A name match in the wrong currency falls through to
+        // "add someone new", which creates them in the right one.
+        val match = persons.value.firstOrNull {
+            it.name.trim().equals(claimed, ignoreCase = true) &&
+                normaliseCurrency(it.currency) == payload.currency
+        }
+        _uiState.update {
+            it.copy(
+                import = ImportFlowState.Confirming(
+                    payload = payload,
+                    targetPersonId = match?.id,
+                    newPersonName = if (match == null) claimed else null
+                )
+            )
+        }
+    }
+
+    fun setImportTarget(personId: Long) = _uiState.update {
+        val confirming = it.import as? ImportFlowState.Confirming ?: return@update it
+        it.copy(import = confirming.copy(targetPersonId = personId, newPersonName = null))
+    }
+
+    /** Switches to creating someone new. Null name means "back to picking an existing person". */
+    fun setImportNewPersonName(name: String?) = _uiState.update {
+        val confirming = it.import as? ImportFlowState.Confirming ?: return@update it
+        it.copy(import = confirming.copy(newPersonName = name, targetPersonId = null))
+    }
+
+    /**
+     * Writes the link, creating the person first if that is what was chosen.
+     *
+     * A new person is created in the payload's currency, not the app default — creating them in the
+     * wrong one would immediately trip the currency guard and refuse the very link that made them.
+     */
+    fun applyImport() {
+        val confirming = _uiState.value.import as? ImportFlowState.Confirming ?: return
+        if (!confirming.canApply) return
+        _uiState.update { it.copy(import = confirming.copy(busy = true)) }
+
+        viewModelScope.launch {
+            val personId = confirming.targetPersonId ?: repository.addPerson(
+                Person(
+                    name = confirming.newPersonName!!.trim(),
+                    pfpValue = confirming.newPersonName.trim().take(2).uppercase(),
+                    sortOrder = repository.nextSortOrder(),
+                    currency = confirming.payload.currency
+                )
+            )
+            val name = persons.value.firstOrNull { it.id == personId }?.name
+                ?: confirming.newPersonName?.trim()
+                ?: confirming.payload.senderName
+
+            val outcome = repository.importPayload(
+                personId = personId,
+                payload = confirming.payload,
+                now = System.currentTimeMillis()
+            )
+            _uiState.update { it.copy(import = ImportFlowState.Done(outcome, name)) }
+        }
+    }
+
+    /** Opens the paste box. See [ImportFlowState.Pasting] for why this is a primary path. */
+    fun openPasteImport() = _uiState.update {
+        it.copy(showSettingsDialog = false, import = ImportFlowState.Pasting())
+    }
+
+    fun setPasteText(text: String) = _uiState.update {
+        val pasting = it.import as? ImportFlowState.Pasting ?: return@update it
+        it.copy(import = pasting.copy(text = text))
+    }
+
+    /** Reads whatever was pasted, taking the same path a tapped link does. */
+    fun submitPaste() {
+        val pasting = _uiState.value.import as? ImportFlowState.Pasting ?: return
+        onShareLinkReceived(pasting.text)
+    }
+
+    fun dismissImport() = _uiState.update { it.copy(import = null) }
 }

@@ -1,5 +1,6 @@
 package com.kg.merapaisa
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
@@ -27,11 +28,23 @@ class MainActivity : FragmentActivity() {
      */
     private val lock: AppLockViewModel by viewModels()
 
+    /**
+     * A share link that arrived from outside the app, held until the ledger is actually on screen.
+     *
+     * It cannot be handed straight to the ViewModel: that would show an import dialog over the lock
+     * screen, so tapping a link would reveal who you owe money to without a fingerprint. The
+     * delivery happens inside the unlocked branch of [setContent] below, which is what makes the
+     * lock apply to imports as well.
+     */
+    private var pendingShareLink by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // The system splash window covers startup on its own; no artificial delay on top.
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        pendingShareLink = shareLinkFrom(intent)
 
         // Start secure and relax later. The lock setting is read from disk, so for the first
         // frames we do not yet know whether this ledger is meant to be private; assuming it is
@@ -68,6 +81,17 @@ class MainActivity : FragmentActivity() {
                         )
                         else -> {
                             val viewModel: MainViewModel = viewModel()
+
+                            // Reached only once unlocked, so an incoming link waits for the
+                            // fingerprint like everything else. Cleared immediately so a rotation
+                            // does not re-open an import the user already dismissed.
+                            LaunchedEffect(pendingShareLink) {
+                                pendingShareLink?.let { link ->
+                                    pendingShareLink = null
+                                    viewModel.onShareLinkReceived(link)
+                                }
+                            }
+
                             MainScreen(viewModel = viewModel)
                         }
                     }
@@ -75,6 +99,23 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
+
+    /**
+     * The activity is `singleTask`, so a link tapped while the app is already open arrives here
+     * rather than starting a second copy. Without this the link would be silently ignored.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingShareLink = shareLinkFrom(intent)
+    }
+
+    /**
+     * The link text, or null if this intent is not one. The whole URI is passed on, fragment
+     * included — the payload lives in the fragment, so dropping it would leave an empty link.
+     */
+    private fun shareLinkFrom(intent: Intent?): String? =
+        if (intent?.action == Intent.ACTION_VIEW) intent.data?.toString() else null
 
     override fun onStop() {
         super.onStop()

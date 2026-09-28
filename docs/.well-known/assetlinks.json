@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.kg.merapaisa",
+      "sha256_cert_fingerprints": [
+        "4D:5C:0A:55:33:71:BC:A5:AB:BF:44:0E:33:49:7D:B8:25:DD:28:01:4F:0A:BE:59:BC:0D:10:4F:31:DA:22:44"
+      ]
+    }
+  }
+]

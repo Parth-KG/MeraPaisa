@@ -217,6 +217,105 @@ class MigrationTest {
         }
     }
 
+    /**
+     * 6 -> 7 adds the share-link tables. Nothing about anyone's balance may move: this migration
+     * only gains a watermark column and a dedupe table, so the ledger it inherits must come
+     * through byte for byte.
+     */
+    @Test
+    fun migrate6To7_addsShareStateAndLeavesTheLedgerAlone() {
+        helper.createDatabase(TEST_DB, 6).use { db ->
+            db.insertV4Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV4Transaction(personId = 1, amountMinor = 250_50, timestamp = 2_000, note = "dinner")
+            db.insertV4Person(id = 2, name = "Ravi", currency = "USD")
+            db.insertV4Transaction(personId = 2, amountMinor = -40_00, timestamp = 3_000, note = "cab")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 7, true, MIGRATION_6_7).use { db ->
+            assertEquals("Asha's balance must survive", 25_050L, db.derivedBalance(1))
+            assertEquals("Ravi's balance must survive", -4_000L, db.derivedBalance(2))
+            assertEquals("no entry may be invented", 1, db.transactionCount(1).toInt())
+            assertEquals("no entry may be invented", 1, db.transactionCount(2).toInt())
+
+            // Nothing has been shared yet, so every watermark starts at zero — which is what makes
+            // the first link for an existing person offer their whole history rather than nothing.
+            assertEquals(
+                "an existing install has shared nothing, so every watermark must be 0",
+                0,
+                db.longOf("SELECT COUNT(*) FROM persons WHERE lastSharedAt != 0").toInt()
+            )
+
+            assertEquals(
+                "the dedupe table should exist and be empty",
+                0,
+                db.longOf("SELECT COUNT(*) FROM applied_payloads").toInt()
+            )
+        }
+    }
+
+    /** The primary key is what makes applying a forwarded link twice impossible. */
+    @Test
+    fun afterMigrating_theSamePayloadIdCannotBeRecordedTwice() {
+        helper.createDatabase(TEST_DB, 6).use { db ->
+            db.insertV4Person(id = 1, name = "Asha", currency = "INR")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 7, true, MIGRATION_6_7).use { db ->
+            db.execSQL(
+                "INSERT INTO applied_payloads (payloadId, appliedAt, personId, senderName, entryCount, netMinor) " +
+                    "VALUES ('abc123', 10, 1, 'Parth', 2, 34000)"
+            )
+
+            var rejected = false
+            try {
+                db.execSQL(
+                    "INSERT INTO applied_payloads (payloadId, appliedAt, personId, senderName, entryCount, netMinor) " +
+                        "VALUES ('abc123', 20, 1, 'Parth', 2, 34000)"
+                )
+            } catch (e: android.database.sqlite.SQLiteConstraintException) {
+                rejected = true
+            }
+
+            assertTrue("a duplicate payloadId must be refused by the primary key", rejected)
+            assertEquals(1, db.longOf("SELECT COUNT(*) FROM applied_payloads").toInt())
+            assertEquals("the first application must be the one that stands", 10L, db.longOf("SELECT appliedAt FROM applied_payloads"))
+        }
+    }
+
+    /**
+     * Locks in the one deliberate asymmetry in this schema: `applied_payloads` has **no** foreign
+     * key to `persons`, so deleting someone does not take their dedupe records with them.
+     *
+     * Every other child table here cascades. If this one did too, deleting a person and then
+     * tapping their old link again would find no record of it and apply the entries a second
+     * time. The record has to outlive the person it was about. A future tidy-up that "fixes the
+     * missing foreign key" would reintroduce exactly that bug, which is why this test exists.
+     */
+    @Test
+    fun afterMigrating_deletingAPersonKeepsTheirAppliedPayloadRecords() {
+        helper.createDatabase(TEST_DB, 6).use { db ->
+            db.insertV4Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV4Transaction(personId = 1, amountMinor = 10_000, timestamp = 1_000, note = "dinner")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 7, true, MIGRATION_6_7).use { db ->
+            db.execSQL("PRAGMA foreign_keys = ON")
+            db.execSQL(
+                "INSERT INTO applied_payloads (payloadId, appliedAt, personId, senderName, entryCount, netMinor) " +
+                    "VALUES ('keepme', 10, 1, 'Parth', 1, 10000)"
+            )
+
+            db.execSQL("DELETE FROM persons WHERE id = 1")
+
+            assertEquals("their transactions still cascade away", 0, db.transactionCount(1).toInt())
+            assertEquals(
+                "the dedupe record must survive the person, or a forwarded link applies twice",
+                1,
+                db.longOf("SELECT COUNT(*) FROM applied_payloads WHERE payloadId = 'keepme'").toInt()
+            )
+        }
+    }
+
     // --- seeding helpers, written against the v3 shape ---
 
     private fun SupportSQLiteDatabase.insertV3Person(

@@ -42,6 +42,8 @@ import com.kg.merapaisa.ui.groups.GroupRow
 import com.kg.merapaisa.ui.groups.SettleUpSheet
 import com.kg.merapaisa.ui.groups.GroupsEmptyState
 import com.kg.merapaisa.ui.dialogs.TransactionHistoryDialog
+import com.kg.merapaisa.ui.share.ImportLedgerDialog
+import com.kg.merapaisa.ui.share.ShareLedgerSheet
 import kotlinx.coroutines.launch
 import com.kg.merapaisa.SecurityStore
 import com.kg.merapaisa.ThemeStore
@@ -219,7 +221,8 @@ fun MainScreen(viewModel: MainViewModel) {
                             viewModel.personSummary(person) { text ->
                                 shareText(context, text, "Share summary via")
                             }
-                        }
+                        },
+                        onShareLedger = { viewModel.openShareSheet(person.id) }
                     )
                 }
             }
@@ -366,6 +369,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 currentThemeName = theme.name,
                 appLockEnabled = appLockEnabled,
                 appLockAvailable = remember { canAuthenticate(context) },
+                onImportLink = viewModel::openPasteImport,
                 onAppLockChange = { enabled ->
                     scope.launch { SecurityStore.setAppLockEnabled(context, enabled) }
                 },
@@ -513,6 +517,37 @@ fun MainScreen(viewModel: MainViewModel) {
                     Text("Cancel", color = theme.textSecondary)
                 }
             }
+        )
+    }
+
+    // The outgoing half of the two-sided ledger. Building the message advances the share
+    // watermark, so the Context work stays here and the ViewModel only hands back a String.
+    ui.share?.let { share ->
+        ShareLedgerSheet(
+            state = share,
+            onSenderNameChange = viewModel::setShareSenderName,
+            onFullHistoryChange = viewModel::setShareFullHistory,
+            onShare = {
+                viewModel.prepareShareMessage { message ->
+                    shareText(context, message, "Share ledger update via")
+                }
+            },
+            onDismiss = viewModel::closeShareSheet
+        )
+    }
+
+    // The incoming half. Rendered here rather than as its own screen so it sits above whatever
+    // the user was already doing, and behind the app lock like everything else.
+    ui.import?.let { incoming ->
+        ImportLedgerDialog(
+            state = incoming,
+            persons = persons,
+            onTargetChange = viewModel::setImportTarget,
+            onNewPersonNameChange = viewModel::setImportNewPersonName,
+            onApply = viewModel::applyImport,
+            onPasteChange = viewModel::setPasteText,
+            onPasteSubmit = viewModel::submitPaste,
+            onDismiss = viewModel::dismissImport
         )
     }
 }

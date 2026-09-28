@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mera Paisa — ledger update</title>
+<meta name="robots" content="noindex">
+<style>
+  :root {
+    --bg: #fdf8f4; --card: #fff; --text: #1a0f0b; --muted: #6b5a50;
+    --accent: #c2410c; --line: #eadfd6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a0f0b; --card: #241611; --text: #f7ece5; --muted: #a89086;
+      --accent: #ff8b66; --line: #3a251d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; align-items: center; justify-content: center; min-height: 100vh;
+  }
+  main { max-width: 34rem; width: 100%; background: var(--card);
+         border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  p { margin: 0 0 14px; }
+  .muted { color: var(--muted); font-size: 0.9rem; }
+  a.btn { display: inline-block; background: var(--accent); color: #fff; text-decoration: none;
+          padding: 11px 18px; border-radius: 10px; font-weight: 600; }
+  ol { padding-left: 1.2rem; margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+  code { background: var(--bg); border: 1px solid var(--line); border-radius: 5px;
+         padding: 1px 5px; font-size: 0.85em; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 20px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Someone shared a ledger update with you</h1>
+  <p class="muted">This page is a signpost. Everything in the link stays on your phone.</p>
+
+  <hr>
+
+  <p><strong>If you have Mera Paisa installed</strong>, open this link from the message you were
+  sent and it will go straight into the app. If it opened this page instead, Android has not yet
+  learned to route these links — copy the whole message, then in Mera Paisa tap
+  <strong>Settings → Record a shared update</strong> and paste it.</p>
+
+  <p><strong>If you do not have it yet:</strong></p>
+  <ol>
+    <li>Install Mera Paisa from the link below.</li>
+    <li>Copy the whole message someone sent you.</li>
+    <li>Open <strong>Settings → Record a shared update</strong> and paste it.</li>
+  </ol>
+
+  <p><a class="btn" href="https://github.com/Parth-KG/MeraPaisa/releases/latest">Get Mera Paisa</a></p>
+
+  <hr>
+
+  <p class="muted"><strong>Why this page cannot read your ledger.</strong> The update travels in
+  the part of the link after the <code>#</code>. Browsers never send that to a server, so the
+  amounts, names and notes in it are never transmitted anywhere — not to GitHub, not to anyone.
+  This page is plain HTML with no scripts and no analytics; it only ever sees that you asked for
+  <code>/MeraPaisa/s</code>.</p>
+
+  <p class="muted"><strong>One thing worth knowing.</strong> Anyone can make one of these links,
+  and nothing in them proves who sent it. Mera Paisa shows you every amount before it records
+  anything, and never writes to your ledger without you tapping to confirm. Only accept an update
+  you were expecting.</p>
+</main>
+</body>
+</html>
