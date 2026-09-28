@@ -4,7 +4,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import android.graphics.Color
 import androidx.activity.viewModels
 import androidx.compose.runtime.*
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -42,6 +44,10 @@ class MainActivity : FragmentActivity() {
         // The system splash window covers startup on its own; no artificial delay on top.
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
+        // Bar styling is applied from the chosen theme once it is known, in the effect below.
+        // A bare enableEdgeToEdge() here would take SystemBarStyle.auto, which reads the phone's
+        // dark mode rather than the app's theme: Paper on a phone set to dark drew white icons
+        // on white paper, and Midnight on a phone set to light drew dark icons on near black.
         enableEdgeToEdge()
 
         pendingShareLink = shareLinkFrom(intent)
@@ -65,6 +71,18 @@ class MainActivity : FragmentActivity() {
 
             LaunchedEffect(lockEnabled) {
                 if (lockEnabled == false) window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
+
+            // Re-applied on every theme change, not once at startup. The theme is not known in
+            // onCreate, since it arrives from DataStore, and switching theme in Settings used to
+            // repaint the whole app while leaving the system bars as they were at process start.
+            LaunchedEffect(currentTheme) {
+                val bars = if (currentTheme.isDark) {
+                    SystemBarStyle.dark(Color.TRANSPARENT)
+                } else {
+                    SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                }
+                enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
             }
 
             // Ask as soon as we are locked, so the prompt appears without the user tapping.
