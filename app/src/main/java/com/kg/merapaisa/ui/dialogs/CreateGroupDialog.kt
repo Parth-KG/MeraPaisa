@@ -27,12 +27,14 @@ fun CreateGroupDialog(
     people: List<PersonWithBalance>,
     defaultCurrency: String,
     onDismiss: () -> Unit,
-    onCreate: (name: String, currency: String, memberIds: List<Long>) -> Unit
+    onCreate: (name: String, currency: String, memberIds: List<Long>, simplifyDebts: Boolean) -> Unit
 ) {
     val theme = LocalAppTheme.current
     var name by remember { mutableStateOf("") }
     var currency by remember { mutableStateOf(defaultCurrency) }
     var selected by remember { mutableStateOf(setOf<Long>()) }
+    // Defaults to on, which is what every group has done since groups shipped.
+    var simplifyDebts by remember { mutableStateOf(true) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -47,6 +49,24 @@ fun CreateGroupDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Switch(checked = simplifyDebts, onCheckedChange = { simplifyDebts = it })
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Fewest payments", color = theme.textPrimary, fontSize = 13.sp)
+                        Text(
+                            if (simplifyDebts)
+                                "Net everyone's position across the group when settling up."
+                            else
+                                "Keep each debt with the expense that created it.",
+                            color = theme.textSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
 
                 Text("Currency", color = theme.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -102,7 +122,7 @@ fun CreateGroupDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onCreate(name.trim(), currency, selected.toList()) },
+                onClick = { onCreate(name.trim(), currency, selected.toList(), simplifyDebts) },
                 enabled = name.isNotBlank() && selected.isNotEmpty()
             ) { Text("Create", fontWeight = FontWeight.Bold) }
         },

@@ -52,6 +52,58 @@ fun settleUp(balances: List<MemberBalance>): List<Transfer> {
 }
 
 /**
+ * The debts as they actually arose, netted only between each pair.
+ *
+ * The alternative to [settleUp]. Where that nets the whole group down to the fewest payments —
+ * collapsing B out of "A owes B, B owes C" so A pays C — this keeps every debt attached to the
+ * expense that created it. If you shared a dinner Ravi paid for, you owe Ravi, and no amount of
+ * other people's spending moves that.
+ *
+ * Netting still happens *within* a pair, because "you owe me ₹300 and I owe you ₹100" is one
+ * payment of ₹200 by any reading, and presenting it as two would be pedantry rather than honesty.
+ *
+ * **Exact by construction, with no rounding anywhere.** Shares are already whole minor units that
+ * add up to their expense, so summing and subtracting them cannot introduce a fraction. That is
+ * the reason this is built from shares rather than from a pro-rata split of each member's net
+ * position, which would need two-dimensional rounding to keep both the payer totals and the
+ * receiver totals honest.
+ *
+ * A member's own share of an expense they paid for is skipped: nobody owes themselves.
+ */
+fun directTransfers(
+    expenses: List<Expense>,
+    shares: List<ExpenseShare>
+): List<Transfer> {
+    val paidBy = expenses.associate { it.id to it.paidByPersonId }
+
+    // debtor -> creditor -> amount
+    val owed = LinkedHashMap<Pair<Long, Long>, Long>()
+    shares.forEach { share ->
+        val creditor = paidBy[share.expenseId] ?: return@forEach
+        if (creditor == share.personId || share.shareMinor == 0L) return@forEach
+        val key = share.personId to creditor
+        owed[key] = (owed[key] ?: 0L) + share.shareMinor
+    }
+
+    // Net each pair against its opposite, then emit whichever direction survives.
+    val settled = HashSet<Pair<Long, Long>>()
+    val transfers = mutableListOf<Transfer>()
+    owed.forEach { (pair, amount) ->
+        val (debtor, creditor) = pair
+        if (pair in settled) return@forEach
+        settled.add(pair)
+        settled.add(creditor to debtor)
+
+        val net = amount - (owed[creditor to debtor] ?: 0L)
+        when {
+            net > 0 -> transfers += Transfer(debtor, creditor, net)
+            net < 0 -> transfers += Transfer(creditor, debtor, -net)
+        }
+    }
+    return transfers
+}
+
+/**
  * Each member's net position in a group: what they paid out, less what they were assigned.
  * Members who neither paid nor owe anything are still reported, at zero, so a group screen can
  * list everyone rather than only the people currently in the red.

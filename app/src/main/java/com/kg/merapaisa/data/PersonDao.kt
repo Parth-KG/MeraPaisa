@@ -153,6 +153,47 @@ interface PersonDao {
         if (transaction.amountMinor != 0L) setSettled(transaction.personId, false)
     }
 
+    /**
+     * Moves [amountMinor] of what [fromPersonId] owes onto [toPersonId].
+     *
+     * Two entries, equal and opposite, sharing one timestamp so they sort together and read as the
+     * single event they are. One transaction, because half of this landing would invent or destroy
+     * money: the whole point is that the total owed to you does not change, only who owes it.
+     *
+     * Each entry names the other person, so a year later the pair explains itself without needing
+     * the other half in view.
+     */
+    @androidx.room.Transaction
+    suspend fun moveDebt(
+        fromPersonId: Long,
+        toPersonId: Long,
+        amountMinor: Long,
+        fromName: String,
+        toName: String,
+        note: String = ""
+    ) {
+        val at = System.currentTimeMillis()
+        val suffix = if (note.isBlank()) "" else " — $note"
+        insertTransactions(
+            listOf(
+                Transaction(
+                    personId = fromPersonId,
+                    amountMinor = -amountMinor,
+                    timestamp = at,
+                    note = "Moved to $toName$suffix"
+                ),
+                Transaction(
+                    personId = toPersonId,
+                    amountMinor = amountMinor,
+                    timestamp = at,
+                    note = "Moved from $fromName$suffix"
+                )
+            )
+        )
+        // The receiver now owes something, so they belong back in the active list.
+        setSettled(toPersonId, false)
+    }
+
     /** As [recordEntry], for a split that touches several people at once. */
     @androidx.room.Transaction
     suspend fun recordEntries(transactions: List<Transaction>) {

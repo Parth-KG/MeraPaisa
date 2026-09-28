@@ -15,6 +15,7 @@ import com.kg.merapaisa.data.ImportOutcome
 import com.kg.merapaisa.data.PayloadResult
 import com.kg.merapaisa.data.SharePayload
 import com.kg.merapaisa.data.buildPersonSummary
+import com.kg.merapaisa.data.MoveDebtResult
 import com.kg.merapaisa.data.buildShareLink
 import com.kg.merapaisa.data.claimedNameForDisplay
 import com.kg.merapaisa.BackupStore
@@ -178,11 +179,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun showCreateGroupDialog(show: Boolean) = _uiState.update { it.copy(showCreateGroupDialog = show) }
 
-    fun createGroup(name: String, currency: String, memberIds: List<Long>) {
+    fun createGroup(name: String, currency: String, memberIds: List<Long>, simplifyDebts: Boolean) {
         viewModelScope.launch {
-            groupRepository.createGroup(name, currency, memberIds)
+            groupRepository.createGroup(name, currency, memberIds, simplifyDebts)
             _uiState.update { it.copy(showCreateGroupDialog = false) }
         }
+    }
+
+    /**
+     * Flips how the open group's settle-up plan is worked out.
+     *
+     * Writes one column. Nothing reaches the expense list — switching between the two views is not
+     * an event that happened to anybody's money.
+     */
+    fun setSimplifyDebts(simplify: Boolean) {
+        val groupId = _uiState.value.openGroupId ?: return
+        viewModelScope.launch { groupRepository.setSimplifyDebts(groupId, simplify) }
     }
 
     fun deleteGroup(groupId: Long) {
@@ -1016,4 +1028,83 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun closeUpdate() = _uiState.update { it.copy(update = null) }
+
+    // =========================================================================================
+    // Moving a debt between people
+    // =========================================================================================
+
+    /** Opens the sheet for [personId], who must be owed something for there to be a debt to move. */
+    fun openMoveDebt(personId: Long) {
+        val person = persons.value.firstOrNull { it.id == personId } ?: return
+        _uiState.update {
+            it.copy(moveDebt = MoveDebtFlowState(
+                fromPersonId = personId,
+                fromName = person.name,
+                currency = normaliseCurrency(person.currency),
+                availableMinor = person.balanceMinor
+            ))
+        }
+    }
+
+    fun closeMoveDebt() = _uiState.update { it.copy(moveDebt = null) }
+
+    fun onMoveDebtKey(key: String) = _uiState.update {
+        val m = it.moveDebt ?: return@update it
+        it.copy(moveDebt = m.copy(amount = appendAmountKey(m.amount, key), problem = null))
+    }
+
+    fun setMoveDebtTarget(personId: Long) = _uiState.update {
+        it.copy(moveDebt = it.moveDebt?.copy(toPersonId = personId, problem = null))
+    }
+
+    fun setMoveDebtNote(note: String) = _uiState.update {
+        it.copy(moveDebt = it.moveDebt?.copy(note = note))
+    }
+
+    /**
+     * Performs the move, or leaves the sheet open saying why not.
+     *
+     * The repository re-reads the balance under its own transaction, so the guard here is about
+     * not offering a live button rather than about correctness — two fast taps cannot both move
+     * the same money.
+     */
+    fun confirmMoveDebt() {
+        val m = _uiState.value.moveDebt ?: return
+        if (!m.canMove) return
+        _uiState.update { it.copy(moveDebt = m.copy(busy = true, problem = null)) }
+
+        viewModelScope.launch {
+            val result = repository.moveDebt(
+                fromPersonId = m.fromPersonId,
+                toPersonId = m.toPersonId!!,
+                amountMinor = m.amountMinor!!,
+                note = m.note.trim()
+            )
+            _uiState.update { state ->
+                when (result) {
+                    is MoveDebtResult.Moved -> state.copy(moveDebt = null, selectedId = null)
+                    is MoveDebtResult.CurrencyMismatch -> state.copy(
+                        moveDebt = m.copy(busy = false, problem =
+                            "${m.fromName} is tracked in ${result.from} and they are in ${result.to}. " +
+                                "Moving between currencies would need an exchange rate nobody agreed to.")
+                    )
+                    is MoveDebtResult.MoreThanOwed -> state.copy(
+                        moveDebt = m.copy(busy = false, problem =
+                            "That is more than ${m.fromName} owes you " +
+                                "(${formatMinor(result.availableMinor, m.currency)}).")
+                    )
+                    is MoveDebtResult.NothingToMove -> state.copy(
+                        moveDebt = m.copy(busy = false, problem =
+                            "${m.fromName} does not owe you anything, so there is nothing to move.")
+                    )
+                    MoveDebtResult.SamePerson -> state.copy(
+                        moveDebt = m.copy(busy = false, problem = "Pick somebody other than ${m.fromName}.")
+                    )
+                    MoveDebtResult.NotAnAmount -> state.copy(
+                        moveDebt = m.copy(busy = false, problem = "Enter an amount above zero.")
+                    )
+                }
+            }
+        }
+    }
 }

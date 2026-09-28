@@ -10,7 +10,10 @@ import com.kg.merapaisa.data.Expense
 import com.kg.merapaisa.data.ExpenseShare
 import com.kg.merapaisa.data.MemberBalance
 import com.kg.merapaisa.data.evenShares
+import com.kg.merapaisa.data.Transfer
+import com.kg.merapaisa.data.directTransfers
 import com.kg.merapaisa.data.groupBalances
+import com.kg.merapaisa.data.settleUp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -38,9 +41,16 @@ class GroupRepository(
     fun expensesPaidBy(personId: Long): Flow<Int> = groupDao.expenseCountPaidBy(personId)
 
     /** Creates a group with you and the chosen people in it. */
-    suspend fun createGroup(name: String, currency: String, memberIds: List<Long>): Long {
+    suspend fun createGroup(
+        name: String,
+        currency: String,
+        memberIds: List<Long>,
+        simplifyDebts: Boolean = true
+    ): Long {
         val selfId = self().id
-        val groupId = groupDao.insertGroup(Group(name = name, currency = currency))
+        val groupId = groupDao.insertGroup(
+            Group(name = name, currency = currency, simplifyDebts = simplifyDebts)
+        )
         val everyone = (memberIds + selfId).distinct()
         groupDao.addMembers(everyone.map { GroupMember(groupId = groupId, personId = it) })
         notifier.onLedgerChanged()
@@ -54,19 +64,34 @@ class GroupRepository(
     fun groupDetail(groupId: Long): Flow<GroupDetail> = combine(
         groupDao.getMembers(groupId),
         groupDao.getExpenses(groupId),
-        groupDao.getSharesForGroup(groupId)
-    ) { members, expenses, shares ->
+        groupDao.getSharesForGroup(groupId),
+        groupDao.getGroup(groupId)
+    ) { members, expenses, shares, group ->
+        val balances = groupBalances(
+            memberIds = members.map { it.id },
+            paidByPerson = expenses.groupBy { it.paidByPersonId }
+                .mapValues { (_, e) -> e.sumOf { it.amountMinor } },
+            sharesByPerson = shares.groupBy { it.personId }
+                .mapValues { (_, s) -> s.sumOf { it.shareMinor } }
+        )
         GroupDetail(
             members = members,
             expenses = expenses,
-            balances = groupBalances(
-                memberIds = members.map { it.id },
-                paidByPerson = expenses.groupBy { it.paidByPersonId }
-                    .mapValues { (_, e) -> e.sumOf { it.amountMinor } },
-                sharesByPerson = shares.groupBy { it.personId }
-                    .mapValues { (_, s) -> s.sumOf { it.shareMinor } }
-            )
+            balances = balances,
+            // Computed here rather than in the screen, so the plan and the balances it squares are
+            // always derived from the same read of the same rows.
+            transfers = if (group?.simplifyDebts != false) {
+                settleUp(balances)
+            } else {
+                directTransfers(expenses, shares)
+            },
+            simplifyDebts = group?.simplifyDebts != false
         )
+    }
+
+    /** Flips the plan between fewest-payments and as-it-happened. Writes nothing to the log. */
+    suspend fun setSimplifyDebts(groupId: Long, simplify: Boolean) {
+        groupDao.setSimplifyDebts(groupId, simplify)
     }
 
     suspend fun addExpense(
@@ -99,7 +124,10 @@ class GroupRepository(
                 groupId = groupId,
                 description = "Settlement",
                 amountMinor = amountMinor,
-                paidByPersonId = fromPersonId
+                paidByPersonId = fromPersonId,
+                // Flagged, so the group screen can show repayments apart from spending. Until v2.4
+                // the two were told apart only by this description.
+                isSettlement = true
             ),
             sharesByPerson = mapOf(toPersonId to amountMinor)
         )
@@ -121,5 +149,21 @@ class GroupRepository(
 data class GroupDetail(
     val members: List<com.kg.merapaisa.data.Person>,
     val expenses: List<com.kg.merapaisa.data.Expense>,
-    val balances: List<com.kg.merapaisa.data.MemberBalance>
-)
+    val balances: List<com.kg.merapaisa.data.MemberBalance>,
+    /**
+     * Who pays whom, and how much — computed by whichever method this group is set to.
+     *
+     * Carried here rather than worked out in the screen so the plan and the balances it squares
+     * come from one read of the same rows. A screen recomputing it separately could show a plan
+     * that does not match the positions printed beside it.
+     */
+    val transfers: List<com.kg.merapaisa.data.Transfer> = emptyList(),
+    /** Which method produced [transfers], so the screen can label the toggle honestly. */
+    val simplifyDebts: Boolean = true
+) {
+    /** Spending, as opposed to people paying each other back. */
+    val purchases: List<com.kg.merapaisa.data.Expense> get() = expenses.filterNot { it.isSettlement }
+
+    /** Repayments. Same arithmetic as an expense, but not spending — see [Expense.isSettlement]. */
+    val settlements: List<com.kg.merapaisa.data.Expense> get() = expenses.filter { it.isSettlement }
+}

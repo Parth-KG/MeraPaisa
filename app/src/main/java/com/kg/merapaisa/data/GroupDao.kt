@@ -47,6 +47,17 @@ interface GroupDao {
     @Query("SELECT * FROM expense_groups WHERE id = :groupId")
     fun getGroup(groupId: Long): Flow<Group?>
 
+    /**
+     * Flips how this group's settle-up plan is worked out.
+     *
+     * Writes one column and nothing else. Switching between simplified and unsimplified changes
+     * what the plan *says*, not what happened — so it leaves no trace in the expense list, and must
+     * not, or the log would fill with entries recording that somebody changed their mind about a
+     * view.
+     */
+    @Query("UPDATE expense_groups SET simplifyDebts = :simplify WHERE id = :groupId")
+    suspend fun setSimplifyDebts(groupId: Long, simplify: Boolean)
+
     @Insert
     suspend fun insertGroup(group: Group): Long
 

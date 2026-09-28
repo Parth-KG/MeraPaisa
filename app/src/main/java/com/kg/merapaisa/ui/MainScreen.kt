@@ -32,6 +32,7 @@ import com.kg.merapaisa.data.formatMinor
 import com.kg.merapaisa.data.parseAmountToMinor
 import com.kg.merapaisa.ui.dialogs.AddPersonDialog
 import com.kg.merapaisa.ui.dialogs.EditPersonDialog
+import com.kg.merapaisa.ui.dialogs.MoveDebtDialog
 import com.kg.merapaisa.ui.dialogs.ReminderDialog
 import com.kg.merapaisa.CurrencyStore
 import com.kg.merapaisa.ui.dialogs.CreateGroupDialog
@@ -231,7 +232,8 @@ fun MainScreen(viewModel: MainViewModel) {
                                 shareText(context, text, "Share summary via")
                             }
                         },
-                        onShareLedger = { viewModel.openShareSheet(person.id) }
+                        onShareLedger = { viewModel.openShareSheet(person.id) },
+                        onMoveDebt = { viewModel.openMoveDebt(person.id) }
                     )
                 }
             }
@@ -408,10 +410,13 @@ fun MainScreen(viewModel: MainViewModel) {
                 members = loaded.members,
                 expenses = loaded.expenses,
                 balances = loaded.balances,
+                transfers = loaded.transfers,
+                simplifyDebts = loaded.simplifyDebts,
                 onBack = { viewModel.openGroup(null) },
                 onAddExpense = { viewModel.showAddExpenseDialog(true) },
                 onSettleUp = { viewModel.showSettleUp(true) },
-                onDeleteExpense = viewModel::deleteExpense
+                onDeleteExpense = viewModel::deleteExpense,
+                onSimplifyChange = viewModel::setSimplifyDebts
             )
 
             if (ui.showAddExpenseDialog) {
@@ -581,6 +586,18 @@ fun MainScreen(viewModel: MainViewModel) {
     // is genuinely a newer release — an app that interrupts you to say nothing has changed is
     // worse than one that never looks.
     LaunchedEffect(Unit) { viewModel.checkForUpdatesQuietly() }
+
+    ui.moveDebt?.let { move ->
+        MoveDebtDialog(
+            state = move,
+            people = persons,
+            onKey = viewModel::onMoveDebtKey,
+            onTargetChange = viewModel::setMoveDebtTarget,
+            onNoteChange = viewModel::setMoveDebtNote,
+            onConfirm = viewModel::confirmMoveDebt,
+            onDismiss = viewModel::closeMoveDebt
+        )
+    }
 
     ui.update?.let { updateState ->
         UpdateDialog(

@@ -20,7 +20,7 @@ import com.kg.merapaisa.data.formatMinor
 import com.kg.merapaisa.data.PersonWithBalance
 
 @Composable
-fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: () -> Unit, onClick: () -> Unit,onSendReminder: () -> Unit, onDelete: () -> Unit, onEditClick: () -> Unit, onSettleToggle: () -> Unit, onShareSummary: () -> Unit, onShareLedger: () -> Unit) {
+fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: () -> Unit, onClick: () -> Unit,onSendReminder: () -> Unit, onDelete: () -> Unit, onEditClick: () -> Unit, onSettleToggle: () -> Unit, onShareSummary: () -> Unit, onShareLedger: () -> Unit, onMoveDebt: () -> Unit) {
     val theme = LocalAppTheme.current
     var showMenu by remember { mutableStateOf(false) }
 
@@ -88,6 +88,14 @@ fun PersonRow(person: PersonWithBalance, isSelected: Boolean, onHistoryClick: ()
                         text = { Text("Share ledger update", color = theme.textPrimary) },
                         onClick = { showMenu = false; onShareLedger() }
                     )
+                    // Only when they owe you something — there is nothing to hand on otherwise,
+                    // and an always-visible item that always refuses is worse than no item.
+                    if (person.balanceMinor > 0) {
+                        DropdownMenuItem(
+                            text = { Text("Move debt to someone", color = theme.textPrimary) },
+                            onClick = { showMenu = false; onMoveDebt() }
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("Edit", color = theme.textPrimary) },
                         onClick = { showMenu = false; onEditClick() }

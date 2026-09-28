@@ -2,6 +2,8 @@ package com.kg.merapaisa.repository
 
 import com.kg.merapaisa.data.AppliedPayload
 import com.kg.merapaisa.data.ImportOutcome
+import com.kg.merapaisa.data.MoveDebtResult
+import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonDao
 import com.kg.merapaisa.data.PersonLedger
@@ -78,6 +80,46 @@ class PersonRepository(
         if (entries.isEmpty()) return
         dao.recordEntries(entries)
         notifier.onLedgerChanged()
+    }
+
+    /**
+     * Moves part of one person's balance onto another. "Rondu owes you ₹624 — move ₹100 to Sasti."
+     *
+     * Two equal and opposite entries sharing a timestamp, written together, so the total owed to
+     * you never changes — only who owes it. Useful when somebody pays on another's behalf, or when
+     * a debt genuinely changes hands.
+     *
+     * Returns a [MoveDebtResult] rather than throwing, because every refusal here is something the
+     * user needs told rather than an error: refusing is the normal outcome of a mistaken tap.
+     */
+    suspend fun moveDebt(
+        fromPersonId: Long,
+        toPersonId: Long,
+        amountMinor: Long,
+        note: String = ""
+    ): MoveDebtResult {
+        if (fromPersonId == toPersonId) return MoveDebtResult.SamePerson
+        if (amountMinor <= 0L) return MoveDebtResult.NotAnAmount
+
+        val from = dao.getPersonNow(fromPersonId) ?: return MoveDebtResult.NotAnAmount
+        val to = dao.getPersonNow(toPersonId) ?: return MoveDebtResult.NotAnAmount
+
+        // Same reasoning as an incoming share link in another currency: the two amounts are minor
+        // units with no rate attached, so moving ₹100 onto a dollar balance would silently claim
+        // $100. Converting would mean inventing a rate nobody agreed to.
+        val fromCurrency = normaliseCurrency(from.currency)
+        val toCurrency = normaliseCurrency(to.currency)
+        if (fromCurrency != toCurrency) {
+            return MoveDebtResult.CurrencyMismatch(fromCurrency, toCurrency)
+        }
+
+        val available = dao.getBalanceNow(fromPersonId)
+        if (available <= 0L) return MoveDebtResult.NothingToMove(available)
+        if (amountMinor > available) return MoveDebtResult.MoreThanOwed(available)
+
+        dao.moveDebt(fromPersonId, toPersonId, amountMinor, from.name, to.name, note)
+        notifier.onLedgerChanged()
+        return MoveDebtResult.Moved(amountMinor)
     }
 
     suspend fun editTransaction(transaction: Transaction) {

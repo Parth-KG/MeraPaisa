@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.kg.merapaisa.data.Expense
 import com.kg.merapaisa.data.Group
 import com.kg.merapaisa.data.MemberBalance
+import com.kg.merapaisa.data.Transfer
 import com.kg.merapaisa.data.Person
 import org.junit.Rule
 import org.junit.Test
@@ -39,15 +40,21 @@ class GroupDetailScreenTest {
                     Expense(id = 2, groupId = 1, description = "Cab", amountMinor = 200_00, paidByPersonId = 2)
                 ),
                 balances = listOf(MemberBalance(1, 250_00), MemberBalance(2, -250_00)),
+                transfers = listOf(Transfer(fromPersonId = 2, toPersonId = 1, amountMinor = 250_00)),
+                simplifyDebts = true,
                 onBack = {},
                 onAddExpense = {},
                 onSettleUp = {},
-                onDeleteExpense = {}
+                onDeleteExpense = {},
+                onSimplifyChange = {}
             )
         }
 
         compose.onNodeWithText("Hotel").assertIsDisplayed()
         compose.onNodeWithText("Asha").assertIsDisplayed()
+        // The settle-up plan is the headline of this screen since v2.4, not a buried sheet.
+        compose.onNodeWithText("Who pays whom").assertIsDisplayed()
+        compose.onNodeWithText("Bilal pays Asha").assertIsDisplayed()
     }
 
     @Test
@@ -58,10 +65,13 @@ class GroupDetailScreenTest {
                 members = members,
                 expenses = emptyList(),
                 balances = listOf(MemberBalance(1, 0), MemberBalance(2, 0)),
+                transfers = emptyList(),
+                simplifyDebts = true,
                 onBack = {},
                 onAddExpense = {},
                 onSettleUp = {},
-                onDeleteExpense = {}
+                onDeleteExpense = {},
+                onSimplifyChange = {}
             )
         }
 

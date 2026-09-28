@@ -39,7 +39,9 @@ data class MainUiState(
     /** Backup and restore, absent when that screen is closed. */
     val backup: BackupFlowState? = null,
     /** An update being checked for, offered, or downloaded. Absent when nothing is in flight. */
-    val update: UpdateFlowState? = null
+    val update: UpdateFlowState? = null,
+    /** Moving part of one person's balance onto another, absent when that sheet is closed. */
+    val moveDebt: MoveDebtFlowState? = null
 )
 
 /** The multi-step split flow, absent when it is not running. */
@@ -239,4 +241,30 @@ sealed interface UpdateFlowState {
 
     /** Android will not let the app install anything until this is granted, per-app, in Settings. */
     data class NeedsPermission(val version: String, val downloadUrl: String, val sizeBytes: Long) : UpdateFlowState
+}
+
+/**
+ * Moving part of what one person owes onto somebody else.
+ *
+ * The amount is held as typed text rather than a parsed number so the field behaves like every
+ * other amount field in the app — a half-typed "12." is a legal thing to be looking at, and
+ * parsing on every keystroke would fight the user.
+ */
+data class MoveDebtFlowState(
+    val fromPersonId: Long,
+    val fromName: String,
+    val currency: String,
+    val availableMinor: Long,
+    val amount: String = "",
+    val toPersonId: Long? = null,
+    val note: String = "",
+    val busy: Boolean = false,
+    /** Set when the attempt was refused, so the sheet can say why without closing. */
+    val problem: String? = null
+) {
+    val amountMinor: Long? get() = com.kg.merapaisa.data.parseAmountToMinor(amount)
+
+    val canMove: Boolean
+        get() = !busy && toPersonId != null && (amountMinor ?: 0L) > 0L &&
+            (amountMinor ?: 0L) <= availableMinor
 }

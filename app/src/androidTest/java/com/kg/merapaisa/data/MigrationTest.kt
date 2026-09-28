@@ -316,6 +316,84 @@ class MigrationTest {
         }
     }
 
+    /**
+     * 7 -> 8 adds how a group settles up, and the flag that tells a repayment from a purchase.
+     *
+     * `simplifyDebts` must default to **on**: that is what every existing group has been doing
+     * since groups shipped, and defaulting to off would silently change the plan shown for all of
+     * them without anybody asking for it.
+     */
+    @Test
+    fun migrate7To8_defaultsExistingGroupsToTheBehaviourTheyAlreadyHad() {
+        helper.createDatabase(TEST_DB, 7).use { db ->
+            db.insertV7Person(id = 1, name = "Asha", currency = "INR")
+            db.execSQL("INSERT INTO expense_groups (id, name, currency, createdAt, archived) VALUES (1, 'Goa', 'INR', 1, 0)")
+            db.execSQL("INSERT INTO group_members (groupId, personId) VALUES (1, 1)")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 8, true, MIGRATION_7_8).use { db ->
+            assertEquals(
+                "an existing group must keep netting down to the fewest payments",
+                1L,
+                db.longOf("SELECT simplifyDebts FROM expense_groups WHERE id = 1")
+            )
+        }
+    }
+
+    /**
+     * Older settlement rows are recognised from their description, which is the only signal they
+     * carry. `recordTransfer` has always written exactly "Settlement".
+     */
+    @Test
+    fun migrate7To8_backfillsSettlementsFromTheirDescription() {
+        helper.createDatabase(TEST_DB, 7).use { db ->
+            db.insertV7Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV7Person(id = 2, name = "Ravi", currency = "INR")
+            db.execSQL("INSERT INTO expense_groups (id, name, currency, createdAt, archived) VALUES (1, 'Goa', 'INR', 1, 0)")
+            db.execSQL(
+                "INSERT INTO expenses (id, groupId, description, amountMinor, paidByPersonId, timestamp) " +
+                    "VALUES (1, 1, 'Hotel', 20000, 1, 5), (2, 1, 'Settlement', 5000, 2, 6)"
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 8, true, MIGRATION_7_8).use { db ->
+            assertEquals(
+                "a real expense stays an expense",
+                0L,
+                db.longOf("SELECT isSettlement FROM expenses WHERE id = 1")
+            )
+            assertEquals(
+                "a repayment is recognised",
+                1L,
+                db.longOf("SELECT isSettlement FROM expenses WHERE id = 2")
+            )
+        }
+    }
+
+    /** The flag changes how a row is shown, never how it is counted. Balances must not move. */
+    @Test
+    fun migrate7To8_leavesEveryBalanceAlone() {
+        helper.createDatabase(TEST_DB, 7).use { db ->
+            db.insertV7Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV4Transaction(personId = 1, amountMinor = 25_050, timestamp = 2_000, note = "dinner")
+            db.execSQL("INSERT INTO expense_groups (id, name, currency, createdAt, archived) VALUES (1, 'Goa', 'INR', 1, 0)")
+            db.execSQL(
+                "INSERT INTO expenses (id, groupId, description, amountMinor, paidByPersonId, timestamp) " +
+                    "VALUES (1, 1, 'Settlement', 5000, 1, 6)"
+            )
+            db.execSQL("INSERT INTO expense_shares (expenseId, personId, shareMinor) VALUES (1, 1, 5000)")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 8, true, MIGRATION_7_8).use { db ->
+            assertEquals("the direct balance must survive", 25_050L, db.derivedBalance(1))
+            assertEquals(
+                "the settlement still counts in the group arithmetic",
+                5_000L,
+                db.longOf("SELECT SUM(shareMinor) FROM expense_shares WHERE expenseId = 1")
+            )
+        }
+    }
+
     // --- seeding helpers, written against the v3 shape ---
 
     private fun SupportSQLiteDatabase.insertV3Person(
@@ -347,6 +425,27 @@ class MigrationTest {
      * `migrate5To6` gets away with the v4 helper only because it seeds at v5, before the column
      * exists. Caught on the device, where the constraint is real.
      */
+    /**
+     * Seeds a person into a **v7** `persons` table.
+     *
+     * Every schema version that adds a NOT NULL column to `persons` needs its own helper, and this
+     * is now the second time that has been learned the hard way: migration 5 -> 6 added `isSelf`
+     * and broke the v4 helper, then 6 -> 7 added `lastSharedAt` and broke the v6 one. Neither has a
+     * default in the exported schema, so an INSERT that omits the column is rejected — and the
+     * failure only appears on a device, where the constraint is real.
+     *
+     * **If you add a NOT NULL column to `persons`, add the next helper here at the same time.**
+     */
+    private fun SupportSQLiteDatabase.insertV7Person(
+        id: Long,
+        name: String,
+        currency: String,
+        isSelf: Int = 0
+    ) = execSQL(
+        "INSERT INTO persons (id, name, pfpType, pfpValue, pfpColor, sortOrder, isSettled, currency, isSelf, lastSharedAt) " +
+            "VALUES ($id, '$name', 'initials', '${name.take(2)}', '#4CAF50', 0, 0, '$currency', $isSelf, 0)"
+    )
+
     private fun SupportSQLiteDatabase.insertV6Person(
         id: Long,
         name: String,

@@ -1,6 +1,7 @@
 package com.kg.merapaisa.ui.groups
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +24,7 @@ import com.kg.merapaisa.data.Expense
 import com.kg.merapaisa.data.Group
 import com.kg.merapaisa.data.MemberBalance
 import com.kg.merapaisa.data.Person
+import com.kg.merapaisa.data.Transfer
 
 /**
  * One group: where everybody stands, what has been spent, and a way to square it up.
@@ -35,14 +37,21 @@ fun GroupDetailScreen(
     members: List<Person>,
     expenses: List<Expense>,
     balances: List<MemberBalance>,
+    transfers: List<Transfer>,
+    simplifyDebts: Boolean,
     onBack: () -> Unit,
     onAddExpense: () -> Unit,
     onSettleUp: () -> Unit,
-    onDeleteExpense: (Long) -> Unit
+    onDeleteExpense: (Long) -> Unit,
+    onSimplifyChange: (Boolean) -> Unit
 ) {
     val theme = LocalAppTheme.current
     val nameOf = { id: Long -> members.firstOrNull { it.id == id }?.name ?: "Someone" }
     val everyoneSquare = balances.all { it.amountMinor == 0L }
+    // Repayments are expenses in the arithmetic but not spending, and showing them in one list
+    // made a 500 dinner and a 500 repayment look identical.
+    val purchases = expenses.filterNot { it.isSettlement }
+    val settlements = expenses.filter { it.isSettlement }
 
     Box(modifier = Modifier.fillMaxSize().background(theme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -60,7 +69,7 @@ fun GroupDetailScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(group.name, color = theme.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "${members.size} members • ${expenses.size} expenses",
+                        "${members.size} members • ${purchases.size} expenses",
                         color = theme.textSecondary,
                         fontSize = 12.sp
                     )
@@ -76,13 +85,72 @@ fun GroupDetailScreen(
                 contentPadding = PaddingValues(bottom = 100.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // The plan comes first. "Where everyone stands" tells you the state; this tells
+                // you what to actually do about it, which is what anybody opens a group for.
                 item {
                     Text(
-                        if (everyoneSquare) "Everyone is square" else "Where everyone stands",
+                        if (everyoneSquare) "Everyone is square" else "Who pays whom",
                         color = theme.textSecondary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+
+                if (!everyoneSquare) {
+                    items(transfers, key = { "transfer-${it.fromPersonId}-${it.toPersonId}" }) { t ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(theme.fillStrong)
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "${nameOf(t.fromPersonId)} pays ${nameOf(t.toPersonId)}",
+                                color = theme.textPrimary,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                formatMinor(t.amountMinor, group.currency),
+                                color = theme.textPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Switch(checked = simplifyDebts, onCheckedChange = onSimplifyChange)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Fewest payments", color = theme.textPrimary, fontSize = 13.sp)
+                                Text(
+                                    if (simplifyDebts)
+                                        "Everyone's position is netted across the group, so there are as few payments as possible."
+                                    else
+                                        "Each debt stays with the expense that created it — more payments, but every one traces back to something that happened.",
+                                    color = theme.textSecondary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Text(
+                        "Where everyone stands",
+                        color = theme.textSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(top = 12.dp)
                     )
                 }
                 // Balances and expenses share this LazyColumn, so they share one key space.
@@ -122,7 +190,7 @@ fun GroupDetailScreen(
                         modifier = Modifier.padding(top = 12.dp)
                     )
                 }
-                if (expenses.isEmpty()) {
+                if (purchases.isEmpty()) {
                     item {
                         Text(
                             "Nothing spent yet. Tap + to add what somebody paid for.",
@@ -131,7 +199,7 @@ fun GroupDetailScreen(
                         )
                     }
                 }
-                items(expenses, key = { "expense-${it.id}" }) { e ->
+                items(purchases, key = { "expense-${it.id}" }) { e ->
                     var showMenu by remember(e.id) { mutableStateOf(false) }
                     Box {
                         Row(
@@ -160,6 +228,56 @@ fun GroupDetailScreen(
                                 text = { Text("Delete expense", color = theme.negative) },
                                 onClick = { showMenu = false; onDeleteExpense(e.id) }
                             )
+                        }
+                    }
+                }
+
+                // Repayments, kept apart from spending. They square positions rather than adding
+                // to what the group spent, and reading them in one list with real expenses made a
+                // 500 dinner and a 500 repayment indistinguishable.
+                if (settlements.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Payments between members",
+                            color = theme.textSecondary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(top = 12.dp)
+                        )
+                    }
+                    items(settlements, key = { "settlement-${it.id}" }) { e ->
+                        var showMenu by remember(e.id) { mutableStateOf(false) }
+                        Box {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(theme.background)
+                                    .border(1.dp, theme.outline, RoundedCornerShape(12.dp))
+                                    .combinedClickable(onClick = {}, onLongClick = { showMenu = true })
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "${nameOf(e.paidByPersonId)} paid back",
+                                        color = theme.textSecondary,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                                Text(
+                                    formatMinor(e.amountMinor, group.currency),
+                                    color = theme.textSecondary,
+                                    fontSize = 14.sp
+                                )
+                            }
+                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Delete payment", color = theme.negative) },
+                                    onClick = { showMenu = false; onDeleteExpense(e.id) }
+                                )
+                            }
                         }
                     }
                 }

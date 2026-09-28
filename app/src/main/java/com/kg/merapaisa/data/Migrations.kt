@@ -212,3 +212,25 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
         )
     }
 }
+
+/**
+ * 7 -> 8. How a group's settle-up is worked out, and telling a repayment from a purchase.
+ *
+ * `simplifyDebts` defaults to 1 because that is what every existing group has been doing since
+ * groups shipped — `settleUp` has always netted positions down to the fewest payments. Defaulting
+ * to 0 would silently change the plan shown for every group that already exists.
+ *
+ * `isSettlement` is backfilled from the description, which is the only signal older rows carry.
+ * `recordTransfer` has always written exactly "Settlement", so the match is reliable for rows this
+ * app produced — and a real expense somebody happened to name "Settlement" being reclassified is a
+ * cosmetic misfiling, not an arithmetic one. The flag changes how a row is displayed, never how it
+ * is counted.
+ */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `expense_groups` ADD COLUMN `simplifyDebts` INTEGER NOT NULL DEFAULT 1")
+        db.execSQL("ALTER TABLE `expenses` ADD COLUMN `isSettlement` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("UPDATE `expenses` SET `isSettlement` = 1 WHERE `description` = 'Settlement'")
+    }
+}
