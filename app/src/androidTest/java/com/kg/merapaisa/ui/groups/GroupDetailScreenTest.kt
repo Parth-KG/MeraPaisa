@@ -75,6 +75,7 @@ class GroupDetailScreenTest {
             )
         }
 
-        compose.onNodeWithText("Everyone is square").assertIsDisplayed()
+        // Renamed with the screen: the glossary word for a zero balance is "even".
+        compose.onNodeWithText("Everyone is even").assertIsDisplayed()
     }
 }

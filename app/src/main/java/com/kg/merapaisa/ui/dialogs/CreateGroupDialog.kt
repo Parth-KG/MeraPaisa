@@ -1,27 +1,58 @@
 package com.kg.merapaisa.ui.dialogs
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.SUPPORTED_CURRENCIES
 import com.kg.merapaisa.data.currencySymbol
+import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.theme.Shapes
+import com.kg.merapaisa.ui.theme.Spacing
+import kotlinx.coroutines.launch
 
 /**
- * You are always in your own groups, so there is no checkbox for yourself — only for the
- * people you are sharing costs with.
+ * A name, a currency, and who you are splitting with.
+ *
+ * You are always in your own groups, so there is no checkbox for yourself, only for the people you
+ * are sharing costs with. It was an AlertDialog around four fields and a list of everybody you
+ * know; a dialog is for a decision, so a form this size goes on a sheet that can take the height.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateGroupDialog(
     people: List<PersonWithBalance>,
@@ -36,98 +67,181 @@ fun CreateGroupDialog(
     // Defaults to on, which is what every group has done since groups shipped.
     var simplifyDebts by remember { mutableStateOf(true) }
 
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text("New group", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name") },
-                    placeholder = { Text("Goa trip, Flat 402...") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+        sheetState = sheetState,
+        shape = Shapes.sheet,
+        containerColor = theme.surface,
+        contentColor = theme.textPrimary,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = theme.outline) }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                "New group",
+                style = MeraPaisaType.screenTitle,
+                color = theme.textPrimary,
+                modifier = Modifier.padding(horizontal = Spacing.lg)
+            )
+            Spacer(Modifier.height(Spacing.lg))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Switch(checked = simplifyDebts, onCheckedChange = { simplifyDebts = it })
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Fewest payments", color = theme.textPrimary, fontSize = 13.sp)
-                        Text(
-                            if (simplifyDebts)
-                                "Net everyone's position across the group when settling up."
-                            else
-                                "Keep each debt with the expense that created it.",
-                            color = theme.textSecondary,
-                            fontSize = 11.sp
-                        )
-                    }
-                }
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Name") },
+                placeholder = { Text("Goa trip, Flat 402") },
+                singleLine = true,
+                shape = Shapes.medium,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
+            )
 
-                Text("Currency", color = theme.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SUPPORTED_CURRENCIES.forEach { code ->
-                        FilterChip(
-                            selected = currency == code,
-                            onClick = { currency = code },
-                            label = { Text(currencySymbol(code), fontSize = 14.sp) }
-                        )
-                    }
-                }
-
-                Text(
-                    if (selected.isEmpty()) "Who else is in it?" else "${selected.size} selected, plus you",
-                    color = theme.textSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-
-                if (people.isEmpty()) {
-                    Text(
-                        "Add some people first — a group needs somebody to split with.",
-                        color = theme.textSecondary,
-                        fontSize = 13.sp
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(
+                        value = simplifyDebts,
+                        onValueChange = { simplifyDebts = it },
+                        role = Role.Switch
                     )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f, fill = false),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        items(people, key = { it.id }) { person ->
-                            val isIn = person.id in selected
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .clickable {
-                                        selected = if (isIn) selected - person.id else selected + person.id
-                                    }
-                                    .padding(vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(checked = isIn, onCheckedChange = {
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Fewest payments", style = MeraPaisaType.bodyStrong, color = theme.textPrimary)
+                    Text(
+                        if (simplifyDebts)
+                            "Net everyone's position across the group when settling up."
+                        else
+                            "Keep each debt with the expense that created it.",
+                        style = MeraPaisaType.label,
+                        color = theme.textSecondary
+                    )
+                }
+                Switch(checked = simplifyDebts, onCheckedChange = null)
+            }
+
+            FormHeading("Currency")
+            Row(
+                modifier = Modifier.padding(horizontal = Spacing.lg),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
+                SUPPORTED_CURRENCIES.forEach { code ->
+                    FilterChip(
+                        selected = currency == code,
+                        onClick = { currency = code },
+                        shape = Shapes.small,
+                        modifier = Modifier.heightIn(min = 48.dp),
+                        label = { Text(currencySymbol(code), style = MeraPaisaType.body) }
+                    )
+                }
+            }
+
+            FormHeading(
+                if (selected.isEmpty()) "Who else is in it?"
+                else "${selected.size} selected, plus you"
+            )
+
+            if (people.isEmpty()) {
+                Text(
+                    "Add some people first. A group needs somebody to split with.",
+                    style = MeraPaisaType.body,
+                    color = theme.textSecondary,
+                    modifier = Modifier.padding(horizontal = Spacing.lg)
+                )
+            } else {
+                people.forEachIndexed { index, person ->
+                    if (index > 0) RowDivider()
+                    val isIn = person.id in selected
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = isIn,
+                                onValueChange = {
                                     selected = if (isIn) selected - person.id else selected + person.id
-                                })
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(person.name, color = theme.textPrimary, fontSize = 15.sp)
-                            }
-                        }
+                                },
+                                role = Role.Checkbox
+                            )
+                            .heightIn(min = 48.dp)
+                            .padding(horizontal = Spacing.lg),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                    ) {
+                        // The row carries the click and the role, so the box is not separately
+                        // reachable: TalkBack hears one person, not a checkbox and then a name.
+                        Checkbox(checked = isIn, onCheckedChange = null)
+                        Text(
+                            person.name,
+                            style = MeraPaisaType.body,
+                            color = theme.textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onCreate(name.trim(), currency, selected.toList(), simplifyDebts) },
-                enabled = name.isNotBlank() && selected.isNotEmpty()
-            ) { Text("Create", fontWeight = FontWeight.Bold) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel", color = theme.textSecondary) }
         }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedButton(
+                onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
+                shape = Shapes.small,
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                border = BorderStroke(1.dp, theme.outline),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
+            ) {
+                Text("Cancel", style = MeraPaisaType.action)
+            }
+            Button(
+                onClick = {
+                    val members = selected.toList()
+                    val groupName = name.trim()
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        onCreate(groupName, currency, members, simplifyDebts)
+                    }
+                },
+                enabled = name.isNotBlank() && selected.isNotEmpty(),
+                shape = Shapes.small,
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = theme.primary,
+                    contentColor = theme.background
+                )
+            ) {
+                Text("Create group", style = MeraPaisaType.action)
+            }
+        }
+    }
+}
+
+/** A quiet label over a block of the form, with air above it and none below. */
+@Composable
+private fun FormHeading(text: String) {
+    val theme = LocalAppTheme.current
+    Text(
+        text,
+        style = MeraPaisaType.sectionTitle,
+        color = theme.textSecondary,
+        modifier = Modifier.padding(
+            start = Spacing.lg,
+            end = Spacing.lg,
+            top = Spacing.xl,
+            bottom = Spacing.sm
+        )
     )
 }

@@ -176,14 +176,16 @@ fun MainScreen(viewModel: MainViewModel) {
                     GroupsEmptyState(
                         modifier = Modifier
                             .weight(1f)
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
+                        onCreateGroup = { viewModel.showCreateGroupDialog(true) }
                     )
                 } else {
                     LazyColumn(
+                        // No horizontal padding here: GroupRow pads to the gutter itself, as
+                        // PersonRow does, and RowDivider measures its inset from the list edge.
                         modifier = Modifier
                             .weight(1f)
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                            .padding(horizontal = 16.dp),
+                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
                         contentPadding = PaddingValues(bottom = Spacing.xxl)
                     ) {
                         itemsIndexed(groups, key = { _, it -> it.group.id }) { index, summary ->

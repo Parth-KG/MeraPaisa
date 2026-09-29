@@ -1,29 +1,54 @@
 package com.kg.merapaisa.ui.groups
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.MemberBalance
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.Transfer
-import com.kg.merapaisa.ui.format.amountString
+import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.data.settleUp
+import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.format.AmountText
+import com.kg.merapaisa.ui.format.SignStyle
+import com.kg.merapaisa.ui.format.amountParts
+import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.theme.Shapes
+import com.kg.merapaisa.ui.theme.Spacing
+import kotlinx.coroutines.launch
 
 /**
- * The fewest payments that square the group up. Balances that pass through a member — A owes
- * B, B owes C — collapse, so nobody hands money over just to hand it straight on.
+ * The fewest payments that square the group up. Balances that pass through a member (A owes B, B
+ * owes C) collapse, so nobody hands money over just to hand it straight on.
+ *
+ * It was called a sheet and built as an AlertDialog, which put a scrolling list of payments inside
+ * a box sized for a question. A dialog is for a decision; a list you work down one line at a time
+ * belongs on a sheet that can take the height, so this is one now.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettleUpSheet(
     balances: List<MemberBalance>,
@@ -35,57 +60,135 @@ fun SettleUpSheet(
     val theme = LocalAppTheme.current
     val transfers = settleUp(balances)
     val nameOf = { id: Long -> members.firstOrNull { it.id == id }?.name ?: "Someone" }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text("Settle up", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
-        text = {
-            if (transfers.isEmpty()) {
-                Text("Everyone is square — nothing to pay.", color = theme.textSecondary, fontSize = 14.sp)
-            } else {
-                Column {
-                    Text(
-                        if (transfers.size == 1) "One payment settles the group:"
-                        else "${transfers.size} payments settle the group:",
-                        color = theme.textSecondary,
-                        fontSize = 13.sp
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    LazyColumn(
-                        modifier = Modifier.weight(1f, fill = false),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(transfers) { t ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(theme.fill)
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        "${nameOf(t.fromPersonId)} pays ${nameOf(t.toPersonId)}",
-                                        color = theme.textPrimary,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        amountString(t.amountMinor, currency),
-                                        color = theme.positive,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                TextButton(onClick = { onRecord(t) }) { Text("Record") }
-                            }
-                        }
+        sheetState = sheetState,
+        shape = Shapes.sheet,
+        containerColor = theme.surface,
+        contentColor = theme.textPrimary,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = theme.outline) }
+    ) {
+        Text(
+            "Settle up",
+            style = MeraPaisaType.screenTitle,
+            color = theme.textPrimary,
+            modifier = Modifier.padding(horizontal = Spacing.lg)
+        )
+        Spacer(Modifier.height(Spacing.xs))
+        Text(
+            when {
+                transfers.isEmpty() -> "Everyone is even, so there is nothing to pay."
+                transfers.size == 1 -> "One payment settles the group."
+                else -> "${transfers.size} payments settle the group."
+            },
+            style = MeraPaisaType.body,
+            color = theme.textSecondary,
+            modifier = Modifier.padding(horizontal = Spacing.lg)
+        )
+        Spacer(Modifier.height(Spacing.lg))
+
+        // fill = false so a group with two payments makes a short sheet rather than a tall one
+        // with an empty half.
+        LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+            itemsIndexed(
+                transfers,
+                key = { _, t -> "transfer-${t.fromPersonId}-${t.toPersonId}" }
+            ) { index, t ->
+                if (index > 0) RowDivider()
+                TransferRow(
+                    line = "${nameOf(t.fromPersonId)} pays ${nameOf(t.toPersonId)}",
+                    amountMinor = t.amountMinor,
+                    currency = currency
+                ) {
+                    // Recording leaves the sheet open on purpose: the plan shrinks as each payment
+                    // is written down, and closing after the first one would hide the rest.
+                    TextButton(onClick = { onRecord(t) }, modifier = Modifier.heightIn(min = 48.dp)) {
+                        Text("Record payment", style = MeraPaisaType.action)
                     }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
-    )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.lg),
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(
+                onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
+                modifier = Modifier.heightIn(min = 48.dp)
+            ) {
+                Text("Close", style = MeraPaisaType.action)
+            }
+        }
+    }
 }
+
+/**
+ * One line of the settle-up plan, shared by this sheet and the group screen so the plan reads the
+ * same wherever you meet it.
+ *
+ * The sentence carries the direction, so the figure is drawn with no sign and no ink of its own: a
+ * payment between two members is neither owed to you nor owed by you, and colouring it either way
+ * would state something untrue. It stays column aligned because these amounts sit under each other.
+ *
+ * The line and the figure are merged into one description rather than cleared into one, so the row
+ * is a single stop for TalkBack while the words it is made of stay where they were written.
+ */
+@Composable
+internal fun TransferRow(
+    line: String,
+    amountMinor: Long,
+    currency: String,
+    action: (@Composable () -> Unit)? = null
+) {
+    val theme = LocalAppTheme.current
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {
+                    contentDescription = "$line, ${spokenFigure(amountMinor, currency)}"
+                },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+        ) {
+            Text(
+                line,
+                style = MeraPaisaType.body,
+                color = theme.textPrimary,
+                modifier = Modifier.weight(1f)
+            )
+            // The figure's own description is dropped: it can only say whether an amount is owed
+            // to you or by you, and this one is owed between two other people.
+            Box(Modifier.clearAndSetSemantics { }) {
+                AmountText(
+                    amountMinor = amountMinor,
+                    currencyCode = currency,
+                    style = MeraPaisaType.amount,
+                    signStyle = SignStyle.None,
+                    colourByDirection = false,
+                    columnAligned = true
+                )
+            }
+        }
+        // The button sits under the pair rather than beside it: "Chaitanya pays Bilal" and a
+        // lakh figure already fill the row, and squeezing a third thing in ellipsised the names.
+        if (action != null) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { action() }
+        }
+    }
+}
+
+/**
+ * A figure in words, for TalkBack.
+ *
+ * `amountSpoken` says an amount from your side of the ledger, which is the wrong side inside a
+ * group: a position here belongs to a member and a payment runs between two of them, neither of
+ * whom is necessarily you. The code stands in for the symbol because "₹" and U+2212 have no
+ * spoken name, and a group has one currency, so naming it once per line is enough.
+ */
+internal fun spokenFigure(amountMinor: Long, currency: String): String =
+    "${amountParts(amountMinor, currency, SignStyle.None).digits} ${normaliseCurrency(currency)}"

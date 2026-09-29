@@ -1,27 +1,64 @@
 package com.kg.merapaisa.ui.groups
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.currencySymbol
-import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.evenShares
 import com.kg.merapaisa.data.parseAmountToMinor
+import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.format.PlainAmountText
+import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.theme.Shapes
+import com.kg.merapaisa.ui.theme.Spacing
+import kotlinx.coroutines.launch
 
+/**
+ * What somebody paid for, who paid, and who it is split between.
+ *
+ * This was an AlertDialog with a whole form inside it, and inside that two lazy lists: one of radio
+ * buttons and one of checkboxes, each capped at a height that showed three members of six. A dialog
+ * is for a decision, so a form of four fields goes on a sheet, where the members are plain rows
+ * that scroll with everything else rather than two little windows scrolling inside a third.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddExpenseDialog(
     members: List<Person>,
@@ -44,84 +81,178 @@ fun AddExpenseDialog(
     val valid = description.isNotBlank() && amountMinor != null && amountMinor > 0 &&
         sharedWith.isNotEmpty() && members.any { it.id == paidBy }
 
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text("Add expense", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("What for?") },
-                    placeholder = { Text("Hotel, dinner, cab...") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text("Amount in ${currencySymbol(currency)}") },
-                    singleLine = true,
-                    isError = amount.isNotEmpty() && amountMinor == null,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
-                )
+        sheetState = sheetState,
+        shape = Shapes.sheet,
+        containerColor = theme.surface,
+        contentColor = theme.textPrimary,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = theme.outline) }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                "Add an expense",
+                style = MeraPaisaType.screenTitle,
+                color = theme.textPrimary,
+                modifier = Modifier.padding(horizontal = Spacing.lg)
+            )
+            Spacer(Modifier.height(Spacing.lg))
 
-                Text("Paid by", color = theme.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                LazyColumn(modifier = Modifier.heightIn(max = 120.dp)) {
-                    items(members, key = { it.id }) { m ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable { paidBy = m.id }
-                                .padding(vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(selected = paidBy == m.id, onClick = { paidBy = m.id })
-                            Text(m.name, color = theme.textPrimary, fontSize = 14.sp)
-                        }
-                    }
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("What for?") },
+                placeholder = { Text("Hotel, dinner, cab") },
+                singleLine = true,
+                shape = Shapes.medium,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
+            )
+            Spacer(Modifier.height(Spacing.md))
+            OutlinedTextField(
+                value = amount,
+                onValueChange = { amount = it },
+                label = { Text("Amount in ${currencySymbol(currency)}") },
+                singleLine = true,
+                isError = amount.isNotEmpty() && amountMinor == null,
+                supportingText = if (amount.isNotEmpty() && amountMinor == null) {
+                    { Text("That is not an amount this app can read. Digits and one decimal point.") }
+                } else null,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                shape = Shapes.medium,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
+            )
+
+            FormHeading("Paid by")
+            members.forEachIndexed { index, m ->
+                if (index > 0) RowDivider()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = paidBy == m.id,
+                            onClick = { paidBy = m.id },
+                            role = Role.RadioButton
+                        )
+                        .heightIn(min = 48.dp)
+                        .padding(horizontal = Spacing.lg),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                ) {
+                    // The control is not separately clickable: the row already carries the click
+                    // and the role, so TalkBack hears one member rather than a button and a name.
+                    RadioButton(selected = paidBy == m.id, onClick = null)
+                    Text(
+                        m.name,
+                        style = MeraPaisaType.body,
+                        color = theme.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
+            }
 
-                Text(
-                    "Split between ${sharedWith.size} of ${members.size}",
-                    color = theme.textSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                LazyColumn(modifier = Modifier.heightIn(max = 140.dp)) {
-                    items(members, key = { it.id }) { m ->
-                        val isIn = m.id in sharedWith
-                        val share = if (isIn && amountMinor != null) {
-                            evenShares(amountMinor, sharedWith.toList().sorted())[m.id]
-                        } else null
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable { sharedWith = if (isIn) sharedWith - m.id else sharedWith + m.id }
-                                .padding(vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(checked = isIn, onCheckedChange = {
-                                sharedWith = if (isIn) sharedWith - m.id else sharedWith + m.id
-                            })
-                            Text(m.name, color = theme.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                            if (share != null) {
-                                Text(amountString(share, currency), color = theme.textSecondary, fontSize = 13.sp)
-                            }
-                        }
+            FormHeading("Split between ${sharedWith.size} of ${members.size}")
+            members.forEachIndexed { index, m ->
+                if (index > 0) RowDivider()
+                val isIn = m.id in sharedWith
+                val share = if (isIn && amountMinor != null) {
+                    evenShares(amountMinor, sharedWith.toList().sorted())[m.id]
+                } else null
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .toggleable(
+                            value = isIn,
+                            onValueChange = { sharedWith = if (isIn) sharedWith - m.id else sharedWith + m.id },
+                            role = Role.Checkbox
+                        )
+                        .heightIn(min = 48.dp)
+                        .padding(horizontal = Spacing.lg),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                ) {
+                    Checkbox(checked = isIn, onCheckedChange = null)
+                    Text(
+                        m.name,
+                        style = MeraPaisaType.body,
+                        color = theme.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    // Their share of what has been typed so far. No sign and no ink: the heading
+                    // above already says these are shares of one expense.
+                    if (share != null) {
+                        PlainAmountText(
+                            amountMinor = share,
+                            currencyCode = currency,
+                            style = MeraPaisaType.amountSmall,
+                            colour = theme.textSecondary
+                        )
                     }
                 }
             }
-        },
-        confirmButton = {
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedButton(
+                onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
+                shape = Shapes.small,
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                border = BorderStroke(1.dp, theme.outline),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
+            ) {
+                Text("Cancel", style = MeraPaisaType.action)
+            }
             Button(
-                onClick = { onAdd(description.trim(), amountMinor!!, paidBy, sharedWith.toList().sorted()) },
-                enabled = valid
-            ) { Text("Add", fontWeight = FontWeight.Bold) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = theme.textSecondary) } }
+                onClick = {
+                    val minor = amountMinor ?: return@Button
+                    val shares = sharedWith.toList().sorted()
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        onAdd(description.trim(), minor, paidBy, shares)
+                    }
+                },
+                enabled = valid,
+                shape = Shapes.small,
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = theme.primary,
+                    contentColor = theme.background
+                )
+            ) {
+                Text("Add expense", style = MeraPaisaType.action)
+            }
+        }
+    }
+}
+
+/** A quiet label over a block of the form, with air above it and none below. */
+@Composable
+private fun FormHeading(text: String) {
+    val theme = LocalAppTheme.current
+    Text(
+        text,
+        style = MeraPaisaType.sectionTitle,
+        color = theme.textSecondary,
+        modifier = Modifier.padding(
+            start = Spacing.lg,
+            end = Spacing.lg,
+            top = Spacing.xl,
+            bottom = Spacing.sm
+        )
     )
 }
