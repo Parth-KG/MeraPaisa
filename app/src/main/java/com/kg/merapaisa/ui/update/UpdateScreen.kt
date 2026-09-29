@@ -44,7 +44,9 @@ fun UpdateScreen(
     onInstall: (path: String) -> Unit,
     onGrantPermission: () -> Unit,
     onDismiss: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    /** Where closing goes, named: Settings when it was opened from there, the ledger otherwise. */
+    backLabel: String = "Back to your ledger"
 ) {
     val theme = LocalAppTheme.current
 
@@ -58,6 +60,7 @@ fun UpdateScreen(
         UpdateFlowState.UpToDate -> Message(
             title = "You're up to date",
             text = "You're running the newest release on GitHub.",
+            backLabel = backLabel,
             onClose = onClose
         )
 
@@ -65,6 +68,8 @@ fun UpdateScreen(
             title = "Couldn't check for updates",
             text = "${state.reason} Nothing has changed. Try again once you're connected, or " +
                 "look at the releases page on GitHub yourself.",
+            colour = theme.negative,
+            backLabel = backLabel,
             onClose = onClose
         )
 
@@ -171,6 +176,7 @@ fun UpdateScreen(
                 "Don't install Mera Paisa from anywhere except the GitHub releases page, and " +
                 "check the APK's SHA-256 against the one in the release notes.",
             colour = theme.negative,
+            backLabel = backLabel,
             onClose = onClose
         )
 
@@ -203,6 +209,8 @@ fun UpdateScreen(
                     "installed. Check for updates in Settings to try again, or take the APK " +
                     "from the GitHub releases page." +
                     state.reason.takeIf { it.isNotBlank() }?.let { " ($it)" }.orEmpty(),
+                colour = theme.negative,
+                backLabel = backLabel,
                 onClose = onClose
             )
         } else {
@@ -210,6 +218,8 @@ fun UpdateScreen(
                 title = "The update didn't download",
                 text = "${state.reason} Nothing was installed and nothing changed. Try again " +
                     "once you're connected, or take the APK from the GitHub releases page.",
+                colour = theme.negative,
+                backLabel = backLabel,
                 onClose = onClose
             )
         }
@@ -222,13 +232,14 @@ private fun Message(
     title: String,
     text: String,
     onClose: () -> Unit,
+    backLabel: String,
     colour: Color = LocalAppTheme.current.textSecondary
 ) {
     ScreenFrame(
         title = title,
         onBack = onClose,
         footer = {
-            FootActions { PrimaryAction("Back to your ledger", enabled = true, onClick = onClose) }
+            FootActions { PrimaryAction(backLabel, enabled = true, onClick = onClose) }
         }
     ) {
         item { Paragraph(text, colour = colour) }

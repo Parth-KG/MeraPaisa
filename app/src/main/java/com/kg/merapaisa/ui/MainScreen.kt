@@ -122,44 +122,45 @@ fun MainScreen(viewModel: MainViewModel) {
             // A real tab row. These were pill buttons, which look like three things you can
             // press rather than one place you are currently in, and gave no sense of which of
             // the three you were looking at beyond a fill colour.
-            PrimaryTabRow(
-                selectedTabIndex = Tab.entries.indexOf(ui.tab),
-                containerColor = theme.background,
-                contentColor = theme.primary,
+            //
+            // Settings sits at the end of it. It had a row of its own below the tabs, holding
+            // nothing but the gear, which left an empty band across the top of every tab.
+            // Exporting a CSV used to sit beside it as an unlabelled share icon; that is a filing
+            // job, not something you reach for while looking at a balance, so it lives in Settings.
+            Row(
                 modifier = Modifier.windowInsetsPadding(
                     WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
                 ),
-                divider = {},
-                indicator = {
-                    TabRowDefaults.PrimaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(Tab.entries.indexOf(ui.tab)),
-                        width = Dp.Unspecified,
-                        color = theme.primary
-                    )
-                }
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Tab.entries.forEach { tab ->
-                    androidx.compose.material3.Tab(
-                        selected = ui.tab == tab,
-                        onClick = { viewModel.selectTab(tab) },
-                        selectedContentColor = theme.textPrimary,
-                        unselectedContentColor = theme.textSecondary,
-                        text = { Text(tab.name, style = MeraPaisaType.action) }
-                    )
+                PrimaryTabRow(
+                    selectedTabIndex = Tab.entries.indexOf(ui.tab),
+                    containerColor = theme.background,
+                    contentColor = theme.primary,
+                    modifier = Modifier.weight(1f),
+                    divider = {},
+                    indicator = {
+                        TabRowDefaults.PrimaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(Tab.entries.indexOf(ui.tab)),
+                            width = Dp.Unspecified,
+                            color = theme.primary
+                        )
+                    }
+                ) {
+                    Tab.entries.forEach { tab ->
+                        androidx.compose.material3.Tab(
+                            selected = ui.tab == tab,
+                            onClick = { viewModel.selectTab(tab) },
+                            selectedContentColor = theme.textPrimary,
+                            unselectedContentColor = theme.textSecondary,
+                            text = { Text(tab.name, style = MeraPaisaType.action) }
+                        )
+                    }
                 }
-            }
-
-            // Settings is the only thing in the corner now. Exporting a CSV was an unlabelled
-            // share icon sitting beside it, which is a filing job, not something you reach for
-            // while looking at a balance: it lives in Settings with backup and restore.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                    .padding(horizontal = Spacing.sm),
-                horizontalArrangement = Arrangement.End
-            ) {
-                IconButton(onClick = { viewModel.showSettingsDialog(true) }) {
+                IconButton(
+                    onClick = { viewModel.showSettingsDialog(true) },
+                    modifier = Modifier.padding(end = Spacing.xs)
+                ) {
                     Icon(
                         Icons.Outlined.Settings,
                         contentDescription = "Settings",
@@ -167,6 +168,8 @@ fun MainScreen(viewModel: MainViewModel) {
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(Spacing.lg))
 
             if (ui.tab == Tab.Active) {
                 NetPosition(
@@ -641,6 +644,10 @@ fun MainScreen(viewModel: MainViewModel) {
         )
     }
 
+    // Backup, update links and updates open from Settings and go back to it, so their way out says
+    // so. Reached any other way (a tapped link, the daily update check) they go back to the ledger.
+    val backLabel = if (ui.showSettingsDialog) "Back to Settings" else "Back to your ledger"
+
     ui.update?.let { updateState ->
         UpdateScreen(
             state = updateState,
@@ -651,7 +658,8 @@ fun MainScreen(viewModel: MainViewModel) {
                 viewModel.closeUpdate()
             },
             onDismiss = viewModel::dismissUpdate,
-            onClose = viewModel::closeUpdate
+            onClose = viewModel::closeUpdate,
+            backLabel = backLabel
         )
     }
 
@@ -669,7 +677,8 @@ fun MainScreen(viewModel: MainViewModel) {
             onBackUpNow = viewModel::backUpNow,
             onModeChange = viewModel::setRestoreMode,
             onApply = viewModel::applyRestore,
-            onDismiss = viewModel::closeBackupScreen
+            onDismiss = viewModel::closeBackupScreen,
+            backLabel = backLabel
         )
     }
 
@@ -683,7 +692,8 @@ fun MainScreen(viewModel: MainViewModel) {
             onApply = viewModel::applyImport,
             onPasteChange = viewModel::setPasteText,
             onPasteSubmit = viewModel::submitPaste,
-            onDismiss = viewModel::dismissImport
+            onDismiss = viewModel::dismissImport,
+            backLabel = backLabel
         )
     }
 }

@@ -89,12 +89,14 @@ fun ImportLedgerDialog(
     onApply: () -> Unit,
     onPasteChange: (String) -> Unit,
     onPasteSubmit: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** Where closing goes, named: Settings when it was opened from there, the ledger otherwise. */
+    backLabel: String = "Back to your ledger"
 ) {
     when (state) {
         is ImportFlowState.Pasting -> PastingScreen(state, onPasteChange, onPasteSubmit, onDismiss)
         ImportFlowState.Reading -> ReadingScreen()
-        is ImportFlowState.Unreadable -> UnreadableScreen(state.reason, onDismiss)
+        is ImportFlowState.Unreadable -> UnreadableScreen(state.reason, onDismiss, backLabel)
         is ImportFlowState.Confirming -> ConfirmingScreen(
             state = state,
             persons = persons,
@@ -104,7 +106,7 @@ fun ImportLedgerDialog(
             onApply = onApply,
             onDismiss = onDismiss
         )
-        is ImportFlowState.Done -> DoneScreen(state, onDismiss)
+        is ImportFlowState.Done -> DoneScreen(state, onDismiss, backLabel)
     }
 }
 
@@ -177,7 +179,7 @@ private fun ReadingScreen() {
 }
 
 @Composable
-private fun UnreadableScreen(reason: UnreadableReason, onDismiss: () -> Unit) {
+private fun UnreadableScreen(reason: UnreadableReason, onDismiss: () -> Unit, backLabel: String) {
     ScreenFrame(
         title = when (reason) {
             UnreadableReason.NotALink -> "Not a Mera Paisa link"
@@ -185,7 +187,7 @@ private fun UnreadableScreen(reason: UnreadableReason, onDismiss: () -> Unit) {
             UnreadableReason.NewerVersion -> "This link is too new"
         },
         onBack = onDismiss,
-        footer = { FootActions { PrimaryAction("Back to your ledger", enabled = true, onClick = onDismiss) } }
+        footer = { FootActions { PrimaryAction(backLabel, enabled = true, onClick = onDismiss) } }
     ) {
         item {
             Paragraph(
@@ -200,7 +202,8 @@ private fun UnreadableScreen(reason: UnreadableReason, onDismiss: () -> Unit) {
                         "It was made by a newer version of Mera Paisa, so nothing was recorded. " +
                             "Check for updates in Settings, then try the link again. Guessing at " +
                             "a format this version doesn't know could record the wrong amount."
-                }
+                },
+                colour = LocalAppTheme.current.negative
             )
         }
     }
@@ -714,7 +717,7 @@ private fun DeleteConfirmDialog(count: Int, onConfirm: () -> Unit, onDismiss: ()
 }
 
 @Composable
-private fun DoneScreen(state: ImportFlowState.Done, onDismiss: () -> Unit) {
+private fun DoneScreen(state: ImportFlowState.Done, onDismiss: () -> Unit, backLabel: String) {
     val outcome = state.outcome
     ScreenFrame(
         title = when (outcome) {
@@ -725,7 +728,7 @@ private fun DoneScreen(state: ImportFlowState.Done, onDismiss: () -> Unit) {
             is ImportOutcome.CurrencyMismatch -> "Not recorded"
         },
         onBack = onDismiss,
-        footer = { FootActions { PrimaryAction("Back to your ledger", enabled = true, onClick = onDismiss) } }
+        footer = { FootActions { PrimaryAction(backLabel, enabled = true, onClick = onDismiss) } }
     ) {
         item {
             Paragraph(
@@ -759,7 +762,10 @@ private fun DoneScreen(state: ImportFlowState.Done, onDismiss: () -> Unit) {
                             "tracked in ${outcome.personCurrency}. Nothing was changed. Converting " +
                             "would need an exchange rate the sender never agreed to, so file this " +
                             "against someone in ${outcome.payloadCurrency} instead."
-                }
+                },
+                // Only the refusal is a failure; an already-recorded link is ordinary.
+                colour = if (outcome is ImportOutcome.CurrencyMismatch) LocalAppTheme.current.negative
+                else LocalAppTheme.current.textSecondary
             )
         }
     }

@@ -725,7 +725,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Opens the paste box. See [ImportFlowState.Pasting] for why this is a primary path. */
     fun openPasteImport() = _uiState.update {
-        it.copy(showSettingsDialog = false, import = ImportFlowState.Pasting())
+        it.copy(import = ImportFlowState.Pasting())
     }
 
     fun setPasteText(text: String) = _uiState.update {
@@ -747,7 +747,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun openBackupScreen() {
         viewModelScope.launch {
-            _uiState.update { it.copy(showSettingsDialog = false, backup = BackupFlowState.Menu()) }
+            _uiState.update { it.copy(backup = BackupFlowState.Menu()) }
             refreshBackupMenu()
         }
     }
@@ -1049,7 +1049,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** The explicit "Check for updates" in Settings, which reports every outcome. */
     fun checkForUpdatesNow() {
-        _uiState.update { it.copy(showSettingsDialog = false, update = UpdateFlowState.Checking) }
+        _uiState.update { it.copy(update = UpdateFlowState.Checking) }
         viewModelScope.launch {
             val context = getApplication<Application>()
             UpdateStore.recordCheck(context, System.currentTimeMillis())

@@ -75,7 +75,9 @@ fun BackupDialog(
     onBackUpNow: () -> Unit,
     onModeChange: (RestoreMode) -> Unit,
     onApply: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** Where closing goes, named: Settings when it was opened from there, the ledger otherwise. */
+    backLabel: String = "Back to your ledger"
 ) {
     when (state) {
         is BackupFlowState.Menu -> MenuScreen(
@@ -83,8 +85,10 @@ fun BackupDialog(
         )
         BackupFlowState.Working -> WorkingScreen()
         is BackupFlowState.Reviewing -> ReviewScreen(state, onModeChange, onApply, onDismiss)
-        is BackupFlowState.Unreadable -> MessageScreen(state.title, state.detail, "Back to your ledger", onDismiss)
-        is BackupFlowState.Done -> MessageScreen(state.title, state.detail, "Back to your ledger", onDismiss)
+        // A failure's sentence is in the negative ink, the app's one colour for "this went wrong".
+        is BackupFlowState.Unreadable ->
+            MessageScreen(state.title, state.detail, backLabel, onDismiss, LocalAppTheme.current.negative)
+        is BackupFlowState.Done -> MessageScreen(state.title, state.detail, backLabel, onDismiss)
     }
 }
 
@@ -397,13 +401,19 @@ private fun ReplaceConfirmDialog(
 }
 
 @Composable
-private fun MessageScreen(title: String, detail: String, action: String, onDismiss: () -> Unit) {
+private fun MessageScreen(
+    title: String,
+    detail: String,
+    action: String,
+    onDismiss: () -> Unit,
+    colour: Color = LocalAppTheme.current.textSecondary
+) {
     ScreenFrame(
         title = title,
         onBack = onDismiss,
         footer = { FootActions { PrimaryAction(action, enabled = true, onClick = onDismiss) } }
     ) {
-        item { Paragraph(detail) }
+        item { Paragraph(detail, colour = colour) }
     }
 }
 
