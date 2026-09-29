@@ -236,7 +236,7 @@ interface PersonDao {
         note: String = ""
     ) {
         val at = System.currentTimeMillis()
-        val suffix = if (note.isBlank()) "" else " — $note"
+        val suffix = if (note.isBlank()) "" else ": $note"
         insertTransactions(
             listOf(
                 Transaction(

@@ -39,7 +39,7 @@ fun buildShareMessage(senderName: String, entryCount: Int, netText: String, link
     val entries = if (entryCount == 1) "1 entry" else "$entryCount entries"
     return buildString {
         append(senderName)
-        append(" shared a Mera Paisa ledger update with you — ")
+        append(" sent you a Mera Paisa update link: ")
         append(entries)
         append(", ")
         append(netText)

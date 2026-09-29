@@ -22,9 +22,9 @@ class LedgerSummaryTest {
 
     @Test
     fun headlineIsWrittenToThePersonBeingSent() {
-        assertEquals("Asha — you owe me ₹250.5", summary(person(balanceMinor = 250_50), emptyList()))
-        assertEquals("Asha — I owe you ₹40", summary(person(balanceMinor = -40_00), emptyList()))
-        assertEquals("Asha — we're all settled up", summary(person(balanceMinor = 0), emptyList()))
+        assertEquals("Asha: you owe me ₹250.50", summary(person(balanceMinor = 250_50), emptyList()))
+        assertEquals("Asha: I owe you ₹40", summary(person(balanceMinor = -40_00), emptyList()))
+        assertEquals("Asha: we're even", summary(person(balanceMinor = 0), emptyList()))
     }
 
     @Test
@@ -34,16 +34,16 @@ class LedgerSummaryTest {
             listOf(entry(100_00, 1_700_000_000_000, "cab"), entry(50_00, 1_700_000_060_000, "dinner"))
         )
         val lines = text.lines()
-        assertEquals("Asha — you owe me ₹150", lines[0])
+        assertEquals("Asha: you owe me ₹150", lines[0])
         assertEquals("Recent activity:", lines[2])
-        assertEquals("14 Nov, 10:13 PM: +₹100 (cab)  →  ₹100", lines[3])
-        assertEquals("14 Nov, 10:14 PM: +₹50 (dinner)  →  ₹150", lines[4])
+        assertEquals("14 Nov, 10:13 PM: ₹100 (cab)  →  ₹100", lines[3])
+        assertEquals("14 Nov, 10:14 PM: ₹50 (dinner)  →  ₹150", lines[4])
     }
 
     @Test
     fun anEntryWithoutANoteOmitsTheParentheses() {
         val text = summary(person(balanceMinor = 100_00), listOf(entry(100_00, 0)))
-        assertTrue(text.contains("+₹100  →  ₹100"))
+        assertTrue(text.contains(": ₹100  →  ₹100"))
         assertFalse(text.contains("()"))
     }
 
@@ -80,14 +80,14 @@ class LedgerSummaryTest {
 
     @Test
     fun aPersonWithNoHistoryIsJustTheHeadline() {
-        assertEquals("Asha — you owe me ₹10", summary(person(balanceMinor = 10_00), emptyList()))
+        assertEquals("Asha: you owe me ₹10", summary(person(balanceMinor = 10_00), emptyList()))
     }
 
     @Test
     fun amountsFollowTheCurrencysOwnDecimals() {
         val text = summary(person(currency = "JPY", balanceMinor = 1_234), listOf(entry(1_234, 1)))
-        assertTrue(text.startsWith("Asha — you owe me ¥12"))
-        assertTrue(text.contains("+¥12  →  ¥12"))
+        assertTrue(text.startsWith("Asha: you owe me ¥12"))
+        assertTrue(text.contains(": ¥12  →  ¥12"))
     }
 
     @Test

@@ -110,8 +110,9 @@ fun formatMinor(amountMinor: Long, currencyCode: String): String {
         // Still stored in hundredths, so round to the nearest whole major unit for display.
         roundedWholeUnits(magnitude).toString()
     } else {
-        // Trailing zeros carry no information: 237.40 reads as 237.4, and 237.00 as 237.
-        val fraction = paiseOf(magnitude).toString().padStart(2, '0').trimEnd('0')
+        // Paise keep both digits, 237.40 and never 237.4, which reads as a different number. Only
+        // a whole ".00" says nothing, so 237.00 is 237.
+        val fraction = paiseOf(magnitude).toString().padStart(2, '0').let { if (it == "00") "" else it }
         if (fraction.isEmpty()) {
             wholeUnits(magnitude).toString()
         } else {
@@ -180,15 +181,14 @@ fun isUsableAmount(text: String): Boolean {
 }
 
 /**
- * Like [formatMinor] but always carries an explicit sign, so which way a debt runs does not depend
- * on telling green from red.
+ * The figure for a line of the shared summary.
  *
- * For **plain text only** — the shared summary, where there is no colour to read. On screen the
- * amount is already green or red, and a leading `+` there is noise; those call sites use
- * [formatMinor] directly.
+ * It used to carry a "+" on what they owe you, because plain text has no colour to read. It follows
+ * the screen now: what you owe carries the minus, what they owe you carries nothing, and the
+ * headline above the lines says which way the whole balance runs.
  */
 fun formatSignedAmount(amountMinor: Long, currencyCode: String): String =
-    if (amountMinor > 0) "+${formatMinor(amountMinor, currencyCode)}" else formatMinor(amountMinor, currencyCode)
+    formatMinor(amountMinor, currencyCode)
 
 /**
  * Converts a whole list of amounts at one rate, keeping the parts consistent with the total.

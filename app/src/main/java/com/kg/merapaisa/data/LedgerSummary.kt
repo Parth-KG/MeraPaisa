@@ -22,9 +22,9 @@ fun buildPersonSummary(
 ): String {
     val amount = formatMinor(person.balanceMinor.absoluteValue, person.currency)
     val headline = when {
-        person.balanceMinor > 0 -> "${person.name} — you owe me $amount"
-        person.balanceMinor < 0 -> "${person.name} — I owe you $amount"
-        else -> "${person.name} — we're all settled up"
+        person.balanceMinor > 0 -> "${person.name}: you owe me $amount"
+        person.balanceMinor < 0 -> "${person.name}: I owe you $amount"
+        else -> "${person.name}: we're even"
     }
 
     if (transactions.isEmpty()) return headline

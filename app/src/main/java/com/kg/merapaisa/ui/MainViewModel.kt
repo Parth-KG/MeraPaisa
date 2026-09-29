@@ -478,7 +478,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(share = it.share?.copy(busy = true)) }
 
         viewModelScope.launch {
-            val senderName = current.senderName.trim().ifEmpty { "A friend" }
+            val senderName = current.senderName.trim().ifEmpty { "Someone" }
             repository.renameSelf(senderName)
 
             val built = repository.buildPayload(current.personId, senderName, current.fullHistory)
