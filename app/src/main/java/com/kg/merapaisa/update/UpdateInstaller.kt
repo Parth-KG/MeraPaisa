@@ -18,14 +18,14 @@ import java.security.MessageDigest
  *
  * **The signature check below is the point of this file.** Android will happily install any APK
  * whose package name matches if the user approves it, and an app that downloads code and installs
- * it without checking what signed it is a worse hole than having no updater at all — it turns a
+ * it without checking what signed it is a worse hole than having no updater at all: it turns a
  * hijacked download, a compromised host, or a tampering proxy into arbitrary code running as Mera
  * Paisa, with the ledger.
  *
  * So: fetch over HTTPS, write to private cache storage, and **compare the downloaded APK's signing
  * certificate against the running app's before it is offered to the installer.** A mismatch means
  * the file is deleted and reported, never installed. The app never learns its own fingerprint from
- * the file it just downloaded — it reads it from itself, via PackageManager.
+ * the file it just downloaded. It reads it from itself, via PackageManager.
  *
  * The system installer still asks the user to confirm. This check happens first, so that prompt is
  * only ever shown for a file that genuinely came from the same key as the running app.
@@ -77,7 +77,7 @@ object UpdateInstaller {
                 setRequestProperty("User-Agent", "MeraPaisa")
             }
             // GitHub redirects release assets to objects.githubusercontent.com. HttpURLConnection
-            // will not follow a redirect that changes protocol, and refuses to downgrade — so the
+            // will not follow a redirect that changes protocol, and refuses to downgrade, so the
             // one hop we follow by hand must be checked to still be HTTPS.
             if (connection.responseCode in 300..399) {
                 val next = connection.getHeaderField("Location")
@@ -152,7 +152,7 @@ object UpdateInstaller {
         ours.isNotEmpty() && ours == theirs
     }.getOrDefault(false)
 
-    /** Digests of either an installed package or an APK file — whichever argument is non-null. */
+    /** Digests of either an installed package or an APK file (whichever argument is non-null). */
     @Suppress("DEPRECATION")
     private fun certificateDigests(context: Context, packageName: String?, apkPath: String?): Set<String> {
         val pm = context.packageManager
@@ -183,8 +183,8 @@ object UpdateInstaller {
     /**
      * Opens the system installer for an already-verified file.
      *
-     * The APK goes out as a `content://` URI through the existing FileProvider — a `file://` one
-     * throws `FileUriExposedException`, the same reason CSV export goes through it.
+     * The APK goes out as a `content://` URI through the existing FileProvider, because a
+     * `file://` one throws `FileUriExposedException`, the same reason CSV export goes through it.
      */
     fun install(context: Context, apk: File) {
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apk)
@@ -206,7 +206,7 @@ object UpdateInstaller {
      *
      * The per-app "install unknown apps" screen only exists from API 26. Below that the permission
      * is granted wholesale by a single system-wide toggle, and the manifest declaration is the
-     * whole story — so older devices get pointed at security settings instead of an Intent action
+     * whole story, so older devices get pointed at security settings instead of an Intent action
      * that does not resolve there.
      *
      * [canInstall] already returns true below API 26, so in practice this branch is unreachable

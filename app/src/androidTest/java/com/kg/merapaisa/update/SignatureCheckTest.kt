@@ -17,7 +17,7 @@ import java.io.File
  * convenience; this is what stops a hijacked download, a compromised host or a tampering proxy
  * turning an update into arbitrary code running as Mera Paisa, with the ledger.
  *
- * It needs a device, because it goes through `PackageManager` — and it needs two real APKs signed
+ * It needs a device, because it goes through `PackageManager`. It also needs two real APKs signed
  * with genuinely different keys. Those are pushed alongside the test rather than embedded, so the
  * test APK does not have to carry several megabytes of fixtures:
  *
@@ -27,7 +27,7 @@ import java.io.File
  *       /sdcard/Android/data/com.kg.merapaisa.debug/files/debug-signed.apk
  *
  * The running test app is the debug build, signed with the debug key. So the debug-signed APK must
- * be accepted and the release-signed one refused — which proves both directions rather than only
+ * be accepted and the release-signed one refused. That proves both directions rather than only
  * the happy one. A check that merely never accepts anything would pass a one-sided test.
  */
 @RunWith(AndroidJUnit4::class)
@@ -44,7 +44,7 @@ class SignatureCheckTest {
         assumeTrue("push release-signed.apk to run this", apk != null)
 
         assertFalse(
-            "a release-signed APK must be refused by the debug build — different key",
+            "a release-signed APK must be refused by the debug build: different key",
             UpdateInstaller.isSignedLikeThisApp(context, apk!!.absolutePath)
         )
     }
@@ -60,7 +60,7 @@ class SignatureCheckTest {
         )
     }
 
-    /** Not an APK at all, so it cannot be read — and unreadable has to mean refused. */
+    /** Not an APK at all, so it cannot be read. Unreadable has to mean refused. */
     @Test
     fun somethingThatIsNotAnApkIsRefused() {
         val junk = File(context.cacheDir, "not-an-apk.apk").apply { writeText("this is not a zip") }

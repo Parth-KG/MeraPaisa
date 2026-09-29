@@ -14,8 +14,8 @@ import java.util.Locale
  * Writing backups into a folder the user picked, and pruning the old ones.
  *
  * Goes through `DocumentsContract` rather than `androidx.documentfile`, which would be a new
- * dependency for something the framework already does — and `loop-audit/PROTOCOL.md` rules those
- * out. The trade is more verbose calls here in exchange for nothing new in the APK.
+ * dependency for something the framework already does, and this project adds none. The trade is
+ * more verbose calls here in exchange for nothing new in the APK.
  *
  * The app holds no storage permission of any kind. It can write to the one folder that was handed
  * to it through the system picker, and to nowhere else.
@@ -25,7 +25,7 @@ object BackupWriter {
     private const val MIME_JSON = "application/json"
     private const val PREFIX = "mera-paisa-backup-"
 
-    /** `20260928-143000` — sorts chronologically as text, which is what the pruning relies on. */
+    /** `20260928-143000`, which sorts chronologically as text. The pruning relies on that. */
     fun stamp(at: Long): String =
         SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date(at))
 
@@ -109,7 +109,7 @@ object BackupWriter {
     /**
      * Whether the folder is still usable.
      *
-     * A persisted permission can be lost — the folder deleted, an SD card removed, the user
+     * A persisted permission can be lost: the folder deleted, an SD card removed, the user
      * revoking access in system settings. Checked before a backup rather than after, so the failure
      * is reported as "the folder is gone" instead of a silent no-op.
      */

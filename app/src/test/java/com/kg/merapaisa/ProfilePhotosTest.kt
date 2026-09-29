@@ -6,7 +6,7 @@ import org.junit.Test
 
 /**
  * The downscale factor was originally derived with `generateSequence(1) { it * 2 }.last { ... }`,
- * which never terminates on its own — the factor doubled until Int overflowed to zero and the
+ * which never terminates on its own: the factor doubled until Int overflowed to zero and the
  * division threw, so no profile photo was ever written to disk.
  */
 class ProfilePhotosTest {

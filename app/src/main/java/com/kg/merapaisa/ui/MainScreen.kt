@@ -85,7 +85,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val ui by viewModel.uiState.collectAsState()
 
     // The split flow is part of this tree rather than a Dialog, so back has to be handled
-    // here — otherwise it would fall through and close the app mid-split.
+    // here. Otherwise it would fall through and close the app mid-split.
     BackHandler(enabled = ui.split != null) {
         val split = ui.split
         if (split != null && split.step > 0) {
@@ -96,8 +96,8 @@ fun MainScreen(viewModel: MainViewModel) {
     }
     BackHandler(enabled = ui.split == null && ui.selectedId != null) { viewModel.clearSelection() }
 
-    // A settled debt is one you have marked settled, not merely one that nets to zero —
-    // otherwise everyone you add lands in Settled the moment they are created.
+    // A settled debt is one you have marked settled, not merely one that nets to zero.
+    // Otherwise everyone you add lands in Settled the moment they are created.
     val activePersons = persons.filter { !it.isSettled }
     val settledPersons = persons.filter { it.isSettled }
     val list = if (ui.tab == Tab.Active) activePersons else settledPersons
@@ -313,7 +313,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         border = BorderStroke(1.dp, theme.outline),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
                     ) {
-                        Text("Split a bill", style = MeraPaisaType.action)
+                        Text("Split an expense", style = MeraPaisaType.action)
                     }
                 }
             }
@@ -506,7 +506,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 Text("Delete ${target.name}?", color = theme.textPrimary, fontWeight = FontWeight.Bold)
             },
             text = {
-                val entries = if (transactionCount == 1) "1 transaction" else "$transactionCount transactions"
+                val entries = if (transactionCount == 1) "1 entry" else "$transactionCount entries"
                 // Deleting a person cascades away the group expenses they fronted, which moves
                 // what every other member of those groups owes. That is too large a consequence
                 // to leave out of the sentence asking for confirmation.
@@ -570,7 +570,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
     // The incoming half. Rendered here rather than as its own screen so it sits above whatever
     // the user was already doing, and behind the app lock like everything else.
-    // System file pickers. They have to live in the composable — a ViewModel cannot launch one —
+    // System file pickers. They have to live in the composable (a ViewModel cannot launch one),
     // so each hands the chosen uri straight back and does no work of its own.
     val saveBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -588,7 +588,7 @@ fun MainScreen(viewModel: MainViewModel) {
     ) { uri ->
         if (uri != null) {
             // Without taking the permission persistably, the weekly job loses access to the folder
-            // the moment this process dies — which is exactly when it needs it.
+            // the moment this process dies, which is exactly when it needs it.
             context.contentResolver.takePersistableUriPermission(
                 uri,
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
@@ -598,7 +598,7 @@ fun MainScreen(viewModel: MainViewModel) {
     }
 
     // The quiet once-a-day check. Runs on first composition only, and stays silent unless there
-    // is genuinely a newer release — an app that interrupts you to say nothing has changed is
+    // is genuinely a newer release. An app that interrupts you to say nothing has changed is
     // worse than one that never looks.
     LaunchedEffect(Unit) { viewModel.checkForUpdatesQuietly() }
 

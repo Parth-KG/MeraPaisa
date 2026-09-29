@@ -6,7 +6,7 @@ import org.junit.Test
 
 /**
  * The rate service rejects a negative `amount` with HTTP 422 "invalid amount". Balances here
- * are signed — negative is what you owe — so the request carries the magnitude and the sign is
+ * are signed (negative is what you owe), so the request carries the magnitude and the sign is
  * restored afterwards. Sending the raw figure failed for every person you owed, and reported it
  * as a connection problem.
  */

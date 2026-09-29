@@ -61,7 +61,7 @@ class MainActivity : FragmentActivity() {
             val context = this
             val themeName by ThemeStore.getTheme(context).collectAsState(initial = "Midnight")
             val currentTheme = getThemeByName(themeName)
-            // null while DataStore is still answering — neither enabled nor disabled yet.
+            // null while DataStore is still answering. Neither enabled nor disabled yet.
             val lockEnabled by SecurityStore.isAppLockEnabled(context).collectAsState(initial = null)
             val known = lockEnabled != null
             val showLock = lockEnabled == true && lock.locked
@@ -130,7 +130,7 @@ class MainActivity : FragmentActivity() {
 
     /**
      * The link text, or null if this intent is not one. The whole URI is passed on, fragment
-     * included — the payload lives in the fragment, so dropping it would leave an empty link.
+     * included: the payload lives in the fragment, so dropping it would leave an empty link.
      */
     private fun shareLinkFrom(intent: Intent?): String? =
         if (intent?.action == Intent.ACTION_VIEW) intent.data?.toString() else null

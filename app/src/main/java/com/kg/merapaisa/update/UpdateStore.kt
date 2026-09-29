@@ -31,7 +31,7 @@ object UpdateStore {
     suspend fun dismissedVersion(context: Context): String? =
         context.dataStore.data.map { it[DISMISSED_KEY] }.first()
 
-    /** Records "not now" for one version only — the next release will still be offered. */
+    /** Records "not now" for one version only, so the next release is still offered. */
     suspend fun dismiss(context: Context, version: String) {
         context.dataStore.edit { it[DISMISSED_KEY] = version }
     }

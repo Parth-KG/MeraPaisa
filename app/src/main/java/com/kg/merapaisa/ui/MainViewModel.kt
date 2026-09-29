@@ -135,7 +135,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      *
      * [distinctUntilChanged] is what keeps "whenever its expenses change" true. Every field of
      * [MainUiState] shares one flow, so a tab switch, a numpad key or a dialog opening all
-     * re-emit the same `openGroupId` — and without the filter each of those restarted
+     * re-emit the same `openGroupId`. Without the filter each of those restarted
      * `groupDetail`, re-running its three Room queries for a group that had not changed.
      */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -189,7 +189,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Flips how the open group's settle-up plan is worked out.
      *
-     * Writes one column. Nothing reaches the expense list — switching between the two views is not
+     * Writes one column. Nothing reaches the expense list: switching between the two views is not
      * an event that happened to anybody's money.
      */
     fun setSimplifyDebts(simplify: Boolean) {
@@ -314,7 +314,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val currencyChanged = currency != snapshot.currency
 
             // Converting rewrites every entry rather than recording a correction. The balance is
-            // derived from those entries, so converting them is converting the balance — and it
+            // derived from those entries, so converting them is converting the balance. It also
             // leaves a log that reads wholly in one currency instead of old amounts plus a
             // mystery adjustment. Irreversible; the dialog says so.
             //
@@ -399,14 +399,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // =========================================================================================
-    // Two-sided ledger over share links — outgoing
+    // Two-sided ledger over share links: outgoing
     // =========================================================================================
 
     /**
      * Opens the share sheet for [personId], having worked out what the next link would carry.
      *
      * Nothing is sent and no watermark moves here. This only reads, so backing out of the sheet
-     * leaves no trace — which matters because the sheet is also where an empty payload is
+     * leaves no trace. That matters because the sheet is also where an empty payload is
      * explained ("nothing new since you last shared").
      */
     fun openShareSheet(personId: Long) {
@@ -417,7 +417,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             // "You" means nothing on the recipient's phone.
             //
             // Read before the update rather than inside it. `update` is inline, so a suspend call
-            // in its block compiles — but it retries the block on contention, which would mean
+            // in its block compiles. But it retries the block on contention, which would mean
             // re-querying the database for every retry.
             val myName = repository.self().name.takeUnless { it == "You" } ?: ""
 
@@ -462,7 +462,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Builds the link and hands the finished message back through [onReady] for the share sheet.
      *
-     * The watermark advances here, before we know whether the user actually sent the message —
+     * The watermark advances here, before we know whether the user actually sent the message:
      * Android does not report that. Advancing optimistically can skip entries if they back out,
      * which "send full history" exists to undo. The other order would double-send by default, and
      * a debt counted twice is worse than one that needs re-sending.
@@ -505,7 +505,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // =========================================================================================
-    // Two-sided ledger over share links — incoming
+    // Two-sided ledger over share links: incoming
     // =========================================================================================
 
     /**
@@ -539,7 +539,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Preselects the person the link most likely refers to, matching on name.
      *
-     * A suggestion only — the user can change it, and must confirm either way. Matching on an
+     * A suggestion only. The user can change it, and must confirm either way. Matching on an
      * unverified name is a convenience, never a decision: a crafted link naming someone should
      * cost a tap to notice, not apply itself.
      */
@@ -568,7 +568,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * The people this link could be filed against, read straight from the database.
      *
      * Not `persons.value`. A tapped link cold-starts the app, and the flow backing that property is
-     * still empty for the first moment afterwards — so the name match found nobody and the screen
+     * still empty for the first moment afterwards, so the name match found nobody and the screen
      * offered to *create* a second Rahul beside the one already there. Taking that offer splits a
      * ledger in two, and from v2.5 it also means the new entries share no history with the old
      * ones, so nothing will ever reconcile against them again. Found on a device, by reinstalling
@@ -582,7 +582,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val candidates = personsForMatching()
         // Currency is part of the match, not just the name. The import screen only offers people in
         // the payload's currency, so matching on name alone could preselect somebody who is not in
-        // that list — leaving the dialog looking like nothing was chosen while "Record it" was live,
+        // that list, leaving the dialog looking like nothing was chosen while "Record it" was live,
         // and ending in a currency refusal. A name match in the wrong currency falls through to
         // "add someone new", which creates them in the right one.
         val match = candidates.firstOrNull {
@@ -661,8 +661,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Writes the link, creating the person first if that is what was chosen.
      *
-     * A new person is created in the payload's currency, not the app default — creating them in the
-     * wrong one would immediately trip the currency guard and refuse the very link that made them.
+     * A new person is created in the payload's currency, not the app default: creating them in
+     * the wrong one would immediately trip the currency guard and refuse the very link that made
+     * them.
      */
     fun applyImport() {
         val confirming = _uiState.value.import as? ImportFlowState.Confirming ?: return
@@ -681,7 +682,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val name = persons.value.firstOrNull { it.id == personId }?.name
                 ?: confirming.newPersonName?.trim()
                 // Sanitised, like everywhere else this string is shown. It is chosen by whoever
-                // built the link, and the Done dialog renders it inside a sentence — which is
+                // built the link, and the Done dialog renders it inside a sentence, which is
                 // exactly the shape of the v2.2.1 spoofing bug, on a screen that fix did not
                 // reach. Only used when the person list has not caught up yet.
                 ?: claimedNameForDisplay(confirming.payload.senderName)
@@ -690,7 +691,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val outcome = if (confirming.payload.canReconcile && confirming.targetPersonId != null) {
                 // Decided by the payload and the target, never by whether the plan happens to have
                 // arrived. It is computed asynchronously, so a quick tap on a cold start used to
-                // fall through to appending — silently writing a second copy of every entry the
+                // fall through to appending, silently writing a second copy of every entry the
                 // ledger already had. A null selection tells the repository to use its own
                 // defaults rather than treating "not loaded" as "nothing ticked".
                 //
@@ -703,14 +704,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     now = now
                 )
             } else {
-                // Nothing to compare against — a new person, or a version 1 link with no uids.
+                // Nothing to compare against: a new person, or a version 1 link with no uids.
                 // Appending is the whole of the correct behaviour here, not a fallback.
                 repository.importPayload(personId, confirming.payload, now)
             }
             _uiState.update { state ->
                 // Only if the flow is still the one that started this write. The dialog blocks
-                // dismissal while busy, but a second route to closing it — a later release adding
-                // one, or anything that resets the flow — must not be able to make a finished
+                // dismissal while busy, but a second route to closing it (a later release adding
+                // one, or anything that resets the flow) must not be able to make a finished
                 // import pop back up on top of whatever the user moved on to.
                 val still = state.import as? ImportFlowState.Confirming
                 if (still?.payload?.payloadId != confirming.payload.payloadId) state
@@ -844,7 +845,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** JSON first, then CSV, then give up — with a sentence that says which it tried. */
+    /** JSON first, then CSV, then give up, with a sentence that says which it tried. */
     private suspend fun interpretRestoreFile(text: String) {
         when (val backup = decodeBackup(text)) {
             is BackupResult.Ok ->
@@ -948,8 +949,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     onFailure = { e ->
                         BackupFlowState.Unreadable(
                             "The restore did not finish",
-                            "Nothing was changed. The whole restore runs as one database " +
-                                "transaction, so a failure leaves your ledger as it was. " +
+                            "Nothing was changed. The whole restore runs as a single database " +
+                                "operation, so a failure leaves your ledger as it was. " +
                                 "(${e.message ?: e::class.simpleName})"
                         )
                     }
@@ -1029,7 +1030,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             val status = updates.check(BuildConfig.VERSION_NAME)
             if (status !is UpdateStatus.Available) return@launch
-            // Already told "not now" for this exact version — do not ask again.
+            // Already told "not now" for this exact version, so do not ask again.
             if (UpdateStore.dismissedVersion(context) == status.version) return@launch
 
             _uiState.update { it.copy(update = status.toFlowState()) }
@@ -1103,7 +1104,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
-    /** "Not now" — remembered for this version only, so the next release still gets offered. */
+    /** "Not now" is remembered for this version only, so the next release still gets offered. */
     fun dismissUpdate() {
         val version = when (val u = _uiState.value.update) {
             is UpdateFlowState.Available -> u.version
@@ -1154,7 +1155,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Performs the move, or leaves the sheet open saying why not.
      *
      * The repository re-reads the balance under its own transaction, so the guard here is about
-     * not offering a live button rather than about correctness — two fast taps cannot both move
+     * not offering a live button rather than about correctness: two fast taps cannot both move
      * the same money.
      */
     fun confirmMoveDebt() {

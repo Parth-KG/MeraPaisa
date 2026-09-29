@@ -28,7 +28,7 @@ data class AppTheme(
 ) {
     val isDark: Boolean get() = background.luminance() < 0.4f
 
-    /** Fill for rows, numpad keys and chips — a step away from the background, not white-on-white. */
+    /** Fill for rows, numpad keys and chips: a step away from the background, not white on white. */
     val fill: Color get() = card
 
     /** The same fill one step stronger, for selected and pressed states. */

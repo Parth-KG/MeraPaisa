@@ -49,7 +49,7 @@ class AutoExportWorker(
 
         if (!BackupWriter.canWriteTo(context, treeUri)) {
             // The folder was deleted, unmounted, or its permission revoked. Retrying cannot fix
-            // that, so this reports rather than loops — and Settings shows the sentence.
+            // that, so this reports rather than loops, and Settings shows the sentence.
             return finish(
                 context, now,
                 "Could not write to the backup folder. Pick it again in Settings.",
@@ -69,7 +69,7 @@ class AutoExportWorker(
             val note = if (pruned > 0) " ${pruned} older ${if (pruned == 1) "backup" else "backups"} removed." else ""
             finish(context, now, "Backed up successfully.$note", Result.success())
         } catch (e: Exception) {
-            // A transient failure — storage busy, provider not ready — is worth one more go.
+            // A transient failure (storage busy, provider not ready) is worth one more go.
             finish(context, now, "Backup failed: ${e.message ?: e::class.simpleName}", Result.retry())
         }
     }

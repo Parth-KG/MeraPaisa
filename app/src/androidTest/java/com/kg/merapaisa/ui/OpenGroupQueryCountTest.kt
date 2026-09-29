@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * Every field of `MainUiState` shares one flow, so typing a digit or opening a dialog re-emits
  * the same `openGroupId`. `Flow.map` does not dedupe, so without the filter each of those
- * restarted `groupDetail` — a `combine` of three Room queries — for a group that had not
+ * restarted `groupDetail` (a `combine` of three Room queries) for a group that had not
  * changed. This drives the same operator chain the ViewModel builds and counts what SQLite is
  * actually asked to run.
  */

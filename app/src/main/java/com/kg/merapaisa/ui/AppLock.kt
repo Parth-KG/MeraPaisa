@@ -15,13 +15,13 @@ import androidx.core.content.ContextCompat
 import com.kg.merapaisa.SecurityStore
 
 /**
- * The app lock leans entirely on what the phone already trusts — fingerprint, face, or the
+ * The app lock leans entirely on what the phone already trusts: fingerprint, face, or the
  * device PIN/pattern as a fallback. Nothing is stored or verified by this app, so there is no
  * secret of ours to leak and no PIN screen of our own to get wrong.
  */
 private const val ALLOWED_AUTHENTICATORS = BIOMETRIC_WEAK or DEVICE_CREDENTIAL
 
-/** True when this device can actually prompt for something — otherwise the toggle is pointless. */
+/** True when this device can actually prompt for something. Otherwise the toggle is pointless. */
 fun canAuthenticate(context: Context): Boolean =
     BiometricManager.from(context).canAuthenticate(ALLOWED_AUTHENTICATORS) ==
         BiometricManager.BIOMETRIC_SUCCESS

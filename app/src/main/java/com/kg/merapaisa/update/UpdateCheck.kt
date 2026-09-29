@@ -45,7 +45,7 @@ class UpdateCheck(private val releasesUrl: String = LATEST_RELEASE_URL) {
      * Asks GitHub for the latest release.
      *
      * [currentVersion] is `BuildConfig.VERSION_NAME`. Returns [UpdateStatus.Unreachable] rather
-     * than throwing — an update check failing is ordinary and must never look like a fault.
+     * than throwing: an update check failing is ordinary and must never look like a fault.
      */
     suspend fun check(currentVersion: String): UpdateStatus {
         val body = withTimeoutOrNull(REQUEST_TIMEOUT_MS) {
@@ -131,8 +131,8 @@ class UpdateCheck(private val releasesUrl: String = LATEST_RELEASE_URL) {
          * line break becomes a real one, so the text breaks at seemingly random points that have
          * nothing to do with where the dialog's edge is.
          *
-         * So paragraphs are **reflowed** — lines within a paragraph are joined back into one and
-         * left for the layout to wrap — while blank lines, list items and table rows keep their
+         * So paragraphs are **reflowed** (lines within a paragraph are joined back into one and
+         * left for the layout to wrap), while blank lines, list items and table rows keep their
          * breaks, because there the line break carries meaning.
          *
          * Deliberately not a markdown renderer. It removes emphasis and heading markers, drops
@@ -177,7 +177,7 @@ class UpdateCheck(private val releasesUrl: String = LATEST_RELEASE_URL) {
                         inBullet = true
                     }
                     // A plain line straight after a bullet is that bullet wrapping, not a new
-                    // paragraph — splitting it leaves half a sentence stranded below a gap.
+                    // paragraph. Splitting it leaves half a sentence stranded below a gap.
                     inBullet -> out.append(' ').append(line)
                     // Ordinary prose: join onto the paragraph being built.
                     else -> {
@@ -194,8 +194,11 @@ class UpdateCheck(private val releasesUrl: String = LATEST_RELEASE_URL) {
          * Trims notes to something a dialog can hold.
          *
          * Full notes belong on the releases page; this is a summary to decide by. Cut at a
-         * paragraph if one falls in range, otherwise at a word — never mid-word, and never
+         * paragraph if one falls in range, otherwise at a word. Never mid-word, and never
          * mid-sentence without an ellipsis to show it was cut.
+         *
+         * The punctuation trimmed off the cut includes an em dash, kept as a unicode escape so
+         * that no literal one sits in the source.
          */
         private fun summarise(text: String, limit: Int = 420): String {
             if (text.length <= limit) return text
@@ -206,7 +209,7 @@ class UpdateCheck(private val releasesUrl: String = LATEST_RELEASE_URL) {
 
             val atWord = head.lastIndexOf(' ')
             val cut = if (atWord >= limit / 2) atWord else limit
-            return text.take(cut).trimEnd().trimEnd(',', ';', ':', '—', '-') + "…"
+            return text.take(cut).trimEnd().trimEnd(',', ';', ':', '\u2014', '-') + "…"
         }
 
         /**

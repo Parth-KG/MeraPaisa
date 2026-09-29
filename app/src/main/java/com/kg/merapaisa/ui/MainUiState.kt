@@ -49,7 +49,7 @@ data class MainUiState(
 data class SplitFlowState(
     val step: Int = 0,
     val amount: String = "",
-    /** ISO 4217 code the split is entered in — the user's working currency, not a guess. */
+    /** ISO 4217 code the split is entered in: the user's working currency, not a guess. */
     val currency: String = "INR",
     val note: String = "",
     val selectedIds: Set<Long> = emptySet(),
@@ -70,7 +70,7 @@ data class ShareFlowState(
     val senderName: String,
     val entryCount: Int,
     val netMinor: Long,
-    /** Ignore the watermark and send everything — the way back from a link that never arrived. */
+    /** Ignore the watermark and send everything (the way back from a link that never arrived). */
     val fullHistory: Boolean = false,
     val busy: Boolean = false
 ) {
@@ -79,7 +79,7 @@ data class ShareFlowState(
 
 /**
  * The incoming side. A link arrives from outside the app, so this models being unable to read it as
- * a first-class state rather than an error to swallow — a user who tapped a link and saw nothing
+ * a first-class state rather than an error to swallow: a user who tapped a link and saw nothing
  * happen would have no idea whether their ledger changed.
  */
 sealed interface ImportFlowState {
@@ -106,7 +106,7 @@ sealed interface ImportFlowState {
      * Nothing is written until this is confirmed. That is not politeness: the payload is
      * unauthenticated, so the user confirming *is* the only check that the link is genuine.
      *
-     * Exactly one of [targetPersonId] and [newPersonName] is set — file it against someone who
+     * Exactly one of [targetPersonId] and [newPersonName] is set. File it against someone who
      * already exists, or create someone for it.
      */
     data class Confirming(
@@ -118,8 +118,8 @@ sealed interface ImportFlowState {
          * How this link compares against what the chosen person already has.
          *
          * Null while it is still being worked out, and null for a brand-new person, who by
-         * definition has nothing to compare against. Recomputed whenever the target changes — the
-         * same payload against a different person is a different answer.
+         * definition has nothing to compare against. Recomputed whenever the target changes,
+         * because the same payload against a different person is a different answer.
          */
         val plan: ReconcilePlan? = null,
         /** The uids ticked to apply. Seeded from [ReconcilePlan.defaultSelection]. */
@@ -132,7 +132,7 @@ sealed interface ImportFlowState {
          * Whether to show the comparison at all.
          *
          * A plan that is nothing but new entries is the ordinary case and says nothing worth a
-         * section — it is what importing a link has always meant. The comparison earns its space
+         * section: it is what importing a link has always meant. The comparison earns its space
          * only when it has found something the user did not already assume.
          */
         val showsDifferences: Boolean
@@ -146,7 +146,7 @@ sealed interface ImportFlowState {
 
 /** Why a link could not be read, each needing a different sentence on screen. */
 enum class UnreadableReason {
-    /** Nothing payload-shaped was found — a stray tap, or the wrong thing pasted. */
+    /** Nothing payload-shaped was found: a stray tap, or the wrong thing pasted. */
     NotALink,
 
     /** Payload-shaped but did not survive: clipped by a chat app, or edited by hand. */
@@ -233,7 +233,7 @@ sealed interface UpdateFlowState {
     /** Already on the newest release. Only shown for an explicit check. */
     data object UpToDate : UpdateFlowState
 
-    /** Could not ask — no network, rate limited, or an answer that made no sense. */
+    /** Could not ask: no network, rate limited, or an answer that made no sense. */
     data class Unreachable(val reason: String) : UpdateFlowState
 
     /** A newer release exists. Nothing is downloaded until the user says so. */
@@ -269,7 +269,7 @@ sealed interface UpdateFlowState {
  * Moving part of what one person owes onto somebody else.
  *
  * The amount is held as typed text rather than a parsed number so the field behaves like every
- * other amount field in the app — a half-typed "12." is a legal thing to be looking at, and
+ * other amount field in the app. A half-typed "12." is a legal thing to be looking at, and
  * parsing on every keystroke would fight the user.
  */
 data class MoveDebtFlowState(

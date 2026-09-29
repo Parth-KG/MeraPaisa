@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Hands plain text — a reminder, a summary — straight to the share sheet. */
+/** Hands plain text (a reminder, a summary) straight to the share sheet. */
 fun shareText(context: Context, text: String, chooserTitle: String) {
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
@@ -22,7 +22,7 @@ fun shareText(context: Context, text: String, chooserTitle: String) {
 
 /**
  * Writes an export into the cache directory and hands it to the share sheet. Sharing needs a
- * content:// URI — a file:// one throws FileUriExposedException — so it goes through the
+ * content:// URI (a file:// one throws FileUriExposedException), so it goes through the
  * FileProvider declared in the manifest.
  */
 suspend fun writeExportToCache(context: Context, csv: String): Uri = withContext(Dispatchers.IO) {

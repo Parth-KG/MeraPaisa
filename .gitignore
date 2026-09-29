@@ -20,7 +20,7 @@ local.properties
 *.aab
 *.idsig
 
-# Signing material — never commit these
+# Signing material. Never commit these.
 *.jks
 *.keystore
 keystore.properties
@@ -29,4 +29,3 @@ keystore.properties
 .DS_Store
 
 # audit loop artifacts: the ledger, protocol, backups and logs stay local
-loop-audit/

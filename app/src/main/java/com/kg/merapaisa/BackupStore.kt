@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.map
 /**
  * Where automatic backups go, and when the last one happened.
  *
- * Only the folder's URI is kept — a `content://` tree from the system folder picker, whose read and
+ * Only the folder's URI is kept: a `content://` tree from the system folder picker, whose read and
  * write permission is persisted separately by `ContentResolver.takePersistableUriPermission`. The
  * app never stores a filesystem path and never asks for storage permission, so it can write to a
  * folder the user chose and to nothing else.

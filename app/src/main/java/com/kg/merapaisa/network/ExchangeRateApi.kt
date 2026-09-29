@@ -12,7 +12,7 @@ import kotlin.math.abs
  * The amount the service is asked about, in major units.
  *
  * Always a magnitude. The service answers a negative `amount` with HTTP 422 "invalid amount",
- * and half of this app's balances are negative — those are the people you owe.
+ * and half of this app's balances are negative. Those are the people you owe.
  */
 internal fun requestAmountMajor(amountMinor: Long): Double = abs(amountMinor) / 100.0
 
@@ -33,11 +33,11 @@ class ExchangeRateApi {
 
     /**
      * Converts minor units between two ISO 4217 codes. Returns null when no rate could be
-     * fetched — callers must surface that rather than carrying on with the original amount.
+     * fetched: callers must surface that rather than carrying on with the original amount.
      *
      * Only the magnitude is sent. The service answers a negative `amount` with HTTP 422
      * ("invalid amount"), and a negative balance is simply one you owe rather than one you
-     * are owed — so passing the raw figure made conversion fail for half the ledger, and
+     * are owed, so passing the raw figure made conversion fail for half the ledger, and
      * fail with a message blaming the user's connection. The sign is re-applied here.
      */
     suspend fun convert(amountMinor: Long, from: String, to: String): Long? {
@@ -55,7 +55,7 @@ class ExchangeRateApi {
      * per entry would be dozens of requests for one answer that does not change between them. So
      * the rate is fetched once and applied locally by `convertAll`.
      *
-     * Asked for as a rate on one unit rather than derived from a converted balance — a balance of
+     * Asked for as a rate on one unit rather than derived from a converted balance. A balance of
      * zero would give no ratio at all, and a person at zero can still have a history worth
      * converting.
      */
