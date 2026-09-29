@@ -1,42 +1,26 @@
 package com.kg.merapaisa.ui.share
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -49,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,6 +52,12 @@ import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
+import com.kg.merapaisa.ui.FootActions
+import com.kg.merapaisa.ui.Paragraph
+import com.kg.merapaisa.ui.PrimaryAction
+import com.kg.merapaisa.ui.ScreenFrame
+import com.kg.merapaisa.ui.SecondaryAction
+import com.kg.merapaisa.ui.SectionHeading
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -118,123 +107,6 @@ fun ImportLedgerDialog(
     }
 }
 
-/**
- * The shape every step of this flow takes: a back arrow, a title in the gutter, a list, and the
- * answers named at the foot.
- *
- * [onBack] is null while the link is being read or written. Leaving mid-write would hide the
- * screen without stopping anything, and the result would then reappear on its own, announcing a
- * change the user had just waved away, so the system back is swallowed instead.
- */
-@Composable
-private fun ImportFrame(
-    title: String,
-    onBack: (() -> Unit)?,
-    footer: (@Composable () -> Unit)? = null,
-    content: LazyListScope.() -> Unit
-) {
-    val theme = LocalAppTheme.current
-
-    BackHandler(enabled = true) { onBack?.invoke() }
-
-    Column(modifier = Modifier.fillMaxSize().background(theme.background)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
-                )
-                .padding(horizontal = Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (onBack != null) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier.widthIn(min = 48.dp).heightIn(min = 48.dp)
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = theme.textPrimary
-                    )
-                }
-            } else {
-                // Keeps the title where it sits on every other step, so the screen does not jump
-                // up by a row at the moment the ledger is being written.
-                Spacer(Modifier.height(48.dp))
-            }
-        }
-
-        Text(
-            title,
-            style = MeraPaisaType.screenTitle,
-            color = theme.textPrimary,
-            modifier = Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                .padding(horizontal = Spacing.lg)
-        )
-
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
-            contentPadding = PaddingValues(top = Spacing.md, bottom = Spacing.lg),
-            content = content
-        )
-
-        footer?.invoke()
-    }
-}
-
-/** The answers, side by side at the foot, clear of the navigation bar. */
-@Composable
-private fun FootActions(content: @Composable RowScope.() -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .windowInsetsPadding(
-                WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
-            )
-            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-        content = content
-    )
-}
-
-@Composable
-private fun RowScope.PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
-    val theme = LocalAppTheme.current
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        shape = Shapes.small,
-        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = theme.primary,
-            contentColor = theme.background
-        )
-    ) {
-        Text(label, style = MeraPaisaType.action)
-    }
-}
-
-@Composable
-private fun RowScope.SecondaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
-    val theme = LocalAppTheme.current
-    OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        shape = Shapes.small,
-        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
-        border = BorderStroke(1.dp, theme.outline),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
-    ) {
-        Text(label, style = MeraPaisaType.action)
-    }
-}
-
 @Composable
 private fun PastingScreen(
     state: ImportFlowState.Pasting,
@@ -243,7 +115,7 @@ private fun PastingScreen(
     onDismiss: () -> Unit
 ) {
     val theme = LocalAppTheme.current
-    ImportFrame(
+    ScreenFrame(
         title = "Record an update link",
         onBack = onDismiss,
         footer = {
@@ -285,7 +157,7 @@ private fun PastingScreen(
 @Composable
 private fun ReadingScreen() {
     val theme = LocalAppTheme.current
-    ImportFrame(title = "Reading the link", onBack = null) {
+    ScreenFrame(title = "Reading the link", onBack = null) {
         item {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
@@ -305,7 +177,7 @@ private fun ReadingScreen() {
 
 @Composable
 private fun UnreadableScreen(reason: UnreadableReason, onDismiss: () -> Unit) {
-    ImportFrame(
+    ScreenFrame(
         title = when (reason) {
             UnreadableReason.NotALink -> "Not a Mera Paisa link"
             UnreadableReason.Damaged -> "This link is damaged"
@@ -362,7 +234,7 @@ private fun ConfirmingScreen(
     val tickedDeletions = plan?.deletedBySender?.count { it.uid in state.selected } ?: 0
     var confirmingDeletions by remember { mutableStateOf(false) }
 
-    ImportFrame(
+    ScreenFrame(
         title = "Check this update link",
         onBack = if (state.busy) null else onDismiss,
         footer = {
@@ -864,7 +736,7 @@ private fun DeleteConfirmDialog(count: Int, onConfirm: () -> Unit, onDismiss: ()
 @Composable
 private fun DoneScreen(state: ImportFlowState.Done, onDismiss: () -> Unit) {
     val outcome = state.outcome
-    ImportFrame(
+    ScreenFrame(
         title = when (outcome) {
             is ImportOutcome.Applied -> "Recorded"
             is ImportOutcome.Reconciled ->
@@ -911,34 +783,6 @@ private fun DoneScreen(state: ImportFlowState.Done, onDismiss: () -> Unit) {
             )
         }
     }
-}
-
-/** A heading inside the list. Sentence case, quiet, with air above it and none below. */
-@Composable
-private fun SectionHeading(text: String) {
-    val theme = LocalAppTheme.current
-    Text(
-        text,
-        style = MeraPaisaType.sectionTitle,
-        color = theme.textSecondary,
-        modifier = Modifier.padding(
-            start = Spacing.lg,
-            end = Spacing.lg,
-            top = Spacing.xl,
-            bottom = Spacing.sm
-        )
-    )
-}
-
-/** A sentence in the gutter, aligned with everything else on the screen. */
-@Composable
-private fun Paragraph(text: String, colour: Color = LocalAppTheme.current.textSecondary) {
-    Text(
-        text,
-        style = MeraPaisaType.body,
-        color = colour,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
-    )
 }
 
 private fun countOf(n: Int, one: String, many: String): String = "$n " + if (n == 1) one else many

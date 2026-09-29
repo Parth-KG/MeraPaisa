@@ -1107,7 +1107,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         runCatching { UpdateInstaller.install(context, File(path)) }
             .onFailure { e ->
                 _uiState.update { s ->
-                    s.copy(update = UpdateFlowState.Failed(e.message ?: "The installer would not open."))
+                    s.copy(update = UpdateFlowState.Failed(e.message.orEmpty(), downloaded = true))
                 }
             }
     }

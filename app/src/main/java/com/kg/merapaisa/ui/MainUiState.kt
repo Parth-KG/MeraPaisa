@@ -259,7 +259,12 @@ sealed interface UpdateFlowState {
      */
     data object SignatureMismatch : UpdateFlowState
 
-    data class Failed(val reason: String) : UpdateFlowState
+    /**
+     * The download or the installer failed. [downloaded] says which, because the two need
+     * different sentences: a failed download has nothing on the phone yet, while a failed
+     * installer leaves a checked file that simply never opened.
+     */
+    data class Failed(val reason: String, val downloaded: Boolean = false) : UpdateFlowState
 
     /** Android will not let the app install anything until this is granted, per-app, in Settings. */
     data class NeedsPermission(val version: String, val downloadUrl: String, val sizeBytes: Long) : UpdateFlowState

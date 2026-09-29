@@ -46,7 +46,7 @@ import com.kg.merapaisa.ui.dialogs.EntryHistoryScreen
 import com.kg.merapaisa.ui.share.ImportLedgerDialog
 import com.kg.merapaisa.ui.share.ShareLedgerSheet
 import com.kg.merapaisa.ui.backup.BackupDialog
-import com.kg.merapaisa.ui.update.UpdateDialog
+import com.kg.merapaisa.ui.update.UpdateScreen
 import com.kg.merapaisa.BuildConfig
 import com.kg.merapaisa.update.UpdateInstaller
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -624,7 +624,7 @@ fun MainScreen(viewModel: MainViewModel) {
     }
 
     ui.update?.let { updateState ->
-        UpdateDialog(
+        UpdateScreen(
             state = updateState,
             onDownload = viewModel::downloadUpdate,
             onInstall = viewModel::installDownloadedUpdate,

@@ -61,7 +61,7 @@ object UpdateInstaller {
         onProgress: (Int) -> Unit = {}
     ): Result = withContext(Dispatchers.IO) {
         if (!url.startsWith("https://")) {
-            return@withContext Result.Failed("That download link is not HTTPS.")
+            return@withContext Result.Failed("GitHub gave a download link that isn't HTTPS, so it wasn't used.")
         }
 
         val dir = File(context.cacheDir, UPDATE_DIR).apply { mkdirs() }
@@ -116,7 +116,7 @@ object UpdateInstaller {
 
         if (downloaded == null || !downloaded.isFile || downloaded.length() == 0L) {
             target.delete()
-            return@withContext Result.Failed("The download did not finish.")
+            return@withContext Result.Failed("The download didn't finish.")
         }
 
         if (!signedLikeUs(context, downloaded)) {
