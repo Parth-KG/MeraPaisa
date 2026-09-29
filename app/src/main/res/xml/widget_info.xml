@@ -7,7 +7,8 @@
   minWidth and minHeight are what Android 11 and below place it at, targetCellWidth and
   targetCellHeight what Android 12 and above use, which is why both are set.
 
-  previewImage is still the launcher icon. A real one has to be captured off a device.
+  previewImage is the widget itself, in Midnight at night, captured on a phone by
+  WidgetGalleryTest and rounded at the corners the way a launcher draws it.
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_description"
@@ -17,7 +18,7 @@
     android:minResizeHeight="40dp"
     android:targetCellWidth="4"
     android:targetCellHeight="3"
-    android:previewImage="@mipmap/ic_launcher"
+    android:previewImage="@drawable/widget_preview"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />
