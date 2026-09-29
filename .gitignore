@@ -29,3 +29,7 @@ keystore.properties
 .DS_Store
 
 # audit loop artifacts: the ledger, protocol, backups and logs stay local
+
+# Mera Paisa files that live next to the code but never in git: release APKs, the signing
+# keystore and its backup, the pre-rewrite history bundle and personal notes.
+/local-files/
