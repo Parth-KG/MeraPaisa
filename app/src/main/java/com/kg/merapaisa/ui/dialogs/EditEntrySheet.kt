@@ -108,7 +108,8 @@ fun EditEntrySheet(
                             amountMinor != null && amountMinor > 0L -> "They owe you this"
                             amountMinor != null && amountMinor < 0L -> "You owe them this"
                             amountMinor == 0L ->
-                                "An entry of zero moves nothing. Type an amount above zero."
+                                "An entry of zero moves nothing. Type another amount, or delete " +
+                                    "this entry."
                             amount.isBlank() ->
                                 "Type the amount. A minus in front flips which way this entry runs."
                             else ->

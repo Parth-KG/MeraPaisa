@@ -74,7 +74,7 @@ fun SplitAmountScreen(
         SplitStepBar(onCancel = onCancel)
 
         SplitStepHeading(
-            title = "Split an amount",
+            title = "Split an expense",
             supporting = "Every share is worked out from this amount, in this currency."
         )
 

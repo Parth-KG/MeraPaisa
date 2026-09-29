@@ -22,8 +22,9 @@ import com.kg.merapaisa.ui.theme.Spacing
  *
  * It used to describe where a control was: "Tap the + button in the bottom-left corner to add
  * someone you split money with." That is instructions for finding a button instead of a button,
- * and it went stale the moment the button moved. The first action is now here, next to the
- * sentence explaining why the screen is empty.
+ * and it went stale the moment the button moved. The first action is now here, under one line
+ * saying what is missing. A second sentence selling the app went too: the button already says
+ * what to do.
  *
  * No illustration and no oversized icon. There is nothing to illustrate: the screen is empty
  * because nothing has been recorded yet, and a drawing of a wallet does not change that.
@@ -43,11 +44,6 @@ fun EmptyState(tab: Tab, modifier: Modifier = Modifier, onAddPerson: () -> Unit 
         when (tab) {
             Tab.Active -> {
                 Text("No one here yet.", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
-                Text(
-                    "Add someone you lend to or borrow from, and every amount between you stays here.",
-                    style = MeraPaisaType.body,
-                    color = theme.textSecondary
-                )
                 Button(
                     onClick = onAddPerson,
                     shape = Shapes.small,
@@ -62,7 +58,8 @@ fun EmptyState(tab: Tab, modifier: Modifier = Modifier, onAddPerson: () -> Unit 
             }
 
             // Nothing to offer here: you reach this tab by settling someone on the Active tab,
-            // so a button would have to send you back where you came from.
+            // so a button would have to send you back where you came from. The second line
+            // stands in for it by naming that action.
             Tab.Settled -> {
                 Text("Nothing settled yet.", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
                 Text(

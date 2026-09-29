@@ -95,7 +95,7 @@ class UpdateCheck(private val releasesUrl: String = LATEST_RELEASE_URL) {
             }
 
             val tag = root.string("tag_name")
-                ?: return UpdateStatus.Unreachable("That release has no version tag.")
+                ?: return UpdateStatus.Unreachable("GitHub's answer didn't include a version number.")
             val latest = tag.removePrefix("v")
 
             if (compareVersions(latest, currentVersion.removePrefix("v")) <= 0) {
@@ -108,7 +108,7 @@ class UpdateCheck(private val releasesUrl: String = LATEST_RELEASE_URL) {
             } ?: return UpdateStatus.Unreachable("Release $tag has no APK attached.")
 
             val url = asset.string("browser_download_url")
-                ?: return UpdateStatus.Unreachable("That release's APK has no download link.")
+                ?: return UpdateStatus.Unreachable("The APK in release $tag has no download link.")
 
             return UpdateStatus.Available(
                 version = latest,

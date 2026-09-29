@@ -334,7 +334,7 @@ fun SplitAdjustmentsContent(
             }
             if (convertedAmounts == null && conversionError == null) {
                 Text(
-                    "Converting…",
+                    "Getting today's rates…",
                     style = MeraPaisaType.label,
                     color = theme.textSecondary,
                     modifier = Modifier.padding(top = Spacing.xs)

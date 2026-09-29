@@ -172,7 +172,7 @@ fun GroupDetailScreen(
                             Text("Fewest payments", style = MeraPaisaType.bodyStrong, color = theme.textPrimary)
                             Text(
                                 if (simplifyDebts)
-                                    "Everyone's position is netted across the group, so there are as few payments as possible."
+                                    "No one gets money just to pass it on, so there are as few payments as possible."
                                 else
                                     "Each debt stays with the expense that created it: more payments, but every one traces back to something that happened.",
                                 style = MeraPaisaType.label,

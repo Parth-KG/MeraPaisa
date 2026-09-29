@@ -76,7 +76,7 @@ fun UpdateDialog(
                     color = theme.textSecondary
                 )
             },
-            confirm = { DialogButton("Close", onClose) }
+            confirm = { DialogButton("Back to your ledger", onClose) }
         )
 
         is UpdateFlowState.Unreachable -> Shell(
@@ -90,7 +90,7 @@ fun UpdateDialog(
                     color = theme.textSecondary
                 )
             },
-            confirm = { DialogButton("Close", onClose) }
+            confirm = { DialogButton("Back to your ledger", onClose) }
         )
 
         is UpdateFlowState.Available -> Shell(
@@ -181,7 +181,7 @@ fun UpdateDialog(
         )
 
         UpdateFlowState.SignatureMismatch -> Shell(
-            title = "That download isn't right",
+            title = "That download's signing key doesn't match",
             onDismiss = onClose,
             body = {
                 Text(
@@ -194,11 +194,11 @@ fun UpdateDialog(
                     color = theme.negative
                 )
             },
-            confirm = { DialogButton("Close", onClose) }
+            confirm = { DialogButton("Back to your ledger", onClose) }
         )
 
         is UpdateFlowState.NeedsPermission -> Shell(
-            title = "Android needs your permission",
+            title = "Allow installs from Mera Paisa",
             onDismiss = onClose,
             body = {
                 Text(
@@ -225,7 +225,7 @@ fun UpdateDialog(
                     color = theme.textSecondary
                 )
             },
-            confirm = { DialogButton("Close", onClose) }
+            confirm = { DialogButton("Back to your ledger", onClose) }
         )
     }
 }

@@ -46,7 +46,7 @@ fun LockedScreen(onUnlock: () -> Unit) {
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Locked", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
+        Text("Mera Paisa is locked", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
         Text(
             "Your ledger is hidden until you unlock it.",
             style = MeraPaisaType.body,
@@ -62,8 +62,10 @@ fun LockedScreen(onUnlock: () -> Unit) {
                 contentColor = theme.background
             )
         ) {
-            // Names what happens, and matches what the system prompt will then ask for.
-            Text("Unlock with fingerprint or PIN", style = MeraPaisaType.action)
+            // The system prompt's own title, so the tap and the prompt it opens say the same thing.
+            // Not a list of methods: the lock also accepts a pattern or a password, and which
+            // biometrics exist depends on the phone.
+            Text("Unlock Mera Paisa", style = MeraPaisaType.action)
         }
     }
 }

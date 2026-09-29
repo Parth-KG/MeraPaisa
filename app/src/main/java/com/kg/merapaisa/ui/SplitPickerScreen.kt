@@ -111,7 +111,7 @@ fun SplitPickerScreen(
         // Said here rather than on the button, and only while it is true.
         if (!enoughPeople) {
             Text(
-                "A split needs at least two people. Tap another name to bring them in.",
+                "A split needs at least two people. Tap a name to bring them in.",
                 style = MeraPaisaType.label,
                 color = theme.textSecondary,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)

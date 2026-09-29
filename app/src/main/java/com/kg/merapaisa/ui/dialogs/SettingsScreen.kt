@@ -145,8 +145,8 @@ fun SettingsScreen(
                 // the domain root, a tapped link does not reach the app, which makes this the
                 // only way one can get in.
                 ActionRow(
-                    title = "Record a shared update",
-                    subtitle = "Paste a ledger link someone sent you",
+                    title = "Record an update link",
+                    subtitle = "Paste an update link someone sent you",
                     onClick = onImportLink
                 )
             }
@@ -178,9 +178,9 @@ fun SettingsScreen(
                 // on a new phone: it is the system's feature, and this app has no account of its
                 // own to confuse it with.
                 Text(
-                    "Android's own backup copies this app to your Google account when the phone " +
-                        "is idle on Wi-Fi. That is a system feature. Mera Paisa itself has no " +
-                        "account and no server.",
+                    "Android's own backup copies your ledger and settings to your Google " +
+                        "account when the phone is idle on Wi-Fi. That is a system feature. " +
+                        "Mera Paisa itself has no account and no server.",
                     style = MeraPaisaType.label,
                     color = theme.textSecondary,
                     modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)
@@ -191,7 +191,7 @@ fun SettingsScreen(
             item {
                 ActionRow(
                     title = "Check for updates",
-                    subtitle = "You're on $appVersion",
+                    subtitle = "You're on $appVersion. This asks GitHub if there's a newer version.",
                     onClick = onCheckUpdates
                 )
             }

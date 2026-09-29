@@ -95,8 +95,8 @@ fun BackupDialog(
         )
         BackupFlowState.Working -> WorkingScreen()
         is BackupFlowState.Reviewing -> ReviewScreen(state, onModeChange, onApply, onDismiss)
-        is BackupFlowState.Unreadable -> MessageScreen(state.title, state.detail, "Close", onDismiss)
-        is BackupFlowState.Done -> MessageScreen(state.title, state.detail, "Done", onDismiss)
+        is BackupFlowState.Unreadable -> MessageScreen(state.title, state.detail, "Back to your ledger", onDismiss)
+        is BackupFlowState.Done -> MessageScreen(state.title, state.detail, "Back to your ledger", onDismiss)
     }
 }
 
@@ -231,7 +231,7 @@ private fun MenuScreen(
     val automatic = state.folderName != null
 
     BackupFrame(
-        title = "Back up & restore",
+        title = "Back up and restore",
         onBack = onDismiss,
         footer = {
             // The two things anyone opens this screen for, named, one tap away, the way the group
@@ -245,7 +245,7 @@ private fun MenuScreen(
         item {
             Paragraph(
                 "A backup is one file with everything: people, entries, groups and expenses. " +
-                    "Restoring reads one back, or a ledger CSV this app exported."
+                    "Restoring reads one back, or a CSV export from this app."
             )
         }
 
@@ -285,7 +285,7 @@ private fun MenuScreen(
             item { Spacer(Modifier.height(Spacing.sm)) }
             item {
                 ActionRow(
-                    title = if (state.busy) "Working…" else "Back up now",
+                    title = if (state.busy) "Backing up…" else "Back up now",
                     subtitle = "Writes one straight away, without waiting for the week.",
                     enabled = !state.busy,
                     onClick = onBackUpNow
@@ -341,7 +341,7 @@ private fun MenuScreen(
 @Composable
 private fun WorkingScreen() {
     val theme = LocalAppTheme.current
-    BackupFrame(title = "Working", onBack = null) {
+    BackupFrame(title = "Working on the file", onBack = null) {
         item {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
@@ -350,7 +350,7 @@ private fun WorkingScreen() {
             ) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), color = theme.primary)
                 Text(
-                    "Nothing has changed yet.",
+                    "Your ledger hasn't changed.",
                     style = MeraPaisaType.body,
                     color = theme.textSecondary
                 )
@@ -397,7 +397,7 @@ private fun ReviewScreen(
                             (state.exportedAt?.let { ", saved ${dateTimeOf(it)}" } ?: "") +
                             (state.appVersion?.let { " by version $it" } ?: "") + "."
                     RestoreSource.Csv ->
-                        "A ledger CSV. It holds people and entries only, with no groups or expenses."
+                        "A CSV export. It holds people and entries only, with no groups or expenses."
                 },
                 colour = theme.textPrimary
             )
@@ -444,7 +444,7 @@ private fun ReviewScreen(
                         // The trap this whole flag exists for: a CSV has no groups in it, so
                         // replacing from one destroys them and restores none.
                         Text(
-                            "A CSV contains no groups, so those " +
+                            "A CSV export contains no groups, so those " +
                                 "${if (plan.deletes.groups == 1) "group is" else "groups are"} " +
                                 "deleted and not restored. Use a full backup if you need them.",
                             style = MeraPaisaType.body,
@@ -528,7 +528,7 @@ private fun ReplaceConfirmDialog(
                 )
                 if (losesGroups) {
                     Text(
-                        "The CSV puts no groups back.",
+                        "A CSV export puts no groups back.",
                         style = MeraPaisaType.body,
                         color = theme.negative
                     )

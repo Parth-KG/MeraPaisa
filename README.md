@@ -41,7 +41,7 @@ Every release lists the APK's SHA-256. Run `shasum -a 256` on the file if you wo
 
 ## Why
 
-Splitting a bill is easy. Remembering it three weeks later is not, and every app that solves it wants an account, a phone number, and a copy of who you owe money to.
+Splitting an expense is easy. Remembering it three weeks later is not, and every app that solves it wants an account, a phone number, and a copy of who you owe money to.
 
 Mera Paisa keeps all of that on your phone.
 
@@ -52,16 +52,16 @@ Mera Paisa keeps all of that on your phone.
 | **Per-person balances** | Each person has their own currency, picture and history |
 | **Net position** | Where you stand overall, one line per currency, never added together |
 | **Multi-currency** | ₹, $, €, £, ¥ with live rates from [Frankfurter](https://www.frankfurter.app/). Balances stay in each person's currency and are never silently converted |
-| **Bill splitting** | Equal or custom shares, with lock-on-edit redistribution |
+| **Expense splitting** | Equal or custom shares, with lock-on-edit redistribution |
 | **Groups** | A trip or a flatshare: log who paid for what, then settle everyone in the fewest payments |
-| **Settle up** | Close a balance in one tap, and reopen it later without losing the record |
-| **History** | Notes, timestamps, per-entry edit and delete, rollback, and a clear option |
-| **Export and share** | The whole ledger as CSV, or one person's position as text |
+| **Settle up** | Close a balance in one tap, and reopen it later without losing its history |
+| **History** | Notes, timestamps, edit or delete any entry, reverse an entry and everything newer, or clear the history |
+| **Export and summaries** | The whole ledger as CSV, or a plain-text summary of one person's balance |
 | **Update links** | Send a link that records the mirror of your entries in their app, and compares before writing |
 | **Reminders** | An editable message, optionally with the history attached |
 | **Home screen widget** | Your net position and who owes what, in your chosen theme |
 | **Six themes** | Midnight, Amoled, Ocean, Sunset, Purple and Paper, each one tested for contrast |
-| **Backup** | Android's own backup carries the database to your Google account, with no login of ours |
+| **Backup** | Everything in one file, saved when you like or every week to a folder you pick, with a preview before any restore. Android's own backup also copies your ledger and settings to your Google account |
 
 ## Worth a closer look
 
@@ -84,7 +84,7 @@ Mera Paisa keeps all of that on your phone.
 > An update link carries a stable id per entry, so the receiving app can tell a new entry from an edited one from one the sender deleted. It shows you the differences and writes nothing you have not ticked. Additions are ticked for you; an edit or a deletion never is, because nothing about a link proves who sent it.
 
 > **No account, no backend**
-> Data lives in Room on the device and rides Android's own backup to your Google account, which is a system feature rather than anything of ours. Reinstall on a new phone signed into the same account and it is there. There is no sign-up screen, no sync server, and nothing of yours on a machine I control. Exactly three things leave the phone: that system backup, links and messages you choose to send, and requests to Frankfurter for an exchange rate and GitHub for an update check. No names, no notes, no analytics, no crash reporting. The manifest asks for `INTERNET` and that is what it is for, not contacts, not storage, not location.
+> Data lives in Room on the device and rides Android's own backup to your Google account, which is a system feature rather than anything of ours. Reinstall on a new phone that uses the same Google account and it is there. There is no account to create, no server, and nothing of yours on a machine I control. Exactly three things leave the phone: that system backup, links and messages you choose to send, and requests to Frankfurter for an exchange rate and GitHub for an update check. No names, no notes, no analytics, no crash reporting. The manifest asks for `INTERNET` for those requests, and `REQUEST_INSTALL_PACKAGES` so the updater can hand a checked APK to Android's installer. Not contacts, not storage, not location.
 
 <details>
 <summary><b>How each part works</b></summary>
@@ -103,11 +103,11 @@ A person is in **Settled** because you put them there, not because their balance
 
 Each person has their own currency and balances stay in it. Your net position is reported per currency and never summed across them: a rate is a guess about a day, and folding ₹ and $ together would report a number nobody owes. When a split crosses currencies, amounts convert through Frankfurter and are recorded in each recipient's own currency.
 
-### Splitting a bill
+### Splitting an expense
 
-1. Tap **Split a bill**, enter the total, and pick the currency.
+1. Tap **Split an expense**, enter the total, and pick the currency.
 2. Choose people, including yourself if you are part of it.
-3. Add someone new straight from the picker; they join the split.
+3. If someone is not in your ledger yet, tap **Add a person** in the picker, then tap their name to bring them in.
 4. Adjust the shares. Equal by default. Editing a row locks it and redistributes the rest, and the padlock toggles that by hand.
 5. An optional note attaches to every entry the split creates.
 
@@ -121,7 +121,7 @@ Log an expense with a description, an amount and who paid. Shares are equal by d
 
 ### History, corrections and rollback
 
-Every person has a log, grouped by day. Tap an entry to correct its amount or note, or delete it, because a mistyped figure does not have to live in the history forever. **Rollback** is the bulk version: it reverses an entry and everything newer by writing compensating entries rather than deleting rows, so the correction stays visible as a correction. Clearing the log needs a confirmation and carries the balance across as an opening entry, so what you are owed never changes.
+Every person has a log, grouped by day. Tap an entry to correct its amount or note, or delete it, because a mistyped figure does not have to live in the history forever. **Reverse entries** is the bulk version: the undo arrow beside an entry adds one entry that cancels it and everything newer, rather than deleting rows, so the correction stays visible as a correction. **Clear history** asks first and carries the balance across as one opening entry, so what you are owed never changes.
 
 ### Schema changes and updates
 
@@ -131,7 +131,7 @@ The interesting one is version 4, which removed the stored balance column. Dropp
 
 ### Export, summaries and update links
 
-**Export** writes the whole ledger to CSV and hands it to the share sheet. **Share a summary** sends one person's position and recent activity as plain text, with the running balance after each entry, ready to paste into a chat.
+**Export as CSV**, in Settings, writes the whole ledger to CSV and hands it to the share sheet. **Share a summary** sends one person's position and recent activity as plain text, with the running balance after each entry, ready to paste into a chat.
 
 An **update link** is different: it carries your entries so their app can record the mirror, and both ledgers end up agreeing. The payload rides in the URL fragment, which is never sent to a server, so the page hosting the link cannot see anything. A link is unauthenticated by nature, so the import screen shows exactly what it will write and never applies anything without a tap.
 
@@ -145,7 +145,7 @@ Six, each its own world rather than one palette recoloured: **Midnight**, **Amol
 
 ### Backup and restore
 
-Android's own backup carries the database to your Google account, which is a system feature and needs no login of ours. There is also a backup you control: write the whole ledger to a file of your choosing, and restore it later by merging or by replacing. A restore is previewed before it runs, and the whole thing is one database transaction, so a failure changes nothing.
+Android's own backup carries the database to your Google account. That is a system feature, not something Mera Paisa runs. There is also a backup you control, under **Back up and restore** in Settings: **Save a backup** writes everything to one file, and **Restore from a file** reads it back, either adding what is missing or replacing everything. **Choose a folder** and it saves one there every week, keeping the last 12. A restore is previewed before it runs, and the whole thing is one database transaction, so a failure changes nothing.
 
 </details>
 

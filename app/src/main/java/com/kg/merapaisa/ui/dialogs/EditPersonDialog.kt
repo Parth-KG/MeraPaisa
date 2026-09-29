@@ -247,7 +247,7 @@ fun EditPersonDialog(
                     Spacer(Modifier.width(Spacing.sm))
                     Text("Converting", style = MeraPaisaType.action)
                 } else {
-                    Text("Save changes", style = MeraPaisaType.action)
+                    Text("Save person", style = MeraPaisaType.action)
                 }
             }
         }
@@ -319,8 +319,8 @@ private fun ConvertCurrencyDialog(
                     color = theme.negative
                 )
                 Text(
-                    "Group expenses aren't converted, so if $personName is in a group their " +
-                        "balance will mix the two until that is handled.",
+                    "Group expenses aren't converted, so if $personName is in a group, their " +
+                        "balance will mix $to entries with unconverted group amounts.",
                     style = MeraPaisaType.label,
                     color = theme.textSecondary
                 )

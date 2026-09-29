@@ -528,10 +528,19 @@ fun MainScreen(viewModel: MainViewModel) {
                     else -> " Their share of $groupSharedCount group expenses other people paid " +
                         "for passes to whoever paid them."
                 }
+                // An even balance is nothing to lose, so it is not named as a loss: "Removes their
+                // ₹0 balance and 0 entries" read as though something were at stake. A balance with
+                // no entries behind it is possible too, when all of it comes from group expenses.
+                val balance = amountString(target.balanceMinor, target.currency)
+                val lead = when {
+                    target.balanceMinor != 0L && transactionCount > 0 ->
+                        "Removes their $balance balance and $entries."
+                    target.balanceMinor != 0L -> "Removes their $balance balance."
+                    transactionCount > 0 -> "They're even. Removes their $entries."
+                    else -> "They're even and have no entries."
+                }
                 Text(
-                    "This permanently deletes ${target.name}, their balance of " +
-                        "${amountString(target.balanceMinor, target.currency)}, and $entries." +
-                        "$groupNote$sharedNote This can't be undone.",
+                    "$lead$groupNote$sharedNote This can't be undone.",
                     color = theme.textSecondary,
                     style = MeraPaisaType.body
                 )
@@ -561,7 +570,7 @@ fun MainScreen(viewModel: MainViewModel) {
             onFullHistoryChange = viewModel::setShareFullHistory,
             onShare = {
                 viewModel.prepareShareMessage { message ->
-                    shareText(context, message, "Share ledger update via")
+                    shareText(context, message, "Send the update link via")
                 }
             },
             onDismiss = viewModel::closeShareSheet

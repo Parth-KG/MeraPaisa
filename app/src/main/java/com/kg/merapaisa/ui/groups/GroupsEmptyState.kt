@@ -22,8 +22,8 @@ import com.kg.merapaisa.ui.theme.Spacing
  *
  * It used to end with "Tap + to start one", which is a set of directions to a control instead of
  * the control, and it went stale the moment the plus became a named button. The first action is
- * here now, and the text is aligned left with the gutter so the line starts where the first group
- * row will start.
+ * here now, under one line saying what is missing, aligned left with the gutter so the line starts
+ * where the first group row will start.
  */
 @Composable
 fun GroupsEmptyState(modifier: Modifier = Modifier, onCreateGroup: () -> Unit = {}) {
@@ -34,12 +34,6 @@ fun GroupsEmptyState(modifier: Modifier = Modifier, onCreateGroup: () -> Unit = 
         verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
         Text("No groups yet.", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
-        Text(
-            "A group is a trip or a flatshare. Put in what everyone spends, and settle the whole " +
-                "thing in the fewest payments at the end.",
-            style = MeraPaisaType.body,
-            color = theme.textSecondary
-        )
         Button(
             onClick = onCreateGroup,
             shape = Shapes.small,

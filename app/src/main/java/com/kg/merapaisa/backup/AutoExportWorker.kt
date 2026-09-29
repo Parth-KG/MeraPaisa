@@ -45,14 +45,19 @@ class AutoExportWorker(
         }
 
         val treeUri = runCatching { folder.toUri() }.getOrNull()
-            ?: return finish(context, now, "The backup folder could not be read.", Result.success())
+            ?: return finish(
+                context, now,
+                "Couldn't open the backup folder, so nothing was saved. Pick it again with Change folder.",
+                Result.success()
+            )
 
         if (!BackupWriter.canWriteTo(context, treeUri)) {
             // The folder was deleted, unmounted, or its permission revoked. Retrying cannot fix
             // that, so this reports rather than loops, and Settings shows the sentence.
             return finish(
                 context, now,
-                "Could not write to the backup folder. Pick it again in Settings.",
+                "Couldn't write to the backup folder, so nothing was saved. If it was moved or " +
+                    "deleted, pick it again with Change folder.",
                 Result.success()
             )
         }
@@ -63,14 +68,23 @@ class AutoExportWorker(
             val json = repository.exportJson(now, BuildConfig.VERSION_NAME)
 
             val uri = BackupWriter.write(context, treeUri, backupFileName(BackupWriter.stamp(now)), json)
-                ?: return finish(context, now, "The backup could not be written.", Result.retry())
+                ?: return finish(
+                    context, now,
+                    "Couldn't write this week's backup file. Mera Paisa will try again shortly.",
+                    Result.retry()
+                )
 
             val pruned = BackupWriter.prune(context, treeUri)
             val note = if (pruned > 0) " ${pruned} older ${if (pruned == 1) "backup" else "backups"} removed." else ""
-            finish(context, now, "Backed up successfully.$note", Result.success())
+            finish(context, now, "Saved a backup.$note", Result.success())
         } catch (e: Exception) {
             // A transient failure (storage busy, provider not ready) is worth one more go.
-            finish(context, now, "Backup failed: ${e.message ?: e::class.simpleName}", Result.retry())
+            finish(
+                context, now,
+                "This week's backup didn't finish. Mera Paisa will try again shortly. " +
+                    "(${e.message ?: e::class.simpleName})",
+                Result.retry()
+            )
         }
     }
 

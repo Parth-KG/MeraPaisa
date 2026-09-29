@@ -81,8 +81,8 @@ fun SettleUpSheet(
         Text(
             when {
                 transfers.isEmpty() -> "Everyone is even, so there is nothing to pay."
-                transfers.size == 1 -> "One payment settles the group."
-                else -> "${transfers.size} payments settle the group."
+                transfers.size == 1 -> "One payment makes everyone even."
+                else -> "${transfers.size} payments make everyone even."
             },
             style = MeraPaisaType.body,
             color = theme.textSecondary,
@@ -120,7 +120,7 @@ fun SettleUpSheet(
                 onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
                 modifier = Modifier.heightIn(min = 48.dp)
             ) {
-                Text("Close", style = MeraPaisaType.action)
+                Text("Back to the group", style = MeraPaisaType.action)
             }
         }
     }

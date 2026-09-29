@@ -330,8 +330,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 if (rate == null) {
                     _conversionError.value =
-                        "Couldn't get a ${snapshot.currency} to $currency rate. " +
-                        "Check your connection, or choose Keep as-is to relabel without converting."
+                        "Couldn't get today's ${snapshot.currency} to $currency rate, so nothing " +
+                        "was saved. Try again once you're connected, or keep the amounts as they " +
+                        "are and only change the currency."
                     return@launch
                 }
                 repository.convertCurrency(snapshot.id, currency, rate)
@@ -803,7 +804,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         onFailure = { e ->
                             BackupFlowState.Unreadable(
                                 "Could not save the backup",
-                                e.message ?: "The file could not be written."
+                                "The file you picked may be empty or incomplete, so don't keep it " +
+                                    "as a backup. Try again, or pick a different place. " +
+                                    "(${e.message ?: "the file could not be written"})"
                             )
                         }
                     )
@@ -836,7 +839,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update {
                     it.copy(backup = BackupFlowState.Unreadable(
                         "Could not read that file",
-                        "It may have been moved or deleted since you picked it."
+                        "It may have been moved or deleted since you picked it. Nothing was " +
+                            "changed. Find the file and pick it again."
                     ))
                 }
                 return@launch
@@ -854,8 +858,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             is BackupResult.TooNew -> _uiState.update {
                 it.copy(backup = BackupFlowState.Unreadable(
                     "This backup is too new",
-                    "It was written by a newer version of Mera Paisa. Update the app and try again. " +
-                        "Guessing at a format this build does not know could restore the wrong amounts."
+                    "It was written by a newer version of Mera Paisa. Nothing has been changed, " +
+                        "because guessing at a format this version doesn't know could restore the " +
+                        "wrong amounts. Update the app and try again."
                 ))
             }
 
@@ -874,7 +879,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 is CsvImportResult.Damaged -> _uiState.update {
                     it.copy(backup = BackupFlowState.Unreadable(
                         "That CSV could not be read",
-                        "Line ${csv.line}: ${csv.reason}. Nothing has been changed."
+                        "Line ${csv.line}: ${csv.reason}. Nothing has been changed. Fix the " +
+                            "file and try again, or restore from a backup instead."
                     ))
                 }
 
@@ -933,7 +939,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         val i = reviewing.plan.inserts
                         val detail = buildString {
                             if (reviewing.mode == RestoreMode.Replace) {
-                                append("Your ledger now matches the backup exactly. ")
+                                append("Your ledger now matches the file exactly. ")
                             }
                             append("Added ${i.people} ${if (i.people == 1) "person" else "people"}, ")
                             append("${i.transactions} ${if (i.transactions == 1) "entry" else "entries"}")
@@ -944,14 +950,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 append(" ${skipped.transactions} ${if (skipped.transactions == 1) "entry was" else "entries were"} already here and ${if (skipped.transactions == 1) "was" else "were"} left alone.")
                             }
                         }
-                        BackupFlowState.Done("Restored", detail)
+                        BackupFlowState.Done("Ledger restored", detail)
                     },
                     onFailure = { e ->
                         BackupFlowState.Unreadable(
                             "The restore did not finish",
-                            "Nothing was changed. The whole restore runs as a single database " +
-                                "operation, so a failure leaves your ledger as it was. " +
-                                "(${e.message ?: e::class.simpleName})"
+                            "Nothing was changed. A restore either finishes completely or leaves " +
+                                "your ledger exactly as it was. Try again, or restore from a " +
+                                "different file. (${e.message ?: e::class.simpleName})"
                         )
                     }
                 ))
@@ -991,14 +997,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val context = getApplication<Application>()
             val folder = BackupStore.folderUriNow(context)
             val now = System.currentTimeMillis()
-            val message = if (folder == null) "No folder chosen." else {
+            val message = if (folder == null) "No folder chosen, so nothing was backed up. Choose one first." else {
                 val uri = folder.toUri()
                 val json = backupRepository.exportJson(now, BuildConfig.VERSION_NAME)
                 val written = BackupWriter.write(context, uri, backupFileName(BackupWriter.stamp(now)), json)
-                if (written == null) "Could not write to the backup folder. Pick it again."
+                if (written == null) "Couldn't write to the backup folder, so nothing was saved. " +
+                    "If it was moved or deleted, pick it again with Change folder."
                 else {
                     val pruned = BackupWriter.prune(context, uri)
-                    "Backed up successfully." + if (pruned > 0) " $pruned older removed." else ""
+                    "Saved a backup." +
+                        if (pruned > 0) " $pruned older ${if (pruned == 1) "backup" else "backups"} removed." else ""
                 }
             }
             BackupStore.recordRun(context, now, message)
@@ -1175,13 +1183,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     is MoveDebtResult.Moved -> state.copy(moveDebt = null, selectedId = null)
                     is MoveDebtResult.CurrencyMismatch -> state.copy(
                         moveDebt = m.copy(busy = false, problem =
-                            "${m.fromName} is tracked in ${result.from} and they are in ${result.to}. " +
-                                "Moving between currencies would need an exchange rate nobody agreed to.")
+                            "${m.fromName}'s debt is in ${result.from} and the person you picked is " +
+                                "in ${result.to}. Moving it between currencies would need an exchange " +
+                                "rate nobody agreed to, so pick someone in ${result.from}.")
                     )
                     is MoveDebtResult.MoreThanOwed -> state.copy(
                         moveDebt = m.copy(busy = false, problem =
-                            "That is more than ${m.fromName} owes you " +
-                                "(${amountString(result.availableMinor, m.currency)}).")
+                            "That's more than ${m.fromName} owes you. Enter " +
+                                "${amountString(result.availableMinor, m.currency)} or less.")
                     )
                     is MoveDebtResult.NothingToMove -> state.copy(
                         moveDebt = m.copy(busy = false, problem =

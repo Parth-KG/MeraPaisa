@@ -65,7 +65,7 @@ the copy Android reads.
 ### Until that file is live
 
 A tapped link opens a browser or a chooser rather than the app. **This is not a broken feature:**
-the app accepts a pasted link at *Settings → Record a shared update*, which is why that path
+the app accepts a pasted link at *Settings → Record an update link*, which is why that path
 exists and why the fallback page explains it. Everything works; it is one tap longer.
 
 ## The fingerprint

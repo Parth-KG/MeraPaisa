@@ -244,7 +244,7 @@ private fun PastingScreen(
 ) {
     val theme = LocalAppTheme.current
     ImportFrame(
-        title = "Record a shared update",
+        title = "Record an update link",
         onBack = onDismiss,
         footer = {
             FootActions {
@@ -274,8 +274,7 @@ private fun PastingScreen(
         item {
             Column(modifier = Modifier.padding(top = Spacing.xl)) {
                 Paragraph(
-                    "A link only ever adds to your ledger once, so pasting the same one twice " +
-                        "changes nothing.",
+                    "A link only counts once, so pasting the same one twice changes nothing.",
                     colour = theme.textSecondary
                 )
             }
@@ -313,21 +312,21 @@ private fun UnreadableScreen(reason: UnreadableReason, onDismiss: () -> Unit) {
             UnreadableReason.NewerVersion -> "This link is too new"
         },
         onBack = onDismiss,
-        footer = { FootActions { PrimaryAction("Close", enabled = true, onClick = onDismiss) } }
+        footer = { FootActions { PrimaryAction("Back to your ledger", enabled = true, onClick = onDismiss) } }
     ) {
         item {
             Paragraph(
                 when (reason) {
                     UnreadableReason.NotALink ->
-                        "There is no ledger update in this, so nothing was recorded. If you " +
+                        "There is no update link in this, so nothing was recorded. If you " +
                             "pasted it, check you copied the whole message and try again."
                     UnreadableReason.Damaged ->
                         "It arrived incomplete or altered, so nothing was recorded. Chat apps " +
                             "sometimes cut long links in half. Ask them to send it again."
                     UnreadableReason.NewerVersion ->
                         "It was made by a newer version of Mera Paisa, so nothing was recorded. " +
-                            "Update the app and open the link again. Guessing at a format this " +
-                            "build does not know could record the wrong amount."
+                            "Check for updates in Settings, then try the link again. Guessing at " +
+                            "a format this version doesn't know could record the wrong amount."
                 }
             )
         }
@@ -364,7 +363,7 @@ private fun ConfirmingScreen(
     var confirmingDeletions by remember { mutableStateOf(false) }
 
     ImportFrame(
-        title = "Ledger update",
+        title = "Check this update link",
         onBack = if (state.busy) null else onDismiss,
         footer = {
             FootActions {
@@ -719,7 +718,7 @@ private fun LazyListScope.differences(
         item {
             GroupIntro(
                 heading = countOf(plan.onlyYours.size, "entry", "entries") + " they have not seen",
-                explanation = "Yours, and not in their ledger. Send them an update link to even it up."
+                explanation = "Yours, and not in their ledger. Send them an update link so both ledgers agree."
             )
         }
         itemsIndexed(plan.onlyYours, key = { _, item -> "yours-${item.uid}" }) { index, item ->
@@ -737,8 +736,11 @@ private fun LazyListScope.differences(
         item {
             Column(modifier = Modifier.padding(top = Spacing.xl)) {
                 Paragraph(
-                    countOf(plan.unchanged.size, "entry", "entries") +
-                        " already match, and stay as they are."
+                    countOf(
+                        plan.unchanged.size,
+                        "entry already matches, and stays as it is.",
+                        "entries already match, and stay as they are."
+                    )
                 )
             }
         }
@@ -866,12 +868,12 @@ private fun DoneScreen(state: ImportFlowState.Done, onDismiss: () -> Unit) {
         title = when (outcome) {
             is ImportOutcome.Applied -> "Recorded"
             is ImportOutcome.Reconciled ->
-                if (outcome.changedNothing) "Nothing to change" else "Ledgers match"
+                if (outcome.changedNothing) "Nothing changed" else "Recorded"
             is ImportOutcome.AlreadyApplied -> "Already recorded"
             is ImportOutcome.CurrencyMismatch -> "Not recorded"
         },
         onBack = onDismiss,
-        footer = { FootActions { PrimaryAction("Done", enabled = true, onClick = onDismiss) } }
+        footer = { FootActions { PrimaryAction("Back to your ledger", enabled = true, onClick = onDismiss) } }
     ) {
         item {
             Paragraph(
@@ -884,7 +886,7 @@ private fun DoneScreen(state: ImportFlowState.Done, onDismiss: () -> Unit) {
                     // count of additions that quietly omits it.
                     is ImportOutcome.Reconciled ->
                         if (outcome.changedNothing) {
-                            "You and ${state.personName} already agree. Nothing was changed."
+                            "No entries were added, updated or removed for ${state.personName}."
                         } else {
                             listOfNotNull(
                                 outcome.added.takeIf { it > 0 }?.let { countOf(it, "entry", "entries") + " added" },
@@ -897,7 +899,7 @@ private fun DoneScreen(state: ImportFlowState.Done, onDismiss: () -> Unit) {
                     // Not framed as a failure: forwarding a message, or tapping it twice, is
                     // ordinary.
                     is ImportOutcome.AlreadyApplied ->
-                        "You applied this link on ${dateOf(outcome.appliedAt)}, so nothing " +
+                        "You recorded this link on ${dateOf(outcome.appliedAt)}, so nothing " +
                             "changed. The same link can only count once."
 
                     is ImportOutcome.CurrencyMismatch ->

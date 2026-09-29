@@ -119,9 +119,10 @@ fun CreateGroupDialog(
                     Text("Fewest payments", style = MeraPaisaType.bodyStrong, color = theme.textPrimary)
                     Text(
                         if (simplifyDebts)
-                            "Net everyone's position across the group when settling up."
+                            "No one gets money just to pass it on, so there are as few payments " +
+                                "as possible."
                         else
-                            "Keep each debt with the expense that created it.",
+                            "Each debt stays with the expense that created it.",
                         style = MeraPaisaType.label,
                         color = theme.textSecondary
                     )

@@ -113,8 +113,8 @@ fun ShareLedgerSheet(
                         "There are no entries for ${state.personName} yet, so there is nothing " +
                             "to send. Record one and the link will have something to carry."
                     } else {
-                        "Nothing new since you last shared with ${state.personName}. Turn on " +
-                            "\"Send everything\" below to send their full history again."
+                        "Nothing new since you last sent ${state.personName} an update link. " +
+                            "Turn on \"Send everything\" below to send their full history again."
                     },
                     style = MeraPaisaType.body,
                     color = theme.textSecondary,
@@ -185,7 +185,7 @@ fun ShareLedgerSheet(
                 border = BorderStroke(1.dp, theme.outline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
             ) {
-                Text("Cancel", style = MeraPaisaType.action)
+                Text("Don't send", style = MeraPaisaType.action)
             }
             Button(
                 // Played out before the share sheet arrives over it: building the message closes
@@ -214,5 +214,5 @@ fun ShareLedgerSheet(
 private fun netSentence(netMinor: Long, currency: String, personName: String): String = when {
     netMinor > 0 -> "$personName will record owing you ${amountString(netMinor, currency)}"
     netMinor < 0 -> "$personName will record you owing them ${amountString(-netMinor, currency)}"
-    else -> "These cancel out, so nothing will be outstanding either way"
+    else -> "These cancel out, so they don't change what either of you owes"
 }

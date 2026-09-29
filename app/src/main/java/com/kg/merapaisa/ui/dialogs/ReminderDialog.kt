@@ -91,7 +91,7 @@ fun ReminderDialog(
             )
             Spacer(Modifier.height(Spacing.xs))
             Text(
-                "It goes out through your phone's share sheet, so you pick who carries it.",
+                "It goes out through your phone's share sheet, so you pick which app sends it.",
                 style = MeraPaisaType.body,
                 color = theme.textSecondary,
                 modifier = Modifier.padding(horizontal = Spacing.lg)

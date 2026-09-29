@@ -106,7 +106,7 @@ class SplitConfirmTimingTest {
             )
         }
         compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithText("Converting…").fetchSemanticsNodes().isEmpty()
+            compose.onAllNodesWithText("Getting today's rates…").fetchSemanticsNodes().isEmpty()
         }
 
         compose.onNodeWithText("Save split").performClick()

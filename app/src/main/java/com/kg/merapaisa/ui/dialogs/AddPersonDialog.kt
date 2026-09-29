@@ -247,7 +247,7 @@ internal fun AvatarPicker(
 ) {
     val theme = LocalAppTheme.current
 
-    SheetHeading("Profile picture")
+    SheetHeading("Shown as")
     Row(
         modifier = Modifier.padding(horizontal = Spacing.lg),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
@@ -276,7 +276,7 @@ internal fun AvatarPicker(
             label = { Text("Emoji") },
             supportingText = {
                 Text(
-                    "One character from your keyboard. Left empty, the tile shows initials.",
+                    "One character from your keyboard. If you leave it empty, their initials show.",
                     style = MeraPaisaType.label
                 )
             },
@@ -291,7 +291,7 @@ internal fun AvatarPicker(
         Spacer(Modifier.height(Spacing.sm))
         Text(
             if (hasPhoto) "Tap Photo again to choose a different one."
-            else "No photo chosen yet, so the tile will show initials.",
+            else "No photo chosen yet, so their initials will show.",
             style = MeraPaisaType.label,
             color = theme.textSecondary,
             modifier = Modifier.padding(horizontal = Spacing.lg)

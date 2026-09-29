@@ -165,7 +165,7 @@ fun MoveDebtDialog(
                 Text(
                     "Nobody else is kept in ${state.currency}, so there is nowhere for this to " +
                         "go. A debt can only move between people in the same currency. Add " +
-                        "somebody in ${state.currency} first, or move it once you have.",
+                        "a person in ${state.currency} first, then move it.",
                     style = MeraPaisaType.body,
                     color = theme.textSecondary,
                     modifier = Modifier.padding(horizontal = Spacing.lg)
