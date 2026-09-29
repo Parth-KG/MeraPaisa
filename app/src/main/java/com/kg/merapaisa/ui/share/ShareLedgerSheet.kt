@@ -43,7 +43,9 @@ import kotlinx.coroutines.launch
  * It was called a sheet and built as an AlertDialog. It is a sheet now.
  *
  * The name field is not decoration. The self row ships called "You", and a link whose sender is
- * "You" gives the recipient nothing to match against, so this asks once and remembers.
+ * "You" gives the recipient nothing to match against, so this asks once and remembers. Left empty,
+ * the link used to go out from "A friend", which tells the person opening it even less, so the
+ * send button waits for a name and the line under the field says why.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,7 +96,11 @@ fun ShareLedgerSheet(
                 label = { Text("Your name") },
                 supportingText = {
                     Text(
-                        "How you appear on their phone, so they know who the link is from.",
+                        if (state.senderName.isBlank()) {
+                            "Add your name to send the link. It's how they know who it's from."
+                        } else {
+                            "How you appear on their phone, so they know who the link is from."
+                        },
                         style = MeraPaisaType.label
                     )
                 },
@@ -192,7 +198,7 @@ fun ShareLedgerSheet(
                 // this one from the other end, and the two animating across each other read as a
                 // flicker rather than as a handover.
                 onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onShare() } },
-                enabled = !state.busy && !state.hasNothingToSend,
+                enabled = !state.busy && !state.hasNothingToSend && state.senderName.isNotBlank(),
                 shape = Shapes.small,
                 modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                 colors = ButtonDefaults.buttonColors(
