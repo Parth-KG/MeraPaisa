@@ -327,8 +327,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         viewModelScope.launch {
             _conversionError.value = null
-            val target = currency
-            val currencyChanged = target != snapshot.currency
+            val currencyChanged = currency != snapshot.currency
 
             // Converting rewrites every entry rather than recording a correction. The balance is
             // derived from those entries, so converting them is converting the balance. It also
@@ -341,18 +340,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (convertBalance && currencyChanged) {
                 _converting.value = true
                 val rate = try {
-                    exchangeRates.rate(snapshot.currency, target)
+                    exchangeRates.rate(snapshot.currency, currency)
                 } finally {
                     _converting.value = false
                 }
                 if (rate == null) {
                     _conversionError.value =
-                        "Couldn't get today's ${snapshot.currency} to $target rate, so nothing " +
+                        "Couldn't get today's ${snapshot.currency} to $currency rate, so nothing " +
                         "was saved. Try again once you're connected, or keep the amounts as they " +
                         "are and only change the currency."
                     return@launch
                 }
-                repository.convertCurrency(snapshot.id, target, rate)
+                repository.convertCurrency(snapshot.id, currency, rate)
             }
 
             // The edit is committed, so the photo it replaced is now unreferenced.
@@ -366,10 +365,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     pfpType = pfpType,
                     pfpValue = pfpValue,
                     pfpColor = pfpColor,
-                    currency = target
+                    currency = currency
                 )
             )
-            CurrencyStore.setLastCurrency(getApplication(), target)
+            CurrencyStore.setLastCurrency(getApplication(), currency)
             onSaved()
         }
     }

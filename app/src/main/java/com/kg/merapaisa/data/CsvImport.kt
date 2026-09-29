@@ -3,11 +3,11 @@ package com.kg.merapaisa.data
 /**
  * Reads back what [buildLedgerCsv] writes.
  *
- * **The `balance` column is deliberately ignored.** It is the balance the app displays, which since
- * v2.0.2 includes each person's slice of group activity, while the `amount` rows in the same file
- * cover direct transactions only. For anyone in a group the two therefore disagree, by design.
- * Trusting the column would import a balance with no entries to explain it; deriving from the rows
- * gives a ledger that adds up, and the group activity comes back from a JSON backup instead.
+ * **The `balance` column is deliberately ignored.** Exports from v2.1 to v2.5 counted each person's
+ * slice of group activity in it, while the `amount` rows cover direct transactions only, so for
+ * anyone in a group the two disagree. Balances are now direct entries alone and a new export's
+ * column matches its rows, but old files still exist. Deriving from the rows gives a ledger that
+ * adds up either way, and group activity comes back from a JSON backup instead.
  *
  * The other half of the same limitation: this file has no groups in it at all. A CSV restore is a
  * partial restore, and the UI has to say so rather than letting someone believe otherwise.

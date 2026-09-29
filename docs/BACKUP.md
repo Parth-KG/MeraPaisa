@@ -22,10 +22,10 @@ deletes your groups and restores none of them.** The preview names how many woul
 
 ### Why the export's `balance` column is ignored on import
 
-A person's balance includes their share of group activity, while the export's `amount` rows cover
-direct entries only. For anyone in a group the two therefore disagree, by design rather than by
-bug. Importing the column would write a balance with no entries to explain it, so the importer
-derives balances from the rows and ignores the column entirely.
+Exports from v2.1 to v2.5 counted each person's share of group activity in the `balance` column,
+while the `amount` rows cover direct entries only, so for anyone in a group the two disagree.
+Balances are now direct entries alone, so a new export's column matches its rows, but old files
+are still around. The importer derives balances from the rows and ignores the column entirely.
 
 ### What a backup cannot carry
 

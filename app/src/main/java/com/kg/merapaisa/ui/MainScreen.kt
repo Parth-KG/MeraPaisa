@@ -93,8 +93,8 @@ fun MainScreen(viewModel: MainViewModel) {
     // Large type as well: at 1.5x the keypad's Settle up fell below the bottom of the screen.
     val shortScreen = LocalConfiguration.current.screenHeightDp < SHORT_SCREEN_DP ||
         LocalConfiguration.current.fontScale >= 1.3f
-    // Asked before Settle up writes anything. It records a closing entry, and a payment in every
-    // group the two of you share, and Reopen does not take any of that back.
+    // Asked before Settle up writes anything. It records a closing entry, and Reopen does not take
+    // it back.
     var confirmSettle by remember { mutableStateOf<com.kg.merapaisa.data.PersonWithBalance?>(null) }
 
     // The split flow is part of this tree rather than a Dialog, so back has to be handled
@@ -651,8 +651,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 "for each."
         }
         // An even balance is nothing to lose, so it is not named as a loss: "Removes their ₹0
-        // balance and 0 entries" read as though something were at stake. A balance with no
-        // entries behind it is possible too, when all of it comes from group expenses.
+        // balance and 0 entries" read as though something were at stake.
         //
         // The figure goes in unsigned, with the direction in words: "Removes their − ₹40 balance"
         // read as arithmetic, where "the ₹40 you owe them" says what is at stake.
@@ -681,14 +680,15 @@ fun MainScreen(viewModel: MainViewModel) {
         )
     }
 
-    // Deleting a group cascades away its expenses and payments, and each of those is part of what
-    // you and its members owe each other. It went straight through from the long-press menu, with
-    // nothing to catch a mis-tap, which was the one destructive action in the app left unasked.
+    // Deleting a group cascades away its expenses and payments. It went straight through from the
+    // long-press menu, with nothing to catch a mis-tap, which was the one destructive action in
+    // the app left unasked.
     pendingGroupDelete?.let { target ->
         DecisionDialog(
             title = "Delete ${target.group.name}?",
-            body = "Removes every expense and payment in it, and whatever they added to its " +
-                "members' balances. This can't be undone.",
+            // Only the group: balances on Active and Settled never included it.
+            body = "Removes every expense and payment in it, and what its members owe each " +
+                "other there. Balances on Active and Settled don't change. This can't be undone.",
             confirmLabel = "Delete",
             dismissLabel = "Keep the group",
             onConfirm = {

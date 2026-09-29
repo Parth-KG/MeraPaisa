@@ -70,9 +70,9 @@ fun CreateGroupDialog(
     var simplifyDebts by remember { mutableStateOf(true) }
 
     // Anyone can join, whatever currency their own balance is kept in. A group is its own
-    // ledger in its own currency and moves nothing on the main screen.
-    val eligible = people
-    val chosen = selected.filterTo(mutableSetOf()) { id -> eligible.any { it.id == id } }
+    // ledger in its own currency and moves nothing on the main screen. Filtered against the list
+    // so someone deleted while the sheet is open drops out.
+    val chosen = selected.filterTo(mutableSetOf()) { id -> people.any { it.id == id } }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -166,7 +166,7 @@ fun CreateGroupDialog(
                     modifier = Modifier.padding(horizontal = Spacing.lg)
                 )
             } else {
-                eligible.forEachIndexed { index, person ->
+                people.forEachIndexed { index, person ->
                     if (index > 0) RowDivider()
                     val isIn = person.id in chosen
                     Row(

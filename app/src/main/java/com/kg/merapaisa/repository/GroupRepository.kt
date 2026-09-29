@@ -7,7 +7,6 @@ import com.kg.merapaisa.data.GroupSummary
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonDao
 import com.kg.merapaisa.data.Expense
-import com.kg.merapaisa.data.ExpenseShare
 import com.kg.merapaisa.data.MemberBalance
 import com.kg.merapaisa.data.evenShares
 import com.kg.merapaisa.data.Transfer

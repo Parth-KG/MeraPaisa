@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.Transfer
-import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.TextRowInset
 import com.kg.merapaisa.ui.format.AmountText
