@@ -13,4 +13,11 @@ class InitialsTest {
 
     @Test
     fun aOneLetterNameStaysOneLetter() = assertEquals("B", initialsOf("b"))
+
+    @Test
+    fun anEmojiFieldKeepsOneCharacter() {
+        assertEquals("A", firstCharacter("ABC"))
+        assertEquals("\uD83D\uDE42", firstCharacter("\uD83D\uDE42x"))
+        assertEquals("", firstCharacter("  "))
+    }
 }

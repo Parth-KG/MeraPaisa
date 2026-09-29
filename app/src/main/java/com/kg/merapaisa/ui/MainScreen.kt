@@ -1,5 +1,6 @@
 package com.kg.merapaisa.ui
 
+import com.kg.merapaisa.ui.format.shrinkToFit
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalConfiguration
@@ -89,7 +90,9 @@ fun MainScreen(viewModel: MainViewModel) {
     val ledgerReady by viewModel.ledgerReady.collectAsState()
     // Landscape on a phone. The keypad alone is taller than the screen there, so while someone is
     // picked it gets the whole screen and scrolls; it used to be cut off with its keys unreachable.
-    val shortScreen = LocalConfiguration.current.screenHeightDp < SHORT_SCREEN_DP
+    // Large type as well: at 1.5x the keypad's Settle up fell below the bottom of the screen.
+    val shortScreen = LocalConfiguration.current.screenHeightDp < SHORT_SCREEN_DP ||
+        LocalConfiguration.current.fontScale >= 1.3f
     // Asked before Settle up writes anything. It records a closing entry, and a payment in every
     // group the two of you share, and Reopen does not take any of that back.
     var confirmSettle by remember { mutableStateOf<com.kg.merapaisa.data.PersonWithBalance?>(null) }
@@ -115,10 +118,12 @@ fun MainScreen(viewModel: MainViewModel) {
     // The keypad takes the bottom of the screen when someone is picked, and the list shrinks to
     // make room. A row low in the list then sat half under the keypad, the name cut off at the
     // very moment you are typing an amount for it. Once the keypad is in, bring the row into view.
-    LaunchedEffect(ui.selectedId) {
-        val id = ui.selectedId ?: return@LaunchedEffect
-        val index = list.indexOfFirst { it.id == id }
-        if (index < 0) return@LaunchedEffect
+    // Keyed on whether the row exists yet too: someone just added is picked before the list has
+    // them, and the first run found nothing to scroll to.
+    val selectedIndex = list.indexOfFirst { it.id == ui.selectedId }
+    LaunchedEffect(ui.selectedId, selectedIndex >= 0) {
+        val index = selectedIndex
+        if (ui.selectedId == null || index < 0) return@LaunchedEffect
         delay(Motion.quick.toLong() + 50)
         val info = peopleListState.layoutInfo
         val row = info.visibleItemsInfo.firstOrNull { it.index == index }
@@ -182,7 +187,17 @@ fun MainScreen(viewModel: MainViewModel) {
                             onClick = { viewModel.selectTab(tab) },
                             selectedContentColor = theme.textPrimary,
                             unselectedContentColor = theme.textSecondary,
-                            text = { Text(tab.name, style = MeraPaisaType.action) }
+                            // One line, shrinking at large type: at 1.5x the labels broke mid-word,
+                            // "Settle / d".
+                            text = {
+                                Text(
+                                    tab.name,
+                                    style = MeraPaisaType.action,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    autoSize = shrinkToFit(MeraPaisaType.action)
+                                )
+                            }
                         )
                     }
                 }

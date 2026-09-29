@@ -50,7 +50,12 @@ fun PfpView(person: Person, size: Int) {
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            person.pfpType == "emoji" -> Text(person.pfpValue, style = avatarEmojiStyle(size), textAlign = TextAlign.Center)
+            // One character even if more was saved before the field held to one.
+            person.pfpType == "emoji" -> Text(
+                com.kg.merapaisa.data.firstCharacter(person.pfpValue),
+                style = avatarEmojiStyle(size),
+                textAlign = TextAlign.Center
+            )
             else -> Text(
                 com.kg.merapaisa.data.initialsOf(person.name),
                 style = avatarInitialsStyle(size),

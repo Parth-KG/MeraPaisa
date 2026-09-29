@@ -145,7 +145,7 @@ fun AmountPlaceholder(modifier: Modifier = Modifier, style: TextStyle = MeraPais
  * largest font size. Clipped, that read as a lone "+". Shrunk, it stays a number, and nothing
  * smaller than about half its size is ever drawn.
  */
-private fun shrinkToFit(style: TextStyle) =
+internal fun shrinkToFit(style: TextStyle) =
     TextAutoSize.StepBased(minFontSize = style.fontSize * 0.5f, maxFontSize = style.fontSize, stepSize = 1.sp)
 
 /**

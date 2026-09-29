@@ -151,7 +151,8 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                 pfpType = pfpType,
                 onTypeChange = { pfpType = it },
                 emoji = emoji,
-                onEmojiChange = { emoji = it },
+                // One character: typing another replaces it rather than adding to it.
+                onEmojiChange = { emoji = com.kg.merapaisa.data.firstCharacter(it.removePrefix(emoji).ifEmpty { it }) },
                 hasPhoto = photoPath != null,
                 selectedColour = selectedColour,
                 onColourChange = { pickedColour = it },

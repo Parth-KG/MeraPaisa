@@ -43,3 +43,17 @@ fun initialsOf(name: String): String {
     else trimmed.offsetByCodePoints(0, 2)
     return trimmed.substring(0, end).uppercase()
 }
+
+/**
+ * The first character a person would count as one, however many code units it takes: a flag, a
+ * skin tone or a family emoji stays whole. The emoji field said "one character" and took any
+ * amount of text, which then spilled out of the avatar circle.
+ */
+fun firstCharacter(text: String): String {
+    val trimmed = text.trim()
+    if (trimmed.isEmpty()) return ""
+    val it = java.text.BreakIterator.getCharacterInstance()
+    it.setText(trimmed)
+    val end = it.next()
+    return if (end == java.text.BreakIterator.DONE) trimmed else trimmed.substring(0, end)
+}
