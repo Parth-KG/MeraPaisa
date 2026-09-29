@@ -140,7 +140,7 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                 value = name,
                 onValueChange = { name = it },
                 label = { Text("Name") },
-                placeholder = { Text("Asha, Rondu") },
+                placeholder = { Text("John Doe") },
                 textStyle = MeraPaisaType.body,
                 singleLine = true,
                 shape = Shapes.medium,

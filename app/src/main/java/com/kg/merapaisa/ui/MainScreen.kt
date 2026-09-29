@@ -67,6 +67,12 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.automirrored.outlined.CallSplit
+import androidx.compose.material.icons.outlined.GroupAdd
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.PaddingValues
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
@@ -282,42 +288,48 @@ fun MainScreen(viewModel: MainViewModel) {
             exit = fadeOut(tween(Motion.quick)),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
+            // Icons rather than words, at the bottom right where a thumb rests. The words are still
+            // there for TalkBack, as each button's description.
             Row(
-                modifier = Modifier.height(IntrinsicSize.Min)
+                modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.safeDrawing)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (ui.tab != Tab.Groups) {
+                    OutlinedButton(
+                        onClick = { viewModel.startSplit() },
+                        shape = Shapes.medium,
+                        modifier = Modifier.size(56.dp),
+                        contentPadding = PaddingValues(0.dp),
+                        border = BorderStroke(1.dp, theme.outline),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = theme.background,
+                            contentColor = theme.textPrimary
+                        )
+                    ) {
+                        Icon(Icons.AutoMirrored.Outlined.CallSplit, contentDescription = "Split an expense")
+                    }
+                }
                 Button(
                     onClick = {
                         if (ui.tab == Tab.Groups) viewModel.showCreateGroupDialog(true)
                         else viewModel.showAddDialog(true)
                     },
-                    shape = Shapes.small,
-                    modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
+                    shape = Shapes.medium,
+                    modifier = Modifier.size(56.dp),
+                    contentPadding = PaddingValues(0.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = theme.primary,
                         contentColor = theme.background
                     )
                 ) {
-                    Text(
-                        if (ui.tab == Tab.Groups) "New group" else "Add a person",
-                        style = MeraPaisaType.action
+                    Icon(
+                        if (ui.tab == Tab.Groups) Icons.Outlined.GroupAdd else Icons.Outlined.PersonAdd,
+                        contentDescription = if (ui.tab == Tab.Groups) "New group" else "Add a person"
                     )
-                }
-
-                if (ui.tab != Tab.Groups) {
-                    OutlinedButton(
-                        onClick = { viewModel.startSplit() },
-                        shape = Shapes.small,
-                        modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                        border = BorderStroke(1.dp, theme.outline),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
-                    ) {
-                        Text("Split an expense", style = MeraPaisaType.action)
-                    }
                 }
             }
         }
