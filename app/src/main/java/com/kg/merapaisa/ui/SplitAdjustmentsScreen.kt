@@ -1,41 +1,57 @@
 package com.kg.merapaisa.ui
 
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material3.*
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import kotlin.math.roundToLong
 import kotlinx.coroutines.delay
-import com.kg.merapaisa.AppTheme
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.data.formatMinorPlain
+import com.kg.merapaisa.ui.format.PlainAmountText
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.parseAmountToMinor
-import com.kg.merapaisa.ui.MainViewModel
+import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.theme.Motion
+import com.kg.merapaisa.ui.theme.Shapes
+import com.kg.merapaisa.ui.theme.Spacing
 
 data class SplitParticipant(
     val id: Long,
@@ -94,6 +110,17 @@ private fun redistribute(
     return updated
 }
 
+/**
+ * Step three of a split: who pays what.
+ *
+ * Changing one share moves the others, and the whole point of this screen is being able to see
+ * that happen. So the shares nobody touched count to their new value, and the one under the thumb
+ * does not: the movement is what tells you which numbers the app decided and which you did.
+ *
+ * A locked share is drawn as locked, not merely tinted. It says the word, it loses the fill that
+ * makes a field look typeable, and it carries a closed padlock. Any one of those on its own is a
+ * signal somebody cannot read.
+ */
 @Composable
 fun SplitAdjustmentsScreen(
     viewModel: MainViewModel,
@@ -108,7 +135,6 @@ fun SplitAdjustmentsScreen(
     onConfirm: (Map<Long, Long>) -> Unit
 ) {
     val theme = LocalAppTheme.current
-    val scope = rememberCoroutineScope()
 
     // Build participant list. "You" is represented by id = -1L (won't conflict with any DB id).
     val youId = -1L
@@ -129,7 +155,11 @@ fun SplitAdjustmentsScreen(
     }
     var lockedIds by remember(participants) { mutableStateOf(setOf<Long>()) }
 
-    // Converted amounts (in each person's own currency) — recalculated when amountsInSource changes
+    // The row the user last typed in. It is the one row that must not animate: its digits are
+    // already under a thumb, and a number that moves while you type it cannot be read.
+    var lastEditedId by remember(participants) { mutableStateOf<Long?>(null) }
+
+    // Converted amounts (in each person's own currency), recalculated when amountsInSource changes
     var converted by remember { mutableStateOf<ConvertedSplit?>(null) }
     var conversionError by remember { mutableStateOf<String?>(null) }
 
@@ -147,7 +177,9 @@ fun SplitAdjustmentsScreen(
             } else {
                 val convertedAmount = viewModel.convertCurrency(srcAmt, sourceCurrency, p.currency)
                 if (convertedAmount == null) {
-                    conversionError = "Couldn't convert to ${p.currency} for ${p.name}. Check internet or remove this person."
+                    conversionError = "Couldn't get today's rate for ${p.currency}, so ${p.name}'s " +
+                        "share can't be worked out. Try again once you're connected, or take " +
+                        "${p.name} out of the split."
                     result[p.id] = srcAmt   // fallback, but warning is shown
                 } else {
                     result[p.id] = convertedAmount
@@ -164,228 +196,288 @@ fun SplitAdjustmentsScreen(
     val total = amountsInSource.values.sum()
     val totalsMatch = total == amountMinor
 
-    Box(
-        modifier = Modifier.fillMaxSize().background(theme.background)
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().background(theme.background)) {
 
-            // Top bar
+        SplitStepBar(onCancel = onCancel, onBack = onBack)
+
+        SplitStepHeading(
+            title = "Adjust the shares",
+            supporting = "Splitting ${amountString(amountMinor, sourceCurrency)}"
+        )
+
+        OutlinedTextField(
+            value = note,
+            onValueChange = onNoteChange,
+            placeholder = {
+                Text("dinner, cab fare", style = MeraPaisaType.body, color = theme.textSecondary)
+            },
+            textStyle = MeraPaisaType.body,
+            singleLine = true,
+            shape = Shapes.medium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg)
+                .padding(bottom = Spacing.md)
+        )
+
+        // No dividers between these rows. Each one already carries a boxed field, and a hairline
+        // inset to a name that starts at the gutter would cut across it rather than separate it.
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(bottom = Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            items(participants, key = { it.id }) { p ->
+                SplitShareRow(
+                    participant = p,
+                    sourceCurrency = sourceCurrency,
+                    amountInSourceMinor = amountsInSource[p.id] ?: 0L,
+                    convertedAmountMinor = convertedAmounts?.get(p.id),
+                    locked = p.id in lockedIds,
+                    // Only the shares the user left alone move on their own, so only those count.
+                    animateShare = p.id != lastEditedId,
+                    onAmountChange = { newAmt ->
+                        lastEditedId = p.id
+                        amountsInSource = redistribute(
+                            current = amountsInSource,
+                            locked = lockedIds + p.id,   // editing locks this row
+                            changedId = p.id,
+                            newValue = newAmt,
+                            total = amountMinor
+                        )
+                        lockedIds = lockedIds + p.id
+                    },
+                    onToggleLock = {
+                        if (p.id in lockedIds) {
+                            lockedIds = lockedIds - p.id
+                            // Unlocked, this row is back in the pool that redistribution moves,
+                            // so it stops being the row that must hold still.
+                            if (lastEditedId == p.id) lastEditedId = null
+                        } else {
+                            lockedIds = lockedIds + p.id
+                        }
+                    }
+                )
+            }
+        }
+
+        Column(modifier = Modifier.padding(horizontal = Spacing.lg)) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-                    .padding(16.dp, 16.dp, 16.dp, 16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = theme.textPrimary)
-                }
-                Text("Adjust split", color = theme.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                IconButton(onClick = onCancel) {
-                    Icon(Icons.Default.Close, contentDescription = "Cancel", tint = theme.textPrimary)
-                }
-            }
-
-            // Total amount header
-            Text(
-                "${amountString(amountMinor, sourceCurrency)} total",
-                color = theme.textSecondary,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(horizontal = 24.dp)
-            )
-
-            // Optional note
-            OutlinedTextField(
-                value = note,
-                onValueChange = onNoteChange,
-                placeholder = { Text("Description (optional)", color = theme.textSecondary) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(20.dp, 12.dp, 20.dp, 8.dp)
-            )
-
-            // Per-person rows
-            LazyColumn(
-                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(bottom = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(participants, key = { it.id }) { p ->
-                    SplitAdjustmentRow(
-                        participant = p,
-                        sourceCurrency = sourceCurrency,
-                        amountInSourceMinor = amountsInSource[p.id] ?: 0L,
-                        convertedAmountMinor = convertedAmounts?.get(p.id),
-                        locked = p.id in lockedIds,
-                        onAmountChange = { newAmt ->
-                            amountsInSource = redistribute(
-                                current = amountsInSource,
-                                locked = lockedIds + p.id,   // editing locks this row
-                                changedId = p.id,
-                                newValue = newAmt,
-                                total = amountMinor
-                            )
-                            lockedIds = lockedIds + p.id
-                        },
-                        onToggleLock = {
-                            lockedIds = if (p.id in lockedIds) lockedIds - p.id else lockedIds + p.id
-                        },
-                        theme = theme
-                    )
-                }
-            }
-
-            // Total + warning
-            Column(modifier = Modifier.padding(20.dp, 8.dp, 20.dp, 0.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Total", color = theme.textSecondary, fontSize = 14.sp)
-                    Text(
-                        "${amountString(total, sourceCurrency)} of ${amountString(amountMinor, sourceCurrency)}",
-                        color = if (totalsMatch) theme.textPrimary else theme.negative,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-                if (!totalsMatch) {
-                    Text(
-                        "Warning: totals don't match.",
-                        color = theme.negative,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-                if (convertedAmounts == null && conversionError == null) {
-                    Text(
-                        "Converting…",
-                        color = theme.textSecondary,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-                if (conversionError != null) {
-                    Text(
-                        conversionError!!,
-                        color = theme.negative,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-            }
-
-            // Confirm
-            Button(
-                onClick = {
-                    // Build final map, excluding "You". Guarded rather than trusted: `enabled`
-                    // already blocks this, and a null here would mean confirming amounts that
-                    // were never converted.
-                    val ready = convertedAmounts ?: return@Button
-                    onConfirm(ready.filterKeys { it != youId })
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
-                    .padding(20.dp, 8.dp, 20.dp, 16.dp)
-                    .height(56.dp),
-                shape = RoundedCornerShape(14.dp),
-                enabled = conversionError == null && convertedAmounts != null,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = theme.positive,
-                    contentColor = theme.background,
-                    disabledContainerColor = theme.positive.copy(alpha = 0.3f),
-                    disabledContentColor = theme.background.copy(alpha = 0.5f)
+                Text("Shares add up to", style = MeraPaisaType.body, color = theme.textSecondary)
+                // No sign and no direction ink: this is a sum being checked against a target, not
+                // a debt running one way or the other. Red is reserved for it being wrong.
+                PlainAmountText(
+                    amountMinor = total,
+                    currencyCode = sourceCurrency,
+                    style = MeraPaisaType.amount,
+                    colour = if (totalsMatch) theme.textPrimary else theme.negative
                 )
-            ) {
-                Text("Confirm split", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
+            if (!totalsMatch) {
+                Text(
+                    mismatchMessage(
+                        total = total,
+                        target = amountMinor,
+                        currency = sourceCurrency,
+                        lockedSum = amountsInSource.filterKeys { it in lockedIds }.values.sum(),
+                        everyShareLocked = participants.all { it.id in lockedIds }
+                    ),
+                    style = MeraPaisaType.label,
+                    color = theme.negative,
+                    modifier = Modifier.padding(top = Spacing.xs)
+                )
+            }
+            if (convertedAmounts == null && conversionError == null) {
+                Text(
+                    "Converting…",
+                    style = MeraPaisaType.label,
+                    color = theme.textSecondary,
+                    modifier = Modifier.padding(top = Spacing.xs)
+                )
+            }
+            if (conversionError != null) {
+                Text(
+                    conversionError!!,
+                    style = MeraPaisaType.label,
+                    color = theme.negative,
+                    modifier = Modifier.padding(top = Spacing.xs)
+                )
             }
         }
+
+        SplitPrimaryButton(
+            label = "Save split",
+            enabled = conversionError == null && convertedAmounts != null,
+            onClick = {
+                // Build final map, excluding "You". Guarded rather than trusted: `enabled`
+                // already blocks this, and a null here would mean confirming amounts that
+                // were never converted.
+                val ready = convertedAmounts
+                if (ready != null) onConfirm(ready.filterKeys { it != youId })
+            }
+        )
     }
 }
 
+/**
+ * Why the shares do not add up, by how much, and what to do about it.
+ *
+ * It used to say "Warning: totals don't match." A person looking at that knows less than they did
+ * before reading it: they can see the two figures above disagree. What they cannot see is that a
+ * lock is the reason nothing moved to close the gap.
+ */
+private fun mismatchMessage(
+    total: Long,
+    target: Long,
+    currency: String,
+    lockedSum: Long,
+    everyShareLocked: Boolean
+): String {
+    val over = total > target
+    // The sentence carries the direction in words, so the figure itself is the gap's size.
+    val gap = amountString(if (over) total - target else target - total, currency)
+    val what =
+        if (over) "These shares come to $gap more than you're splitting."
+        else "These shares are $gap short of what you're splitting."
+    val why = when {
+        everyShareLocked ->
+            "Every share is locked, so there was nothing left to take up the difference. " +
+                "Unlock a row, then change a share."
+        lockedSum > target ->
+            "The locked shares already come to more than the whole split. Lower one of them, " +
+                "or unlock it."
+        else -> "Change a share, or unlock one so the rest can take up the difference."
+    }
+    return "$what $why"
+}
+
+/**
+ * One person's share of the split.
+ *
+ * The share counts to its new value when the redistribution moved it, and snaps when the person
+ * typing moved it. Nothing animates on first composition: the animation starts at the value it is
+ * given, so the opening shares simply appear.
+ */
 @Composable
-private fun SplitAdjustmentRow(
+private fun SplitShareRow(
     participant: SplitParticipant,
     sourceCurrency: String,
     amountInSourceMinor: Long,
     convertedAmountMinor: Long?,
     locked: Boolean,
+    animateShare: Boolean,
     onAmountChange: (Long) -> Unit,
-    onToggleLock: () -> Unit,
-    theme: AppTheme
+    onToggleLock: () -> Unit
 ) {
-    var text by remember(amountInSourceMinor) {
-        mutableStateOf(formatMinorPlain(amountInSourceMinor, sourceCurrency, trimZeros = true))
+    val theme = LocalAppTheme.current
+
+    val animated by animateFloatAsState(
+        targetValue = amountInSourceMinor.toFloat(),
+        animationSpec = tween(durationMillis = Motion.medium, easing = Motion.emphasized),
+        label = "share"
+    )
+    // A float holds about seven digits, so the figure that settles is always read back from the
+    // Long. The float only fills the frames in between, where a paisa either way cannot be seen.
+    val shownMinor = when {
+        !animateShare -> amountInSourceMinor
+        animated == amountInSourceMinor.toFloat() -> amountInSourceMinor
+        else -> animated.roundToLong()
+    }
+
+    // Plain digits rather than a grouped amount: the grouping commas would not parse back, and
+    // this is the one amount on screen the user types into rather than reads.
+    var text by remember(shownMinor) {
+        mutableStateOf(formatMinorPlain(shownMinor, sourceCurrency, trimZeros = true))
+    }
+
+    val supporting = when {
+        convertedAmountMinor != null && participant.currency != sourceCurrency && locked ->
+            "Locked, saved as ${amountString(convertedAmountMinor, participant.currency)}"
+        convertedAmountMinor != null && participant.currency != sourceCurrency ->
+            "Saved as ${amountString(convertedAmountMinor, participant.currency)}"
+        locked -> "Locked"
+        else -> null
     }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(theme.fill)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = Spacing.lg)
+            .heightIn(min = 56.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 participant.name,
+                style = MeraPaisaType.bodyStrong,
                 color = theme.textPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            if (participant.currency != sourceCurrency && convertedAmountMinor != null) {
+            if (supporting != null) {
                 Text(
-                    "= ${amountString(convertedAmountMinor, participant.currency)}",
+                    supporting,
+                    style = MeraPaisaType.label,
                     color = theme.textSecondary,
-                    fontSize = 11.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
         }
 
-        // The symbol leads so the amount grows into the row's slack instead of into the symbol.
-        // The field used to be a fixed 80.dp, which clipped anything past about six characters —
-        // and fewer than that once the phone's font scale is turned up.
-        Text(
-            currencySymbol(sourceCurrency),
-            color = theme.textSecondary,
-            fontSize = 12.sp,
-            modifier = Modifier.padding(end = 3.dp)
-        )
-
-        BasicTextField(
-            value = text,
-            onValueChange = { newText ->
-                text = newText
-                parseAmountToMinor(newText)?.let { onAmountChange(it) }
-            },
-            textStyle = LocalTextStyle.current.copy(
-                color = theme.textPrimary,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Start
-            ),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true,
-            cursorBrush = SolidColor(theme.primary),
-            // Sizes to its content: the floor keeps an empty field tappable, the ceiling stops a
-            // pathological amount swallowing the name.
-            modifier = Modifier.widthIn(min = 56.dp, max = 140.dp).padding(end = 4.dp)
-        )
-
-        IconButton(
-            onClick = onToggleLock,
-            modifier = Modifier.size(32.dp)
+        // A locked share loses the fill that makes a box look typeable and keeps only a rule
+        // around it, so it reads as a figure held rather than a field waiting. It is still
+        // editable: locking a share should not cost you a tap to change it.
+        Row(
+            modifier = Modifier
+                .clip(Shapes.small)
+                .then(
+                    if (locked) Modifier.border(1.dp, theme.outline, Shapes.small)
+                    else Modifier.background(theme.fill)
+                )
+                .heightIn(min = 48.dp)
+                .padding(horizontal = Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
         ) {
+            // The symbol leads so the amount grows into the row's slack instead of into the
+            // symbol, and it is set a step down and quieter, the way every other amount sets it.
+            Text(
+                currencySymbol(sourceCurrency),
+                style = MeraPaisaType.amountSmall,
+                color = theme.textSecondary
+            )
+            BasicTextField(
+                value = text,
+                onValueChange = { newText ->
+                    text = newText
+                    parseAmountToMinor(newText)?.let { onAmountChange(it) }
+                },
+                textStyle = MeraPaisaType.amount.copy(
+                    color = theme.textPrimary,
+                    textAlign = TextAlign.End
+                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                cursorBrush = SolidColor(theme.primary),
+                // Sizes to its content: the floor keeps an empty field tappable, the ceiling stops
+                // a pathological amount swallowing the name.
+                modifier = Modifier.widthIn(min = 56.dp, max = 140.dp)
+            )
+        }
+
+        IconButton(onClick = onToggleLock, modifier = Modifier.size(48.dp)) {
             Icon(
-                if (locked) Icons.Default.Lock else Icons.Default.LockOpen,
-                contentDescription = if (locked) "Unlock" else "Lock",
-                tint = if (locked) theme.primary else theme.textSecondary,
-                modifier = Modifier.size(18.dp)
+                if (locked) Icons.Filled.Lock else Icons.Outlined.LockOpen,
+                contentDescription =
+                    if (locked) "Unlock ${participant.name}'s share"
+                    else "Lock ${participant.name}'s share",
+                tint = if (locked) theme.primary else theme.textSecondary
             )
         }
     }

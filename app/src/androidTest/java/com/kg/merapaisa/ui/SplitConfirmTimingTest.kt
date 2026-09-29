@@ -18,8 +18,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * "Confirm split" hands back [convertedAmounts], which starts empty and is only filled once the
- * conversion effect has run — and that effect waits [CONVERSION_SETTLE_MS] before it fetches a
+ * "Save split" hands back [convertedAmounts], which starts empty and is only filled once the
+ * conversion effect has run, and that effect waits [CONVERSION_SETTLE_MS] before it fetches a
  * rate for anyone in a different currency. So there is a guaranteed window, right after the
  * screen opens, in which the button is enabled and the map behind it is still empty. Confirming
  * in that window recorded nothing at all and closed the flow, which reads as a saved split.
@@ -67,12 +67,12 @@ class SplitConfirmTimingTest {
         // Far short of the 400 ms the conversion effect waits before it fetches anything.
         compose.mainClock.advanceTimeBy(50)
 
-        compose.onNodeWithText("Confirm split").performClick()
+        compose.onNodeWithText("Save split").performClick()
         compose.mainClock.advanceTimeBy(50)
 
         assertNull(
-            "confirming before any amount has been converted must not record a split — " +
-                "an empty or partial map silently writes nothing while the flow closes as if " +
+            "confirming before any amount has been converted must not record a split. " +
+                "An empty or partial map silently writes nothing while the flow closes as if " +
                 "it had saved. Got: $confirmed",
             confirmed
         )
@@ -109,7 +109,7 @@ class SplitConfirmTimingTest {
             compose.onAllNodesWithText("Converting…").fetchSemanticsNodes().isEmpty()
         }
 
-        compose.onNodeWithText("Confirm split").performClick()
+        compose.onNodeWithText("Save split").performClick()
         compose.waitForIdle()
 
         assertNotNull("a converted split must still be confirmable", confirmed)
