@@ -1,13 +1,30 @@
 package com.kg.merapaisa.ui.gallery
 
+import com.kg.merapaisa.data.BackupSnapshot
 import com.kg.merapaisa.data.CurrencyTotal
 import com.kg.merapaisa.data.Expense
 import com.kg.merapaisa.data.Group
 import com.kg.merapaisa.data.GroupSummary
+import com.kg.merapaisa.data.ImportOutcome
 import com.kg.merapaisa.data.MemberBalance
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonWithBalance
+import com.kg.merapaisa.data.ReconcileItem
+import com.kg.merapaisa.data.ReconcilePlan
+import com.kg.merapaisa.data.RestoreCounts
+import com.kg.merapaisa.data.RestoreMode
+import com.kg.merapaisa.data.RestorePlan
+import com.kg.merapaisa.data.SharePayload
+import com.kg.merapaisa.data.ShareScope
+import com.kg.merapaisa.data.SharedEntry
+import com.kg.merapaisa.data.Transaction
 import com.kg.merapaisa.data.Transfer
+import com.kg.merapaisa.ui.BackupFlowState
+import com.kg.merapaisa.ui.ImportFlowState
+import com.kg.merapaisa.ui.MoveDebtFlowState
+import com.kg.merapaisa.ui.RestoreSource
+import com.kg.merapaisa.ui.ShareFlowState
+import com.kg.merapaisa.ui.UpdateFlowState
 
 /**
  * Fake data for previews and the screenshot gallery.
@@ -118,6 +135,175 @@ object Fixtures {
             memberCount = 4,
             yourBalanceMinor = 0
         )
+    )
+
+    // -- history ---------------------------------------------------------------------------
+
+    private const val HOUR = 60 * 60 * 1000L
+    private const val DAY = 24 * HOUR
+
+    /**
+     * Asha's entries, newest first, reaching back far enough for every kind of day heading: today,
+     * yesterday, a date this year and one from last year. A long note, an entry with no note (which
+     * says its direction in words instead), paise, and a lakh figure for the column to hold.
+     *
+     * Relative to now, because the headings are. A fixed date would read "12 March 2024" forever
+     * and never show what today looks like.
+     */
+    val ashaHistory: List<Transaction>
+        get() {
+            val now = System.currentTimeMillis()
+            return listOf(
+                Transaction(id = 1, personId = 1, amountMinor = 1_200_50, timestamp = now - HOUR, note = LONG_NOTE),
+                Transaction(id = 2, personId = 1, amountMinor = -340_00, timestamp = now - 2 * HOUR),
+                Transaction(id = 3, personId = 1, amountMinor = 500_00, timestamp = now - DAY, note = "Cab to the airport"),
+                Transaction(id = 4, personId = 1, amountMinor = -2_000_00, timestamp = now - 12 * DAY, note = "Paid back"),
+                Transaction(id = 5, personId = 1, amountMinor = 12_34_567_50, timestamp = now - 400 * DAY, note = "Deposit for the flat")
+            )
+        }
+
+    // -- backup ----------------------------------------------------------------------------
+
+    val backupMenu = BackupFlowState.Menu(
+        folderName = "Documents",
+        lastRun = 1_727_500_000_000,
+        lastResult = "Saved a backup. 1 older backup removed."
+    )
+
+    /**
+     * Replacing from a CSV export: the case with the sharpest edge, where every group is deleted
+     * and none comes back, so the warning line has to show.
+     */
+    val backupReview: BackupFlowState.Reviewing
+        get() {
+            val incoming = BackupSnapshot(
+                persons = mixedPeople.map { it.person },
+                transactions = List(38) { i ->
+                    Transaction(
+                        id = i + 1,
+                        personId = (i % 7 + 1).toLong(),
+                        amountMinor = i * 137_00L - 900_00,
+                        timestamp = 1_700_000_000_000 + i * DAY
+                    )
+                },
+                groups = emptyList(),
+                groupMembers = emptyList(),
+                expenses = emptyList(),
+                expenseShares = emptyList(),
+                appliedPayloads = emptyList()
+            )
+            return BackupFlowState.Reviewing(
+                source = RestoreSource.Csv,
+                incoming = incoming,
+                exportedAt = null,
+                appVersion = null,
+                mode = RestoreMode.Replace,
+                plan = RestorePlan(
+                    mode = RestoreMode.Replace,
+                    persons = incoming.persons,
+                    transactions = incoming.transactions,
+                    groups = emptyList(),
+                    groupMembers = emptyList(),
+                    expenses = emptyList(),
+                    expenseShares = emptyList(),
+                    appliedPayloads = emptyList(),
+                    deletes = RestoreCounts(people = 9, transactions = 61, groups = 3, expenses = 14),
+                    alreadyPresent = RestoreCounts()
+                )
+            )
+        }
+
+    val backupDone = BackupFlowState.Done(
+        "Ledger restored",
+        "Your ledger now matches the file exactly. Added 7 people, 38 entries."
+    )
+
+    // -- update links ----------------------------------------------------------------------
+
+    /**
+     * A full send from Asha compared against what this phone holds: one of every kind of
+     * difference, so the whole comparison is on screen at once. The new entry starts ticked; the
+     * edit and the deletion do not, because nothing about a link proves who sent it.
+     */
+    val importConfirming: ImportFlowState.Confirming
+        get() {
+            val t = 1_727_000_000_000
+            val payload = SharePayload(
+                payloadId = "gallery",
+                senderName = "Asha",
+                currency = "INR",
+                entries = listOf(
+                    SharedEntry(t + 5 * DAY, -500_00, "Cab to the airport", "n1"),
+                    SharedEntry(t + 4 * DAY, -1_250_00, LONG_NOTE, "e1"),
+                    SharedEntry(t + 2 * DAY, 300_00, "Chai and samosas", "u1"),
+                    SharedEntry(t + DAY, -2_000_00, "Tickets", "u2")
+                ),
+                scope = ShareScope.Full,
+                formatVersion = 2
+            )
+            val plan = ReconcilePlan(
+                items = listOf(
+                    ReconcileItem.New("n1", t + 5 * DAY, 500_00, "Cab to the airport"),
+                    ReconcileItem.Edited(
+                        uid = "e1", timestamp = t + 4 * DAY, localId = 12,
+                        localAmountMinor = 1_200_00, localNote = LONG_NOTE,
+                        theirAmountMinor = 1_250_00, theirNote = LONG_NOTE,
+                        theirTimestamp = t + 4 * DAY
+                    ),
+                    ReconcileItem.DeletedBySender("d1", t + 3 * DAY, localId = 11, amountMinor = -340_00, note = "Coffee"),
+                    ReconcileItem.Unchanged("u1", t + 2 * DAY, -300_00, "Chai and samosas"),
+                    ReconcileItem.Unchanged("u2", t + DAY, 2_000_00, "Tickets"),
+                    ReconcileItem.OnlyYours("y1", t, localId = 9, amountMinor = 75_50, note = "Auto")
+                ),
+                scope = ShareScope.Full,
+                comparable = true
+            )
+            return ImportFlowState.Confirming(
+                payload = payload,
+                targetPersonId = asha.id,
+                plan = plan,
+                selected = setOf("n1")
+            )
+        }
+
+    val importDone = ImportFlowState.Done(
+        ImportOutcome.Reconciled(added = 1, updated = 1, removed = 0, netMinor = 1_250_00),
+        personName = "Asha"
+    )
+
+    val shareState = ShareFlowState(
+        personId = asha.id,
+        personName = "Asha",
+        currency = "INR",
+        senderName = "",
+        entryCount = 14,
+        netMinor = 1_200_00
+    )
+
+    // -- updates ---------------------------------------------------------------------------
+
+    /** Long enough notes that the screen has to scroll them, which the old dialog could not. */
+    val updateAvailable = UpdateFlowState.Available(
+        version = "2.6.0",
+        downloadUrl = "https://github.com/Parth-KG/MeraPaisa/releases/download/v2.6.0/app-release.apk",
+        sizeBytes = 7_812_000,
+        notes = "Every screen has been redrawn. Amounts are set in Anek Latin, lakh figures are " +
+            "grouped the Indian way, and each of the six themes has colours of its own.\n\n" +
+            "Deleting a group now asks first, and says what goes with it.\n\n" +
+            "Settle up offers the payments the group is set to, instead of always the fewest.\n\n" +
+            "Settings, backup, update links and this screen are full screens now, with their " +
+            "actions at the foot.\n\nThe APK's SHA-256 is in the release notes on GitHub."
+    )
+
+    // -- moving a debt ---------------------------------------------------------------------
+
+    val moveDebt = MoveDebtFlowState(
+        fromPersonId = chaitanya.id,
+        fromName = chaitanya.name,
+        currency = "INR",
+        availableMinor = chaitanya.balanceMinor,
+        amount = "2500",
+        toPersonId = asha.id
     )
 
     private fun personWith(

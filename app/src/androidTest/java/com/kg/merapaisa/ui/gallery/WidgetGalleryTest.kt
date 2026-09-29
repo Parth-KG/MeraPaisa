@@ -54,13 +54,6 @@ class WidgetGalleryTest {
     }
 
     /**
-     * Every theme, at both declared sizes, in day and in night.
-     *
-     * A widget picks up the launcher's night mode rather than the app's, which is why the palette
-     * carries two themes and why both have to be looked at. A theme that reads on one and not the
-     * other would never show up in a single capture.
-     */
-    /**
      * Whichever mode the device is actually in.
      *
      * A day and night colour reaches the launcher as a pair and is resolved there, at inflation,
@@ -74,16 +67,23 @@ class WidgetGalleryTest {
             android.content.res.Configuration.UI_MODE_NIGHT_YES
         ) "night" else "day"
 
+    private val people = Fixtures.mixedPeople.filter { it.balanceMinor != 0L }
+    private val totals = netTotalsByCurrency(people)
+
+    private val sizes = mapOf(
+        "strip" to DpSize(250.dp, 60.dp),
+        "tall" to DpSize(300.dp, 200.dp)
+    )
+
+    /**
+     * Every theme, at both declared sizes, in whichever mode the phone is in.
+     *
+     * A widget picks up the launcher's night mode rather than the app's, which is why the palette
+     * carries two themes and why both have to be looked at. A theme that reads on one and not the
+     * other would never show up in a single capture, so scripts/run-gallery.sh runs this twice.
+     */
     @Test
     fun captureTheWidget() {
-        val people = Fixtures.mixedPeople.filter { it.balanceMinor != 0L }
-        val totals = netTotalsByCurrency(people)
-
-        val sizes = mapOf(
-            "strip" to DpSize(250.dp, 60.dp),
-            "tall" to DpSize(300.dp, 200.dp)
-        )
-
         val written = mutableListOf<String>()
         listOf("Paper", "Midnight", "Amoled", "Ocean", "Sunset", "Purple").forEach { name ->
             val palette = paletteLike(getThemeByName(name))
@@ -104,6 +104,30 @@ class WidgetGalleryTest {
     }
 
     /**
+     * The widget at double type, in Paper, Amoled and Ocean.
+     *
+     * The launcher inflates the widget with the phone's own font scale, so the scale goes on the
+     * context the RemoteViews are composed and inflated with. A row that only fits at 1.0 clips
+     * its figure here instead of on someone's home screen.
+     */
+    @Test
+    fun captureTheWidgetAtDoubleType() {
+        val large = context.createConfigurationContext(
+            android.content.res.Configuration(context.resources.configuration).apply { fontScale = 2f }
+        )
+        val written = mutableListOf<String>()
+        listOf("Paper", "Amoled", "Ocean").forEach { name ->
+            val palette = paletteLike(getThemeByName(name))
+            sizes.forEach { (sizeName, size) ->
+                written += shoot("${name.lowercase()}-widget-$sizeName-$mode-fs2", size, large) {
+                    WidgetContent(persons = people, totals = totals, palette = palette)
+                }
+            }
+        }
+        check(written.isNotEmpty()) { "no widget images were written" }
+    }
+
+    /**
      * The pairing DebtWidget builds for a chosen theme.
      *
      * A dark choice keeps Paper for the launcher's light mode; a light choice keeps Midnight for
@@ -115,8 +139,12 @@ class WidgetGalleryTest {
         else WidgetPalette(day = selected, night = getThemeByName("Midnight"))
 
     /** Composes Glance content to a RemoteViews, inflates it, and draws it to a PNG. */
-    private fun shoot(name: String, size: DpSize, content: @Composable () -> Unit): String {
-        val themed = context
+    private fun shoot(
+        name: String,
+        size: DpSize,
+        themed: Context = context,
+        content: @Composable () -> Unit
+    ): String {
         val remoteViews = runBlocking {
             GlanceRemoteViews().compose(context = themed, size = size, content = content)
         }.remoteViews

@@ -25,7 +25,8 @@ import java.io.FileOutputStream
  * device. What it does guarantee is that every case composes without throwing in every theme,
  * which is worth having on its own, and it fails loudly if a case renders an empty frame.
  *
- * Run it:
+ * Run it, with the sheets, dialogs and the widget in day and night, using scripts/run-gallery.sh,
+ * or on its own:
  *   ./gradlew connectedDebugAndroidTest \
  *     -Pandroid.testInstrumentationRunnerArguments.class=com.kg.merapaisa.ui.gallery.DesignGalleryTest
  *
@@ -58,13 +59,17 @@ class DesignGalleryTest {
     /**
      * The same again at double type. Amount columns and rows built around a fixed height are
      * where large text breaks first, and it breaks silently: nothing throws, the figure is just
-     * clipped. Restricted to the cases where that actually shows.
+     * clipped. Restricted to the screens where that matters most: Balances, the split's shares,
+     * a group, and a person's history.
      */
     @Test
     fun captureLargeTypeCases() = capture(
         fontScale = 2f,
         label = "-fs2",
-        only = setOf("people-rows", "net-total-multi", "numpad", "group-detail")
+        only = setOf(
+            "people-rows", "net-total-multi", "numpad", "group-detail",
+            "split-adjustments", "split-adjustments-locked", "history"
+        )
     )
 
     private fun capture(fontScale: Float, label: String, only: Set<String>? = null) {

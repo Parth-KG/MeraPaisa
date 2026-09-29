@@ -14,7 +14,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.kg.merapaisa.AppTheme
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.themes
+import com.kg.merapaisa.ui.DecisionDialog
 import com.kg.merapaisa.ui.EmptyState
+import com.kg.merapaisa.ui.ImportFlowState
+import com.kg.merapaisa.ui.LockedScreen
 import com.kg.merapaisa.ui.NetPosition
 import com.kg.merapaisa.ui.NumPad
 import com.kg.merapaisa.ui.PersonRow
@@ -23,10 +26,27 @@ import com.kg.merapaisa.ui.SplitAdjustmentsContent
 import com.kg.merapaisa.ui.SplitAmountScreen
 import com.kg.merapaisa.ui.SplitPickerScreen
 import com.kg.merapaisa.ui.Tab
+import com.kg.merapaisa.ui.UpdateFlowState
+import com.kg.merapaisa.ui.backup.BackupDialog
+import com.kg.merapaisa.ui.dialogs.AddPersonDialog
+import com.kg.merapaisa.ui.dialogs.ConvertCurrencyDialog
+import com.kg.merapaisa.ui.dialogs.CreateGroupDialog
+import com.kg.merapaisa.ui.dialogs.EditEntrySheet
+import com.kg.merapaisa.ui.dialogs.EditPersonDialog
+import com.kg.merapaisa.ui.dialogs.EntryHistoryContent
+import com.kg.merapaisa.ui.dialogs.MoveDebtDialog
+import com.kg.merapaisa.ui.dialogs.ReminderSheet
+import com.kg.merapaisa.ui.dialogs.SettingsScreen
+import com.kg.merapaisa.ui.format.amountString
+import com.kg.merapaisa.ui.groups.AddExpenseDialog
 import com.kg.merapaisa.ui.groups.GroupDetailScreen
 import com.kg.merapaisa.ui.groups.GroupRow
 import com.kg.merapaisa.ui.groups.GroupsEmptyState
+import com.kg.merapaisa.ui.groups.SettleUpSheet
+import com.kg.merapaisa.ui.share.ImportLedgerDialog
+import com.kg.merapaisa.ui.share.ShareLedgerSheet
 import com.kg.merapaisa.ui.theme.MeraPaisaTheme
+import com.kg.merapaisa.ui.update.UpdateScreen
 
 /**
  * Every fake-data rendering, written once.
@@ -248,6 +268,93 @@ fun SplitAdjustmentsLockedCase() {
     )
 }
 
+// -- full screens ---------------------------------------------------------------------------
+
+/** A day's worth of entries under each kind of heading, with a lakh figure in the column. */
+@Composable
+fun HistoryCase() = EntryHistoryContent(
+    person = Fixtures.asha,
+    entries = Fixtures.ashaHistory,
+    onBack = {}, onEdit = {}, onDelete = {}, onReverse = {}, onClear = {}
+)
+
+@Composable
+fun HistoryEmptyCase() = EntryHistoryContent(
+    person = Fixtures.evenPerson,
+    entries = emptyList(),
+    onBack = {}, onEdit = {}, onDelete = {}, onReverse = {}, onClear = {}
+)
+
+/** The theme picker has to show every theme's own colours, whichever theme it is drawn in. */
+@Composable
+fun SettingsCase() = SettingsScreen(
+    currentThemeName = LocalAppTheme.current.name,
+    appLockEnabled = true,
+    appLockAvailable = true,
+    onAppLockChange = {},
+    onImportLink = {},
+    onBackupRestore = {},
+    onExportCsv = {},
+    canExport = true,
+    onCheckUpdates = {},
+    appVersion = "2.6.0",
+    onDismiss = {},
+    onApply = {}
+)
+
+@Composable
+private fun Backup(state: com.kg.merapaisa.ui.BackupFlowState) = BackupDialog(
+    state = state,
+    onSaveBackup = {}, onRestore = {}, onPickFolder = {}, onTurnOffAuto = {}, onBackUpNow = {},
+    onModeChange = {}, onApply = {}, onDismiss = {}
+)
+
+@Composable
+fun BackupMenuCase() = Backup(Fixtures.backupMenu)
+
+/** Replace from a CSV export, so the lost-groups warning is on screen. */
+@Composable
+fun BackupReviewCase() = Backup(Fixtures.backupReview)
+
+@Composable
+fun BackupDoneCase() = Backup(Fixtures.backupDone)
+
+@Composable
+private fun Import(state: ImportFlowState) = ImportLedgerDialog(
+    state = state,
+    persons = Fixtures.mixedPeople,
+    onTargetChange = {}, onNewPersonNameChange = {}, onToggleItem = {}, onApply = {},
+    onPasteChange = {}, onPasteSubmit = {}, onDismiss = {}
+)
+
+@Composable
+fun ImportPasteCase() = Import(ImportFlowState.Pasting())
+
+/** One of every difference a comparison can find. */
+@Composable
+fun ImportConfirmCase() = Import(Fixtures.importConfirming)
+
+@Composable
+fun ImportDoneCase() = Import(Fixtures.importDone)
+
+@Composable
+private fun Update(state: UpdateFlowState) = UpdateScreen(
+    state = state,
+    onDownload = { _, _ -> }, onInstall = {}, onGrantPermission = {}, onDismiss = {}, onClose = {}
+)
+
+@Composable
+fun UpdateAvailableCase() = Update(Fixtures.updateAvailable)
+
+@Composable
+fun UpdateDownloadingCase() = Update(UpdateFlowState.Downloading("2.6.0", 42))
+
+@Composable
+fun UpdateInstallerFailedCase() = Update(UpdateFlowState.Failed("", downloaded = true))
+
+@Composable
+fun LockedCase() = LockedScreen(onUnlock = {})
+
 /**
  * The gallery's running order. The harness renders each of these in every theme, so this list is
  * the single place that decides what gets reviewed.
@@ -270,7 +377,125 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "split-picker" to { SplitPickerCase() },
     "split-picker-too-few" to { SplitPickerTooFewCase() },
     "split-adjustments" to { SplitAdjustmentsCase() },
-    "split-adjustments-locked" to { SplitAdjustmentsLockedCase() }
+    "split-adjustments-locked" to { SplitAdjustmentsLockedCase() },
+    "history" to { HistoryCase() },
+    "history-empty" to { HistoryEmptyCase() },
+    "settings" to { SettingsCase() },
+    "backup-menu" to { BackupMenuCase() },
+    "backup-review" to { BackupReviewCase() },
+    "backup-done" to { BackupDoneCase() },
+    "import-paste" to { ImportPasteCase() },
+    "import-confirm" to { ImportConfirmCase() },
+    "import-done" to { ImportDoneCase() },
+    "update-available" to { UpdateAvailableCase() },
+    "update-downloading" to { UpdateDownloadingCase() },
+    "update-installer-failed" to { UpdateInstallerFailedCase() },
+    "locked" to { LockedCase() }
+)
+
+// -- sheets and dialogs -----------------------------------------------------------------------
+
+/**
+ * Everything that opens a window of its own: the bottom sheets and the dialogs.
+ *
+ * Kept apart from [GalleryCases] because `captureToImage` cannot see a second window. The window
+ * harness captures the whole display instead, which is also what a person sees: the sheet or the
+ * dialog, over the scrim, over the themed background.
+ */
+val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
+    "sheet-add-person" to { AddPersonDialog(onDismiss = {}, onAdd = { _, _, _, _, _ -> }) },
+    "sheet-edit-person" to {
+        EditPersonDialog(
+            person = Fixtures.chaitanya.person,
+            converting = false,
+            conversionError = null,
+            onDismiss = {},
+            onSave = { _, _, _, _, _, _ -> }
+        )
+    },
+    "sheet-reminder" to {
+        ReminderSheet(person = Fixtures.chaitanya, entries = Fixtures.ashaHistory, onDismiss = {})
+    },
+    "sheet-share" to {
+        ShareLedgerSheet(
+            state = Fixtures.shareState,
+            onSenderNameChange = {}, onFullHistoryChange = {}, onShare = {}, onDismiss = {}
+        )
+    },
+    "sheet-move-debt" to {
+        MoveDebtDialog(
+            state = Fixtures.moveDebt,
+            people = Fixtures.mixedPeople,
+            onKey = {}, onTargetChange = {}, onNoteChange = {}, onConfirm = {}, onDismiss = {}
+        )
+    },
+    "sheet-edit-entry" to {
+        EditEntrySheet(
+            entry = Fixtures.ashaHistory.first(),
+            currency = "INR",
+            onSave = {}, onDelete = {}, onDismiss = {}
+        )
+    },
+    "sheet-create-group" to {
+        CreateGroupDialog(
+            people = Fixtures.mixedPeople,
+            defaultCurrency = "INR",
+            onDismiss = {},
+            onCreate = { _, _, _, _ -> }
+        )
+    },
+    "sheet-add-expense" to {
+        AddExpenseDialog(
+            members = Fixtures.groupMembers,
+            currency = "INR",
+            selfId = 1,
+            onDismiss = {},
+            onAdd = { _, _, _, _ -> }
+        )
+    },
+    "sheet-settle-up" to {
+        SettleUpSheet(
+            transfers = Fixtures.groupTransfers,
+            members = Fixtures.groupMembers,
+            currency = "INR",
+            onRecord = {},
+            onDismiss = {}
+        )
+    },
+    "dialog-delete-person" to {
+        val person = Fixtures.chaitanya
+        DecisionDialog(
+            title = "Delete ${person.name}?",
+            body = "Removes their ${amountString(person.balanceMinor, person.currency)} balance and " +
+                "23 entries. It also removes 2 group expenses they paid for, changing what the " +
+                "other members of those groups owe. This can't be undone.",
+            confirmLabel = "Delete",
+            onConfirm = {},
+            onDismiss = {}
+        )
+    },
+    "dialog-replace-ledger" to {
+        DecisionDialog(
+            title = "Replace your ledger?",
+            // The sentence BackupDialog builds for these counts.
+            body = "Deletes 9 people, 61 entries and 3 groups. This can't be undone.",
+            warning = "A CSV export puts no groups back.",
+            confirmLabel = "Replace my ledger",
+            dismissLabel = "Keep my ledger",
+            onConfirm = {},
+            onDismiss = {}
+        )
+    },
+    "dialog-convert-currency" to {
+        ConvertCurrencyDialog(
+            personName = "Asha",
+            from = "INR",
+            to = "USD",
+            onConvert = {},
+            onRelabel = {},
+            onDismiss = {}
+        )
+    }
 )
 
 // -- Android Studio previews ---------------------------------------------------------------
