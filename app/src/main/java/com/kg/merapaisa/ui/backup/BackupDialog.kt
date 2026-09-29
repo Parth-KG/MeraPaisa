@@ -143,7 +143,7 @@ private fun MenuScreen(
                                 style = MeraPaisaType.label,
                                 // A weekly job runs when nobody is watching, so a failure has to be
                                 // legible here or it looks identical to never having been set up.
-                                color = if (result.startsWith("Backed up")) theme.textSecondary
+                                color = if (lastRunSucceeded(result)) theme.textSecondary
                                 else theme.negative
                             )
                         }
@@ -464,6 +464,17 @@ private fun ModeOption(selected: Boolean, title: String, subtitle: String, onCli
 }
 
 /** What Replace is about to destroy, in the same words wherever it is said. */
+/**
+ * Whether the stored result of the last backup run is a success.
+ *
+ * The result is a sentence, written by AutoExportWorker or by Back up now and kept in DataStore,
+ * so this matches its wording. Both wordings count: "Saved a backup." is current, and "Backed up
+ * successfully." is what earlier versions stored, which a phone keeps until the next run. Matching
+ * only the old one turned every successful backup red the moment the sentence was reworded.
+ */
+internal fun lastRunSucceeded(result: String): Boolean =
+    result.startsWith("Saved a backup") || result.startsWith("Backed up")
+
 private fun deletesSentence(deletes: RestoreCounts): String =
     "Deletes ${countPhrase(deletes.people, "person", "people")}, " +
         "${countPhrase(deletes.transactions, "entry", "entries")}" +
