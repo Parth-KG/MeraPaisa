@@ -63,10 +63,12 @@ sealed interface ReconcileItem {
          * entries this phone may already hold, so taking it as well counts them twice. Arrives
          * unticked.
          */
-        val theirOpening: Boolean = false
+        val theirOpening: Boolean = false,
+        /** One you deleted here that they still have. Arrives unticked; ticking adds it back. */
+        val deletedHere: Boolean = false
     ) : ReconcileItem {
         /** Held back for a decision rather than ticked like an ordinary new entry. */
-        val heldBack: Boolean get() = predatesClear || theirOpening
+        val heldBack: Boolean get() = predatesClear || theirOpening || deletedHere
     }
 
     /**
@@ -148,7 +150,9 @@ data class ReconcilePlan(
     val comparable: Boolean
 ) {
     val new: List<ReconcileItem.New> get() = items.filterIsInstance<ReconcileItem.New>()
-    val newBeforeClear: List<ReconcileItem.New> get() = new.filter { it.predatesClear && !it.theirOpening }
+    val newBeforeClear: List<ReconcileItem.New>
+        get() = new.filter { it.predatesClear && !it.theirOpening && !it.deletedHere }
+    val deletedHere: List<ReconcileItem.New> get() = new.filter { it.deletedHere && !it.theirOpening }
     val theirOpenings: List<ReconcileItem.New> get() = new.filter { it.theirOpening }
     val edited: List<ReconcileItem.Edited> get() = items.filterIsInstance<ReconcileItem.Edited>()
     val unchanged: List<ReconcileItem.Unchanged> get() = items.filterIsInstance<ReconcileItem.Unchanged>()
@@ -230,7 +234,9 @@ fun reconcile(
     local: List<Transaction>,
     scope: ShareScope,
     comparable: Boolean,
-    now: Long
+    now: Long,
+    /** Uids removed here on purpose, with [RetiredUid.reason]. See [RetiredUid]. */
+    retired: Map<String, String> = emptyMap()
 ): ReconcilePlan {
     if (!comparable) {
         // No uids, so nothing can be lined up. Everything is new, which is what every version of
@@ -256,20 +262,29 @@ fun reconcile(
 
     val incomingUids = incoming.map { it.uid }.toHashSet()
     val items = mutableListOf<ReconcileItem>()
-    // When this history was last cleared, if it was: the newest opening entry a clear wrote.
-    val clearedAt = local.filter { it.uid.startsWith(OPENING_UID_PREFIX) }.maxOfOrNull { it.timestamp }
+    // When this history was last cleared, if it was: the newest opening entry a clear wrote. Only
+    // needed for a clear that kept no record of the uids it removed, from before v10; one that did
+    // is matched exactly below.
+    val clearedAt = if (retired.values.any { it == RETIRED_CLEARED }) null
+    else local.filter { it.uid.startsWith(OPENING_UID_PREFIX) }.maxOfOrNull { it.timestamp }
 
     incoming.forEach { entry ->
         val existing = localByUid[entry.uid]
         val stamp = clamp(entry.timestamp, now)
+        val retiredAs = if (existing == null) retired[entry.uid] else null
         items += when {
+            // Cleared here: its money is in the opening balance, so it already matches.
+            retiredAs == RETIRED_CLEARED ->
+                ReconcileItem.Unchanged(entry.uid, stamp, entry.amountMinor, entry.note)
+
             existing == null ->
                 ReconcileItem.New(
                     entry.uid, stamp, entry.amountMinor, entry.note,
                     // Full links only. An update carries only what the sender had not sent before,
                     // so this phone cannot have had it, whatever its date.
                     predatesClear = scope == ShareScope.Full && clearedAt != null && stamp < clearedAt,
-                    theirOpening = entry.uid.startsWith(OPENING_UID_PREFIX)
+                    theirOpening = entry.uid.startsWith(OPENING_UID_PREFIX),
+                    deletedHere = retiredAs == RETIRED_DELETED
                 )
 
             existing.amountMinor == entry.amountMinor && existing.note == entry.note ->

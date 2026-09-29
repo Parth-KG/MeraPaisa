@@ -84,6 +84,39 @@ class ReconcileTest {
     }
 
     @Test
+    fun `an entry whose uid was cleared here already matches`() {
+        val opening = local(1, OPENING_UID_PREFIX + "x", 500_00, note = "Opening balance", timestamp = 5_000L)
+        val p = reconcile(
+            personId, listOf(incoming("e1", 500_00, timestamp = 1_000L)), listOf(opening),
+            ShareScope.Full, comparable = true, now = now, retired = mapOf("e1" to RETIRED_CLEARED)
+        )
+        assertEquals("its money is in the opening balance", listOf("e1"), p.unchanged.map { it.uid })
+        assertEquals(0L, p.netChangeFor(p.defaultSelection))
+    }
+
+    @Test
+    fun `with the uids kept, an unknown entry from before the clear is simply new`() {
+        val opening = local(1, OPENING_UID_PREFIX + "x", 500_00, note = "Opening balance", timestamp = 5_000L)
+        val p = reconcile(
+            personId, listOf(incoming("never-had", 70_00, timestamp = 1_000L)), listOf(opening),
+            ShareScope.Full, comparable = true, now = now, retired = mapOf("e1" to RETIRED_CLEARED)
+        )
+        assertEquals(setOf("never-had"), p.defaultSelection)
+    }
+
+    @Test
+    fun `an entry deleted here comes back only if ticked`() {
+        val p = reconcile(
+            personId, listOf(incoming("typo", 10_00)), emptyList(),
+            ShareScope.Full, comparable = true, now = now, retired = mapOf("typo" to RETIRED_DELETED)
+        )
+        assertTrue(p.deletedHere.single().deletedHere)
+        assertTrue(p.defaultSelection.isEmpty())
+        assertTrue(p.needsDecision)
+        assertEquals(10_00L, p.netChangeFor(setOf("typo")))
+    }
+
+    @Test
     fun `without a clear nothing is held back`() {
         val p = plan(listOf(incoming("old", 100_00, timestamp = 1_000L)), listOf(local(1, "mine", 20_00, timestamp = 5_000L)))
         assertEquals(setOf("old"), p.defaultSelection)

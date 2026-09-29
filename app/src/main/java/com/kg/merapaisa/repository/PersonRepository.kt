@@ -356,7 +356,8 @@ class PersonRepository(
             local = dao.getTransactionsForPersonNow(personId),
             scope = payload.scope,
             comparable = payload.canReconcile,
-            now = now
+            now = now,
+            retired = dao.getRetiredUidsNow(personId).associate { it.uid to it.reason }
         )
 
     /**

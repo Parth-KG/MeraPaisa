@@ -72,7 +72,7 @@ Mera Paisa keeps all of that on your phone.
 > There is no balance column to drift out of step with the history. A balance is the sum of that person's entries, derived on read, so the figure on screen and the entries behind it cannot disagree.
 
 > **An update never changes what you are owed**
-> The database has been through nine schema versions with six hand-written migrations, each tested against a seeded database before release. There is no destructive fallback anywhere, so no update can wipe a ledger. The version that removed the stored balance column had to prove first that the entries summed to it, and wrote a reconciling entry where they did not.
+> The database has been through ten schema versions with seven hand-written migrations, each tested against a seeded database before release. There is no destructive fallback anywhere, so no update can wipe a ledger. The version that removed the stored balance column had to prove first that the entries summed to it, and wrote a reconciling entry where they did not.
 
 > **Lock-on-edit redistribution**
 > Change one person's share and that row locks, and the remaining unlocked rows split what is left. Leftover paise go to the first person rather than quietly disappearing. If the shares do not reconcile you get a warning rather than a block, because sometimes you really do mean it.
@@ -155,7 +155,7 @@ Kotlin and Jetpack Compose with Material 3. Room for storage, with exported sche
 
 Type is Anek Latin by Ek Type for amounts and titles and Figtree for everything else, shipped as static subset instances because API 24 and 25 ignore variable font axes.
 
-405 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec and theme contrast, and 150 instrumentation tests covering every migration, the full migration chain, and the settle, reopen, rollback, edit, delete, reconcile and move-debt paths against a real database.
+412 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec and theme contrast, and 160 instrumentation tests covering every migration, the full migration chain, and the settle, reopen, rollback, edit, delete, reconcile and move-debt paths against a real database.
 
 ## Build from source
 

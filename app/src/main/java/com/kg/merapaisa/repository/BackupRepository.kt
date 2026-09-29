@@ -37,7 +37,8 @@ class BackupRepository(
             groupMembers = groupDao.getAllGroupMembersForBackup(),
             expenses = groupDao.getAllExpensesForBackup(),
             expenseShares = groupDao.getAllExpenseSharesForBackup(),
-            appliedPayloads = personDao.getAllAppliedPayloadsForBackup()
+            appliedPayloads = personDao.getAllAppliedPayloadsForBackup(),
+            retiredUids = personDao.getAllRetiredUidsForBackup()
         )
     }
 
@@ -76,6 +77,7 @@ class BackupRepository(
             if (plan.expenses.isNotEmpty()) groupDao.insertExpenses(plan.expenses)
             if (plan.expenseShares.isNotEmpty()) groupDao.insertShares(plan.expenseShares)
             if (plan.appliedPayloads.isNotEmpty()) personDao.insertAppliedPayloads(plan.appliedPayloads)
+            if (plan.retiredUids.isNotEmpty()) personDao.insertRetiredUids(plan.retiredUids)
         }
         notifier.onLedgerChanged()
     }

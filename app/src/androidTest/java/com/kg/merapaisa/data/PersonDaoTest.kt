@@ -184,6 +184,20 @@ class PersonDaoTest {
     }
 
     @Test
+    fun clearingAndDeletingKeepTheUidsTheyRemove() = runBlocking {
+        val id = newPerson()
+        dao.recordEntry(Transaction(personId = id, amountMinor = 10_00, note = "typo", uid = "gone"))
+        dao.recordEntry(Transaction(personId = id, amountMinor = 30_00, note = "cab", uid = "folded"))
+
+        dao.removeTransaction(dao.getTransactionsForPersonNow(id).single { it.uid == "gone" })
+        dao.clearTransactionsForPerson(id)
+
+        val retired = dao.getRetiredUidsNow(id).associate { it.uid to it.reason }
+        assertEquals(RETIRED_DELETED, retired["gone"])
+        assertEquals(RETIRED_CLEARED, retired["folded"])
+    }
+
+    @Test
     fun clearingANeverSharedLogLeavesTheWholeBalanceToShare() = runBlocking {
         val id = newPerson()
         dao.recordEntry(Transaction(personId = id, amountMinor = 75_00, note = "one"))

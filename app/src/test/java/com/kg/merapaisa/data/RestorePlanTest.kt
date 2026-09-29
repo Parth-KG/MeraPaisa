@@ -40,7 +40,8 @@ class RestorePlanTest {
         groupMembers = groupMembers + plan.groupMembers,
         expenses = expenses + plan.expenses,
         expenseShares = expenseShares + plan.expenseShares,
-        appliedPayloads = appliedPayloads + plan.appliedPayloads
+        appliedPayloads = appliedPayloads + plan.appliedPayloads,
+        retiredUids = retiredUids + plan.retiredUids
     )
 
     private fun backup() = snapshot(
@@ -69,6 +70,17 @@ class RestorePlanTest {
     // -----------------------------------------------------------------------------------------
     // Merge into an empty ledger
     // -----------------------------------------------------------------------------------------
+
+    @Test
+    fun `retired uids follow their person to the id they get here, once`() {
+        val withRetired = backup().copy(retiredUids = listOf(RetiredUid(11, "gone", RETIRED_CLEARED, 5)))
+        val plan = merge(emptyLedger(), withRetired)
+        val asha = plan.persons.single { it.name == "Asha" }
+        assertEquals(listOf(RetiredUid(asha.id, "gone", RETIRED_CLEARED, 5)), plan.retiredUids)
+
+        val again = merge(emptyLedger().plus(plan), withRetired)
+        assertTrue("merging the same backup twice adds nothing", again.retiredUids.isEmpty())
+    }
 
     @Test
     fun `merging into an empty ledger brings everything across`() {

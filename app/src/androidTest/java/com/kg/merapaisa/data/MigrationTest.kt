@@ -494,6 +494,23 @@ class MigrationTest {
         }
     }
 
+    /** v10 only adds a table: every entry and balance comes through untouched, and it starts empty. */
+    @Test
+    fun migrate9To10_addsAnEmptyRetiredTableAndKeepsTheLedger() {
+        helper.createDatabase(TEST_DB, 9).use { db ->
+            db.insertV7Person(id = 1, name = "Asha", currency = "INR")
+            db.execSQL(
+                "INSERT INTO transactions (personId, amountMinor, timestamp, note, uid, fromShare) " +
+                    "VALUES (1, 25050, 2000, 'dinner', 'abc', 0)"
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 10, true, MIGRATION_9_10).use { db ->
+            assertEquals(25_050L, db.derivedBalance(1))
+            assertEquals(0L, db.longOf("SELECT COUNT(*) FROM retired_uids"))
+        }
+    }
+
     // -----------------------------------------------------------------------------------------
     // The whole chain, which is what a real upgrade actually runs
     // -----------------------------------------------------------------------------------------
@@ -521,8 +538,9 @@ class MigrationTest {
         }
 
         helper.runMigrationsAndValidate(
-            TEST_DB, 9, true,
-            MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
+            TEST_DB, 10, true,
+            MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
+            MIGRATION_9_10
         ).use { db ->
             // The money survives, in minor units, with the paise intact.
             assertEquals("Asha's balance must survive six migrations", 25_050L, db.derivedBalance(1))
@@ -558,8 +576,9 @@ class MigrationTest {
         helper.createDatabase(TEST_DB, 3).use { }
 
         helper.runMigrationsAndValidate(
-            TEST_DB, 9, true,
-            MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
+            TEST_DB, 10, true,
+            MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
+            MIGRATION_9_10
         ).use { db ->
             assertEquals(0L, db.longOf("SELECT COUNT(*) FROM transactions"))
             // Exactly one person, and it is the row that is you: migration 5 -> 6 creates it, and

@@ -375,6 +375,25 @@ interface PersonDao {
     @Query("DELETE FROM transactions WHERE id = :transactionId")
     suspend fun deleteTransaction(transactionId: Int)
 
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun insertRetiredUids(retired: List<RetiredUid>)
+
+    @Query("SELECT * FROM retired_uids WHERE personId = :personId")
+    suspend fun getRetiredUidsNow(personId: Long): List<RetiredUid>
+
+    @Query("SELECT * FROM retired_uids ORDER BY personId ASC, uid ASC")
+    suspend fun getAllRetiredUidsForBackup(): List<RetiredUid>
+
+    @Query("DELETE FROM retired_uids WHERE personId = :personId AND uid IN (:uids)")
+    suspend fun unretireUids(personId: Long, uids: List<String>)
+
+    /** Records [rows] as removed on purpose, so a later link does not quietly bring them back. */
+    suspend fun retire(rows: List<Transaction>, reason: String, at: Long = System.currentTimeMillis()) {
+        val retired = rows.filter { it.uid.isNotEmpty() }
+            .map { RetiredUid(personId = it.personId, uid = it.uid, reason = reason, retiredAt = at) }
+        if (retired.isNotEmpty()) insertRetiredUids(retired)
+    }
+
     /**
      * Corrects a single entry in place, keeping its original timestamp. A correction can move
      * the balance off zero, so the settled flag is re-derived rather than left stale.
@@ -388,6 +407,7 @@ interface PersonDao {
     /** Removes one entry outright. A mistyped amount should not have to live in the history. */
     @androidx.room.Transaction
     suspend fun removeTransaction(transaction: Transaction) {
+        retire(listOf(transaction), RETIRED_DELETED)
         deleteTransaction(transaction.id)
         if (getBalanceNow(transaction.personId) != 0L) setSettled(transaction.personId, false)
     }
@@ -416,6 +436,9 @@ interface PersonDao {
         // watermark, and every entry that came from its own links whenever it arrived.
         val notYetShared = sumTypedHereSince(personId, sharedUpTo)
         val alreadyShared = outstanding - notYetShared
+        // Their uids go with them, and a link matches on uids: keep them, so an entry the other
+        // phone sends again is recognised as already counted in the opening balance.
+        retire(getTransactionsForPersonNow(personId), RETIRED_CLEARED)
         deleteTransactionsForPerson(personId)
         val now = System.currentTimeMillis()
         if (alreadyShared != 0L) {
@@ -614,7 +637,11 @@ interface PersonDao {
             write.deleteIds.forEach { net -= before[it]?.amountMinor ?: 0L }
         }
 
-        if (write.inserts.isNotEmpty()) insertTransactions(write.inserts)
+        if (write.inserts.isNotEmpty()) {
+            insertTransactions(write.inserts)
+            // Anything ticked back in is live again, not retired.
+            unretireUids(personId, write.inserts.map { it.uid })
+        }
         if (write.updates.isNotEmpty()) updateTransactions(write.updates)
         write.deleteIds.forEach { deleteTransaction(it) }
 

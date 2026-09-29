@@ -594,6 +594,31 @@ private fun LazyListScope.differences(
         }
     }
 
+    if (plan.deletedHere.isNotEmpty()) {
+        item {
+            GroupIntro(
+                heading = countOf(plan.deletedHere.size, "entry", "entries") + " you deleted",
+                explanation = if (plan.deletedHere.size == 1) {
+                    "They still have it. Left unticked, it stays deleted here; tick to add it back."
+                } else {
+                    "They still have these. Left unticked, they stay deleted here; tick one to add it back."
+                }
+            )
+        }
+        itemsIndexed(plan.deletedHere, key = { _, item -> "deleted-here-${item.uid}" }) { index, item ->
+            if (index > 0) RowDivider(TextRowInset)
+            DifferenceRow(
+                checked = item.uid in selected,
+                onToggle = { onToggleItem(item.uid) },
+                title = item.note.ifBlank { "No note" },
+                detail = "",
+                date = dateOf(item.timestamp),
+                amountMinor = item.amountMinor,
+                currency = currency
+            )
+        }
+    }
+
     if (plan.newBeforeClear.isNotEmpty()) {
         item {
             GroupIntro(

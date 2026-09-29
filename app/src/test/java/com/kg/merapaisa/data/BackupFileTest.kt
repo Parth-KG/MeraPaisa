@@ -59,6 +59,25 @@ class BackupFileTest {
         assertEquals(20_000L, back.expenseShares.sumOf { it.shareMinor })
     }
 
+    @Test
+    fun `carries the retired uids`() {
+        val s = snapshot().copy(retiredUids = listOf(RetiredUid(2, "gone", RETIRED_CLEARED, 4_000)))
+        assertEquals(s.retiredUids, roundTrip(s).snapshot.retiredUids)
+    }
+
+    @Test
+    fun `a backup from before retired uids still reads`() {
+        val text = encodeBackup(snapshot(), 1, "2.5.0").replace(Regex(",\\s*\"retiredUids\": \\[\\s*\\]"), "")
+        assertTrue("the test must actually remove the key", "retiredUids" !in text)
+        assertTrue((decodeBackup(text) as BackupResult.Ok).snapshot.retiredUids.isEmpty())
+    }
+
+    @Test
+    fun `refuses retired uids for someone not in the backup`() {
+        val s = snapshot().copy(retiredUids = listOf(RetiredUid(99, "x", RETIRED_DELETED, 1)))
+        assertEquals(BackupResult.Damaged, decodeBackup(encodeBackup(s, 1, "2.5.0")))
+    }
+
     /** Leave these out and restoring an old backup lets an applied share link land twice. */
     @Test
     fun `carries the applied payload records`() {

@@ -14,8 +14,10 @@ package com.kg.merapaisa.data
  *    image. Restoring onto a different phone leaves those people showing initials, which is what
  *    the app already falls back to when a photo file has gone missing. Nothing breaks; a picture
  *    is lost.
- *  - **Nothing else.** Every other table is here, including `applied_payloads`. Leave that out and
- *    restoring an old backup would let a share link you had already applied land a second time.
+ *  - **Nothing else.** Every other table is here, including `applied_payloads` and
+ *    `retired_uids`. Leave the first out and restoring an old backup would let a share link you
+ *    had already applied land a second time; leave the second out and a cleared history would
+ *    take the other phone's entries a second time.
  */
 
 /** Everything in the database, read together. Row ids are kept so the tables still join up. */
@@ -26,7 +28,9 @@ data class BackupSnapshot(
     val groupMembers: List<GroupMember>,
     val expenses: List<Expense>,
     val expenseShares: List<ExpenseShare>,
-    val appliedPayloads: List<AppliedPayload>
+    val appliedPayloads: List<AppliedPayload>,
+    /** Uids removed on purpose. Absent from backups written before v10. See [RetiredUid]. */
+    val retiredUids: List<RetiredUid> = emptyList()
 ) {
     val isEmpty: Boolean
         get() = persons.none { !it.isSelf } && transactions.isEmpty() && groups.isEmpty()
@@ -133,6 +137,14 @@ fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String)
                     "senderName" to a.senderName.json(),
                     "entryCount" to a.entryCount.json(),
                     "netMinor" to a.netMinor.json()
+                )
+            }),
+            "retiredUids" to jsonArray(snapshot.retiredUids.map { r ->
+                jsonObject(
+                    "personId" to r.personId.json(),
+                    "uid" to r.uid.json(),
+                    "reason" to r.reason.json(),
+                    "retiredAt" to r.retiredAt.json()
                 )
             })
         )
@@ -246,6 +258,18 @@ fun decodeBackup(text: String): BackupResult {
         } ?: return BackupResult.Damaged
     }
 
+    // Absent in a backup from before v10, like appliedPayloads before share links.
+    val retiredUids = if (root["retiredUids"] == null) emptyList() else {
+        root.objects("retiredUids")?.map { o ->
+            RetiredUid(
+                personId = o.long("personId") ?: return BackupResult.Damaged,
+                uid = o.string("uid") ?: return BackupResult.Damaged,
+                reason = o.string("reason") ?: return BackupResult.Damaged,
+                retiredAt = o.long("retiredAt") ?: return BackupResult.Damaged
+            )
+        } ?: return BackupResult.Damaged
+    }
+
     // Referential integrity, checked before anything is offered as restorable. Room's foreign keys
     // would reject these rows anyway, but they would do it halfway through writing, and a restore
     // that fails in the middle is how a half-ledger happens.
@@ -256,6 +280,7 @@ fun decodeBackup(text: String): BackupResult {
     if (groupMembers.any { it.groupId !in groupIds || it.personId !in personIds }) return BackupResult.Damaged
     if (expenses.any { it.groupId !in groupIds || it.paidByPersonId !in personIds }) return BackupResult.Damaged
     if (expenseShares.any { it.expenseId !in expenseIds || it.personId !in personIds }) return BackupResult.Damaged
+    if (retiredUids.any { it.personId !in personIds }) return BackupResult.Damaged
 
     return BackupResult.Ok(
         snapshot = BackupSnapshot(
@@ -265,7 +290,8 @@ fun decodeBackup(text: String): BackupResult {
             groupMembers = groupMembers,
             expenses = expenses,
             expenseShares = expenseShares,
-            appliedPayloads = appliedPayloads
+            appliedPayloads = appliedPayloads,
+            retiredUids = retiredUids
         ),
         exportedAt = exportedAt,
         appVersion = appVersion

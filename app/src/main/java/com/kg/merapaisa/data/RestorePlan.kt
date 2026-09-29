@@ -41,6 +41,7 @@ data class RestorePlan(
     val expenses: List<Expense>,
     val expenseShares: List<ExpenseShare>,
     val appliedPayloads: List<AppliedPayload>,
+    val retiredUids: List<RetiredUid> = emptyList(),
     /** What Replace would delete first. Zeroes in Merge, which deletes nothing. */
     val deletes: RestoreCounts,
     /** What Merge recognised and skipped. Zeroes in Replace, which starts from nothing. */
@@ -98,6 +99,7 @@ private fun planReplace(existing: BackupSnapshot, incoming: BackupSnapshot) = Re
     expenses = incoming.expenses,
     expenseShares = incoming.expenseShares,
     appliedPayloads = incoming.appliedPayloads,
+    retiredUids = incoming.retiredUids,
     deletes = RestoreCounts(
         people = existing.persons.count { !it.isSelf },
         transactions = existing.transactions.size,
@@ -233,6 +235,14 @@ private fun planMerge(
         a.copy(personId = personIdMap[a.personId] ?: a.personId)
     }
 
+    // Keyed by person and uid, the table's own key, onto whoever each person became here.
+    val existingRetired = existing.retiredUids.map { it.personId to it.uid }.toHashSet()
+    val newRetired = incoming.retiredUids.mapNotNull { r ->
+        val personId = personIdMap[r.personId] ?: return@mapNotNull null
+        if (!existingRetired.add(personId to r.uid)) return@mapNotNull null
+        r.copy(personId = personId)
+    }
+
     return RestorePlan(
         mode = RestoreMode.Merge,
         persons = newPersons,
@@ -242,6 +252,7 @@ private fun planMerge(
         expenses = newExpenses,
         expenseShares = newShares,
         appliedPayloads = newPayloads,
+        retiredUids = newRetired,
         deletes = RestoreCounts(),
         alreadyPresent = RestoreCounts(
             people = peopleAlreadyPresent,
@@ -253,13 +264,13 @@ private fun planMerge(
 }
 
 private fun personKey(name: String, currency: String): String =
-    name.trim().lowercase() + " " + normaliseCurrency(currency.trim())
+    name.trim().lowercase() + "\u0000" + normaliseCurrency(currency.trim())
 
 private fun groupKey(name: String, currency: String, createdAt: Long): String =
-    name.trim().lowercase() + " " + normaliseCurrency(currency.trim()) + " " + createdAt
+    name.trim().lowercase() + "\u0000" + normaliseCurrency(currency.trim()) + "\u0000" + createdAt
 
 private fun transactionKey(personId: Long, timestamp: Long, amountMinor: Long, note: String): String =
-    "$personId $timestamp $amountMinor ${note.trim()}"
+    "$personId\u0000$timestamp\u0000$amountMinor\u0000${note.trim()}"
 
 private fun expenseKey(
     groupId: Long,
@@ -267,4 +278,4 @@ private fun expenseKey(
     amountMinor: Long,
     paidByPersonId: Long,
     timestamp: Long
-): String = "$groupId ${description.trim().lowercase()} $amountMinor $paidByPersonId $timestamp"
+): String = "$groupId\u0000${description.trim().lowercase()}\u0000$amountMinor\u0000$paidByPersonId\u0000$timestamp"

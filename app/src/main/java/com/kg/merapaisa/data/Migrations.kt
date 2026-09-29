@@ -265,3 +265,22 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_uid` ON `transactions` (`uid`)")
     }
 }
+
+/**
+ * v10: `retired_uids`, the uids this phone removed on purpose. Clearing a history or deleting an
+ * entry dropped the uid a link matches on, so the other phone's next full link brought the entry
+ * back as new and counted it twice. See [RetiredUid]. Nothing to backfill: uids removed before
+ * this version are gone, and the import screen's date check still covers those.
+ */
+val MIGRATION_9_10 = object : Migration(9, 10) {
+
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `retired_uids` (`personId` INTEGER NOT NULL, " +
+                "`uid` TEXT NOT NULL, `reason` TEXT NOT NULL, `retiredAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`personId`, `uid`), FOREIGN KEY(`personId`) REFERENCES `persons`(`id`) " +
+                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_retired_uids_personId` ON `retired_uids` (`personId`)")
+    }
+}

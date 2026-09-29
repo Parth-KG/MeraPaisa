@@ -61,16 +61,32 @@ class WindowGalleryTest {
 
     private fun capture(fontScale: Float, label: String, only: Set<String>? = null) {
         val cases = GalleryWindowCases.filter { only == null || it.first in only }
-        if (fontScale != 1f) {
-            compose.runOnUiThread {
-                val resources = compose.activity.resources
-                val config = android.content.res.Configuration(resources.configuration).apply {
-                    this.fontScale = fontScale
-                }
-                @Suppress("DEPRECATION")
-                resources.updateConfiguration(config, resources.displayMetrics)
-            }
+        val originalScale = compose.activity.resources.configuration.fontScale
+        if (fontScale != 1f) setActivityFontScale(fontScale)
+        try {
+            captureCases(cases, fontScale, label)
+        } finally {
+            // Put it back. The resources are shared by every test in this process, so leaving
+            // double type set made the next class lay out at double type too: the group screen
+            // test found its expense below the fold and failed only when run after this one.
+            if (fontScale != 1f) setActivityFontScale(originalScale)
         }
+    }
+
+    private fun setActivityFontScale(scale: Float) = compose.runOnUiThread {
+        val resources = compose.activity.resources
+        val config = android.content.res.Configuration(resources.configuration).apply {
+            this.fontScale = scale
+        }
+        @Suppress("DEPRECATION")
+        resources.updateConfiguration(config, resources.displayMetrics)
+    }
+
+    private fun captureCases(
+        cases: List<Pair<String, @Composable () -> Unit>>,
+        fontScale: Float,
+        label: String
+    ) {
         val themeState = mutableStateOf(themes.first())
         val caseState = mutableStateOf<(@Composable () -> Unit)?>(null)
 

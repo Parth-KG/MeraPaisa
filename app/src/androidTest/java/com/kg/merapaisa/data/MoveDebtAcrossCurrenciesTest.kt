@@ -72,7 +72,7 @@ class MoveDebtAcrossCurrenciesTest {
         assertTrue(out.note, out.note.startsWith("Moved to Diego"))
         assertTrue(into.note, into.note.startsWith("Moved from Asha"))
         listOf(out, into).forEach {
-            assertTrue("names both sides of the conversion: ${it.note}", "12.05" in it.note && "1000" in it.note)
+            assertTrue("names both sides of the conversion: ${it.note}", "12.05" in it.note && "1,000" in it.note)
             assertTrue("keeps the reason: ${it.note}", it.note.endsWith("Diego covered it"))
         }
     }
