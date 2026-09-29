@@ -14,7 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Two ledgers, two databases, one link between them — the whole round trip against real Room.
+ * Two ledgers, two databases, one link between them: the whole round trip against real Room.
  *
  * The unit tests cover the comparison itself. What this covers is everything the comparison
  * assumes and cannot check: that a uid actually survives being written to SQLite and read back,
@@ -163,7 +163,7 @@ class ReconcileApplyTest {
 
     /**
      * The dinner you both wrote down. Their link cannot know about your copy, and this must not
-     * offer to delete it — it is yours, and they have simply never seen it.
+     * offer to delete it. It is yours, and they have simply never seen it.
      */
     @Test
     fun anEntryYouTypedYourselfIsReportedAsUnseenRatherThanDeleted() = runBlocking {
@@ -242,7 +242,7 @@ class ReconcileApplyTest {
      * Confirming before the comparison has loaded must not append the whole link again.
      *
      * The plan is computed asynchronously, and the import screen used to fall back to plain
-     * appending whenever it had not arrived — so a quick tap on a cold start wrote a second copy
+     * appending whenever it had not arrived, so a quick tap on a cold start wrote a second copy
      * of every entry already in the ledger and silently doubled the debt. A null selection is the
      * "they never saw a plan" case, and it has to mean the defaults, not nothing.
      */
@@ -306,7 +306,7 @@ class ReconcileApplyTest {
     }
 
     /**
-     * A link the user ticked nothing on was considered, not applied — so it can be opened again.
+     * A link the user ticked nothing on was considered, not applied, so it can be opened again.
      * Filing it as used would leave no way to change their mind about a deletion they declined.
      */
     @Test

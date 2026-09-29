@@ -35,7 +35,7 @@ class ReconcileTest {
         timestamp = timestamp, note = note, uid = uid, fromShare = fromShare
     )
 
-    /** Already mirrored, as [reconcile] requires — these are amounts as they read *here*. */
+    /** Already mirrored, as [reconcile] requires: these are amounts as they read *here*. */
     private fun incoming(uid: String, amount: Long, note: String = "n", timestamp: Long = 1_000L) =
         SharedEntry(timestamp, amount, note, uid)
 
@@ -112,7 +112,7 @@ class ReconcileTest {
     }
 
     // -----------------------------------------------------------------------------------------
-    // Deletion — the part that can destroy something
+    // Deletion: the part that can destroy something
     // -----------------------------------------------------------------------------------------
 
     @Test
@@ -128,7 +128,7 @@ class ReconcileTest {
 
     /**
      * The single most dangerous confusion in this file. An incremental link says nothing about
-     * what it omits — everything older than the sender's watermark is missing from it by design.
+     * what it omits. Everything older than the sender's watermark is missing from it by design.
      * Reading that as deletion would wipe most of a ledger the first time anyone sent an update.
      */
     @Test
@@ -223,7 +223,7 @@ class ReconcileTest {
 
     /**
      * Accepting their version hands the row over to them. If it is theirs to edit, it is theirs to
-     * delete — and a row still marked as yours would reconcile as "they have not seen this" forever.
+     * delete, and a row still marked as yours would reconcile as "they have not seen this" forever.
      */
     @Test
     fun `accepting an edit marks the row as theirs`() {
@@ -246,7 +246,7 @@ class ReconcileTest {
     // -----------------------------------------------------------------------------------------
 
     /**
-     * An old link still works. It cannot be compared, so everything in it is new — which is
+     * An old link still works. It cannot be compared, so everything in it is new, which is
      * precisely what every release before v2.5 did with every link.
      */
     @Test
@@ -302,7 +302,7 @@ class ReconcileTest {
 
     /**
      * A full payload from someone who has deleted everything. Every row of theirs is offered for
-     * deletion — and every one of them is unticked, so tapping straight through changes nothing.
+     * deletion, and every one of them is unticked, so tapping straight through changes nothing.
      */
     @Test
     fun `a payload that deletes everything still requires every tick`() {

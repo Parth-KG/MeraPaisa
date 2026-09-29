@@ -19,8 +19,8 @@ private val CSV_HEADER = listOf(
  * The whole ledger as RFC 4180 CSV: one row per transaction, with the person's details
  * repeated so the file opens as a single flat table.
  *
- * People with no transactions still get a row — an export that quietly omits someone is
- * worse than no export — and the raw epoch timestamp travels alongside the readable date so
+ * People with no transactions still get a row (an export that quietly omits someone is
+ * worse than no export), and the raw epoch timestamp travels alongside the readable date so
  * the file can be read back without guessing a locale.
  */
 fun buildLedgerCsv(

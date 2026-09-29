@@ -20,7 +20,7 @@ import org.junit.runner.RunWith
 /**
  * Backup and restore against a real database.
  *
- * The planner is covered by JVM tests; what needs a device is everything those cannot reach — that
+ * The planner is covered by JVM tests; what needs a device is everything those cannot reach: that
  * a snapshot really does read every table, that a restore writes back through Room's foreign keys
  * without tripping them, and that the balances a user actually sees come out the same on the other
  * side. A backup nobody has restored is a file, not a backup.
@@ -277,7 +277,7 @@ class BackupRestoreTest {
 
     /**
      * A restore spans every table, so it runs inside one transaction. If it could fail halfway,
-     * the result would be a ledger with people but no entries — worse than the state the user was
+     * the result would be a ledger with people but no entries, worse than the state the user was
      * trying to recover from.
      */
     @Test

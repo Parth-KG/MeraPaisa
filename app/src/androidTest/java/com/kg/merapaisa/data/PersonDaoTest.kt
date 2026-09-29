@@ -279,7 +279,7 @@ class PersonDaoTest {
         spend(group, paidBy = me, amountMinor = 500_00, sharedWith = listOf(a, b, c))
 
         val byId = dao.getPersonsWithBalances(me).first().associateBy { it.id }
-        // 500 over three is 166.67 / 166.67 / 166.66 — the extra paisa goes to the first.
+        // 500 over three is 166.67 / 166.67 / 166.66; the extra paisa goes to the first.
         assertEquals(50_00L + 166_67L, byId[a]!!.balanceMinor)
         assertEquals(100_00L + 166_67L, byId[b]!!.balanceMinor)
         assertEquals(120_00L + 166_66L, byId[c]!!.balanceMinor)

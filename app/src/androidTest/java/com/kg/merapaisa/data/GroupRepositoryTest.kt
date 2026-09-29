@@ -113,7 +113,7 @@ class GroupRepositoryTest {
     //
     // The delete confirmation counts the expenses a person *paid for*, because those cascade away
     // and move everyone else's position. It says nothing about the expenses they merely had a
-    // share of — and those shares cascade away too, leaving an expense that is no longer fully
+    // share of, and those shares cascade away too, leaving an expense that is no longer fully
     // shared out. Every balance in the group then quietly stops adding up to zero.
     // -----------------------------------------------------------------------------------------
 

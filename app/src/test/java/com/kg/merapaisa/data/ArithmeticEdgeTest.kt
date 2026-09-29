@@ -9,7 +9,7 @@ import org.junit.Test
  *
  * Money here is a `Long` of minor units, and every bug this file is about has the same shape: a
  * total that no longer equals the sum of its parts. Nothing on screen looks wrong when that
- * happens — each individual number is plausible — which is exactly why it has to be pinned by
+ * happens (each individual number is plausible), which is exactly why it has to be pinned by
  * tests rather than noticed.
  */
 class ArithmeticEdgeTest {
@@ -44,7 +44,7 @@ class ArithmeticEdgeTest {
     /**
      * A repeated member must not silently eat somebody's share.
      *
-     * The split is built with `associateWith`, which collapses duplicate keys — so a list with the
+     * The split is built with `associateWith`, which collapses duplicate keys, so a list with the
      * same person twice produced a map whose values no longer added up to the expense. Nothing
      * downstream checks that, so the group's balances would simply be wrong by the difference, and
      * every individual figure would still look reasonable.
@@ -66,7 +66,7 @@ class ArithmeticEdgeTest {
     // -----------------------------------------------------------------------------------------
 
     /**
-     * `Long.MIN_VALUE.absoluteValue` is still negative — there is no positive counterpart — so a
+     * `Long.MIN_VALUE.absoluteValue` is still negative (there is no positive counterpart), so a
      * formatter that takes the magnitude and divides produces a negative body behind a minus sign.
      * It cannot arrive from the keypad or a share link, both of which are bounded, but a restored
      * backup is read straight from a file.

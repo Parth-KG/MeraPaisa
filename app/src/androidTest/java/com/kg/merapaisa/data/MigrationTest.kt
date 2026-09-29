@@ -43,7 +43,7 @@ class MigrationTest {
 
     /**
      * The migration drops the stored balance column, so its whole job is to make the summed
-     * transactions equal what the column said — for people whose rows already agreed, for
+     * transactions equal what the column said: for people whose rows already agreed, for
      * people whose rows had drifted, and for people who never had any rows at all.
      */
     @Test
@@ -106,8 +106,8 @@ class MigrationTest {
 
     /**
      * The 4 -> 5 migration adds a foreign key, which SQLite will not apply while rows point at
-     * a person who no longer exists. Those rows are invisible anyway — counted by no balance,
-     * shown in no history — so the migration clears them, and must not touch anything real.
+     * a person who no longer exists. Those rows are invisible anyway (counted by no balance,
+     * shown in no history), so the migration clears them, and must not touch anything real.
      */
     @Test
     fun migrate4To5_dropsOrphansAndLeavesEveryRealBalanceAlone() {
@@ -237,7 +237,7 @@ class MigrationTest {
             assertEquals("no entry may be invented", 1, db.transactionCount(1).toInt())
             assertEquals("no entry may be invented", 1, db.transactionCount(2).toInt())
 
-            // Nothing has been shared yet, so every watermark starts at zero — which is what makes
+            // Nothing has been shared yet, so every watermark starts at zero, which is what makes
             // the first link for an existing person offer their whole history rather than nothing.
             assertEquals(
                 "an existing install has shared nothing, so every watermark must be 0",
@@ -399,7 +399,7 @@ class MigrationTest {
      *
      * Seeded with `insertV4Transaction` on purpose: nothing has been added to `transactions`
      * between v4 and v8, so the v4 shape is still the v8 shape. That was checked against the
-     * exported 8.json rather than assumed — see the warning on the helpers below, which exists
+     * exported 8.json rather than assumed. See the warning on the helpers below, which exists
      * because exactly this assumption has been wrong twice.
      */
     @Test
@@ -445,7 +445,7 @@ class MigrationTest {
      * Existing rows are nobody else's to delete.
      *
      * `fromShare` is 0 for every one of them, including entries that really did arrive by link
-     * before v2.5 — there is no record of which those were. Treating them as yours is the safe
+     * before v2.5, since there is no record of which those were. Treating them as yours is the safe
      * direction: reconcile will never offer to delete them on a sender's say-so.
      */
     @Test
@@ -504,7 +504,7 @@ class MigrationTest {
      * Every other test here is a *pair*: seed at n, migrate to n+1, check. That proves each step
      * in isolation and proves nothing about the sequence, which is the only thing a real phone
      * ever runs. Somebody still on the first release opens v2.5 and executes six migrations
-     * back to back against data seeded in the oldest shape — a path that, until now, had never
+     * back to back against data seeded in the oldest shape: a path that, until now, had never
      * been executed anywhere.
      *
      * It is also the test that would catch a migration registered out of order, or omitted from
@@ -607,7 +607,7 @@ class MigrationTest {
      * Every schema version that adds a NOT NULL column to `persons` needs its own helper, and this
      * is now the second time that has been learned the hard way: migration 5 -> 6 added `isSelf`
      * and broke the v4 helper, then 6 -> 7 added `lastSharedAt` and broke the v6 one. Neither has a
-     * default in the exported schema, so an INSERT that omits the column is rejected — and the
+     * default in the exported schema, so an INSERT that omits the column is rejected, and the
      * failure only appears on a device, where the constraint is real.
      *
      * **If you add a NOT NULL column to `persons`, add the next helper here at the same time.**

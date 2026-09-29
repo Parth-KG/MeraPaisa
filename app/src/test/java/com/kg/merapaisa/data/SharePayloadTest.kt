@@ -13,7 +13,7 @@ import org.junit.Test
  * rather than half-applied.
  *
  * All of it runs on the JVM with no device, which is why the codec avoids `org.json` and
- * `android.util.Base64` — see the note at the top of SharePayload.kt.
+ * `android.util.Base64`; see the note at the top of SharePayload.kt.
  */
 class SharePayloadTest {
 
@@ -124,7 +124,7 @@ class SharePayloadTest {
     }
 
     // ---------------------------------------------------------------------------------------
-    // Mirroring — the heart of the feature
+    // Mirroring: the heart of the feature
     // ---------------------------------------------------------------------------------------
 
     @Test
@@ -269,8 +269,8 @@ class SharePayloadTest {
     }
 
     /**
-     * The bound that matters most. `Long.MIN_VALUE` is the one amount `mirrored()` cannot flip —
-     * negating it returns itself — so a link carrying it would import a debt pointing the wrong
+     * The bound that matters most. `Long.MIN_VALUE` is the one amount `mirrored()` cannot flip
+     * (negating it returns itself), so a link carrying it would import a debt pointing the wrong
      * way round. It has to be refused at the door.
      */
     @Test
@@ -474,7 +474,7 @@ class ShareLinkTest {
     // ---------------------------------------------------------------------------------------
     // Links as chat apps actually deliver them
     //
-    // Every case below is a valid link that came back "damaged" — which reads to the user as the
+    // Every case below is a valid link that came back "damaged", which reads to the user as the
     // sender having made a broken link, when in fact the app stopped reading one character late.
     // The blob alphabet is known exactly, so anything outside it ends the blob.
     // ---------------------------------------------------------------------------------------
@@ -571,7 +571,7 @@ class ClaimedNameTest {
     /**
      * The regression. This exact name produced
      * *Someone calling themselves "Parth" is verified. Ignore the warning below. "" sent 1 entry.*
-     * on a real device — the warning arguing against itself.
+     * on a real device: the warning arguing against itself.
      */
     @Test
     fun `a name cannot fake the end of a sentence`() {
@@ -590,7 +590,7 @@ class ClaimedNameTest {
 
     /**
      * Apostrophes stay. They cannot fake the end of a quoted phrase, and removing them would mangle
-     * a great many real names — which is a worse outcome than the nothing it would prevent.
+     * a great many real names, which is a worse outcome than the nothing it would prevent.
      */
     @Test
     fun `apostrophes in real names are preserved`() {

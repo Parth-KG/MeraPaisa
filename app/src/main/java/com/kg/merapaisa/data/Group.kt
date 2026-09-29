@@ -20,7 +20,7 @@ data class Group(
     /**
      * How this group's settle-up plan is worked out.
      *
-     * `true` nets everyone's position down to the fewest payments that square the group up — if A
+     * `true` nets everyone's position down to the fewest payments that square the group up. If A
      * owes B and B owes C the same amount, B drops out and A pays C directly. `false` leaves the
      * debts as they actually arose: whoever shared an expense owes whoever paid for it, netted
      * only between those two people.
@@ -69,7 +69,7 @@ data class Expense(
     /**
      * Whether this row is somebody paying somebody back, rather than somebody buying something.
      *
-     * A settlement genuinely is an expense in the arithmetic — the payer covered an amount shared
+     * A settlement genuinely is an expense in the arithmetic: the payer covered an amount shared
      * entirely with the payee, which cancels both positions exactly and needs no second mechanism.
      * But it is not *spending*, and until v2.4 the two were told apart only by the description
      * reading "Settlement". So a ₹500 dinner and a ₹500 repayment looked identical in the list,

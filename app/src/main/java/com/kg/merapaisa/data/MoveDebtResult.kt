@@ -27,7 +27,7 @@ sealed interface MoveDebtResult {
      */
     data class CurrencyMismatch(val from: String, val to: String) : MoveDebtResult
 
-    /** They owe you nothing, or you owe them — there is no debt of theirs to hand on. */
+    /** They owe you nothing, or you owe them, so there is no debt of theirs to hand on. */
     data class NothingToMove(val balanceMinor: Long) : MoveDebtResult
 
     /** One of the two people was deleted while the sheet was open. */

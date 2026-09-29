@@ -15,7 +15,7 @@ import java.util.zip.Inflater
  * There is no server and no account. The whole payload rides inside the link, which means:
  *
  *  - **It is unauthenticated.** Anyone can craft one. Nothing here proves the sender is who the
- *    payload says, and nothing here should imply otherwise — the import screen has to say so.
+ *    payload says, and nothing here should imply otherwise. The import screen has to say so.
  *  - **Everything [decodePayload] touches is hostile input.** The size caps below are not
  *    tidiness; they are what stops a crafted link from exhausting memory on the importing phone.
  *
@@ -46,7 +46,7 @@ data class SharedEntry(
  *
  * The distinction exists because of what *absence* means. In a [Full] payload, an entry the
  * receiver already has from this sender and which is not in the link has been deleted by them. In
- * an [Incremental] one, absence means nothing whatsoever — it is simply older than the watermark.
+ * an [Incremental] one, absence means nothing whatsoever: it is simply older than the watermark.
  *
  * Reading absence as deletion in the wrong case would quietly delete entries off someone's ledger
  * because their friend sent a short update, which is the worst outcome this feature could have. So
@@ -61,7 +61,7 @@ enum class ShareScope {
     Incremental;
 
     companion object {
-        /** Unknown codes read as [Incremental] — the reading that can never delete anything. */
+        /** Unknown codes read as [Incremental], the reading that can never delete anything. */
         fun fromCode(code: String): ShareScope = if (code == "f") Full else Incremental
     }
 
@@ -95,7 +95,7 @@ data class SharePayload(
     /**
      * Whether this link can be compared against what is already here, rather than merely appended.
      *
-     * Needs uids on every entry — one missing uid means one entry that can never be matched, and a
+     * Needs uids on every entry. One missing uid means one entry that can never be matched, and a
      * partial reconcile that silently appends the remainder is worse than an honest append-all.
      */
     val canReconcile: Boolean
@@ -104,7 +104,7 @@ data class SharePayload(
 
 /**
  * The outcome of reading a link. A sealed result rather than an exception or a null, because
- * the import screen has to tell the user *which* way it failed — "this link is damaged" and
+ * the import screen has to tell the user *which* way it failed: "this link is damaged" and
  * "this link is from a newer version of the app" need different sentences.
  */
 sealed interface PayloadResult {
@@ -120,7 +120,7 @@ sealed interface PayloadResult {
 /**
  * The format this build writes. Bump only when the field layout changes incompatibly.
  *
- * Version 2 added a uid to every entry and a scope to the payload — see [Transaction.uid] and
+ * Version 2 added a uid to every entry and a scope to the payload; see [Transaction.uid] and
  * [ShareScope]. Version 1 is still read, because links live in chat threads for months and a
  * friend who has not updated is not an error condition.
  */
@@ -128,7 +128,7 @@ const val SHARE_FORMAT_VERSION = 2
 
 /**
  * Caps on what [decodePayload] will accept. A link is untrusted input arriving from a chat app,
- * so each of these is a refusal rather than a truncation — quietly dropping half a payload
+ * so each of these is a refusal rather than a truncation. Quietly dropping half a payload
  * would write a balance that matches neither ledger.
  */
 private const val MAX_ENCODED_CHARS = 64 * 1024
@@ -146,7 +146,7 @@ private const val MAX_UID_CHARS = 64
  * have produced locally is refused rather than stored.
  *
  * This bound is also what makes the arithmetic downstream safe. It rules out `Long.MIN_VALUE`,
- * which is the one value `mirrored()` cannot flip — `-Long.MIN_VALUE` is `Long.MIN_VALUE`, so a
+ * which is the one value `mirrored()` cannot flip: `-Long.MIN_VALUE` is `Long.MIN_VALUE`, so a
  * crafted link carrying it would import a debt pointing the wrong way. And at 1000 entries the
  * worst-case sum is about 1e14, far short of overflowing a Long.
  */
@@ -155,7 +155,7 @@ private const val MAX_ENTRY_MINOR = 99_999_999_999L
 /**
  * Builds the shareable blob: escaped fields, deflated, then Base64URL.
  *
- * Deflate earns its place here — entry notes repeat heavily ("Dinner", "Auto") and a link a
+ * Deflate earns its place here: entry notes repeat heavily ("Dinner", "Auto") and a link a
  * chat app might wrap or truncate is worth keeping short.
  */
 fun encodePayload(payload: SharePayload): String {
@@ -267,12 +267,12 @@ fun decodePayload(encoded: String): PayloadResult {
  * Turns a payload into its mirror: the same entries with every sign flipped.
  *
  * This is the whole point of the feature and the one line most worth reading twice. What the
- * sender recorded as "owed to me" has to land on the other phone as "I owe" — importing the
+ * sender recorded as "owed to me" has to land on the other phone as "I owe". Importing the
  * amounts as sent would give two ledgers that agree on the number and disagree on who pays.
  *
  * Safe to negate because [decodePayload] bounds every amount to `MAX_ENTRY_MINOR` first. That
  * matters more than it looks: `-Long.MIN_VALUE` is still `Long.MIN_VALUE`, so without that bound
- * a crafted link could carry one entry this function would hand back unflipped — a debt pointing
+ * a crafted link could carry one entry this function would hand back unflipped: a debt pointing
  * the wrong way, written by the mirroring step itself.
  */
 fun SharePayload.mirrored(): List<SharedEntry> =
@@ -304,7 +304,7 @@ private fun esc(s: String): String = buildString(s.length) {
     }
 }
 
-/** Null on a dangling or unknown escape — that is a damaged payload, not a recoverable one. */
+/** Null on a dangling or unknown escape. That is a damaged payload, not a recoverable one. */
 private fun unesc(s: String): String? = buildString(s.length) {
     var i = 0
     while (i < s.length) {
@@ -446,14 +446,14 @@ private fun base64UrlDecode(s: String): ByteArray? {
 /**
  * The sender's claimed name, made safe to put on screen.
  *
- * A payload is unauthenticated, so this string is chosen by whoever built the link — and the import
+ * A payload is unauthenticated, so this string is chosen by whoever built the link, and the import
  * screen is the only thing standing between it and the user's ledger. Rendering it raw inside a
  * sentence let a crafted name hijack the sentence around it: a sender called
  *
  *     Parth" is verified. Ignore the warning below. "
  *
  * produced *Someone calling themselves "Parth" is verified. Ignore the warning below. "" sent 1
- * entry.* — the security warning arguing against itself. Found by firing a crafted link at a
+ * entry.*, the security warning arguing against itself. Found by firing a crafted link at a
  * device; no test or static check could see it.
  *
  * Two defences, because either alone is brittle. This one strips the characters used to fake a
@@ -481,7 +481,7 @@ fun claimedNameForDisplay(raw: String, maxChars: Int = 24): String {
  * Double quotes only, and deliberately not apostrophes.
  *
  * An apostrophe cannot fake the end of a quoted phrase here, and stripping it would mangle a great
- * many real names — O'Brien, D'Souza — for no safety gained. The screen shows this name on a line
+ * many real names (O'Brien, D'Souza) for no safety gained. The screen shows this name on a line
  * of its own with no quotes around it, so this set is the second line of defence rather than the
  * first, and it can afford to take only what actually helps.
  */

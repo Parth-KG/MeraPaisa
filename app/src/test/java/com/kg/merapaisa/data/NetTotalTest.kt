@@ -71,7 +71,7 @@ class NetTotalTest {
     /**
      * A legacy row stores the symbol where a newer one stores the code, and both mean rupees.
      *
-     * Grouped by the raw string they became two separate totals — shown one above the other on the
+     * Grouped by the raw string they became two separate totals, shown one above the other on the
      * main screen and the widget, both rendered with a ₹, as though the user tracked two different
      * rupees. `normaliseCurrency` exists for exactly this and every other comparison in the app
      * already goes through it.

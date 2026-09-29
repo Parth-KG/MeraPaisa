@@ -5,14 +5,14 @@ package com.kg.merapaisa.data
  *
  * Two shapes, both understood on import:
  *
- *  - `https://parth-kg.github.io/MeraPaisa/s#<blob>` — what the app sends. Chat apps make an
+ *  - `https://parth-kg.github.io/MeraPaisa/s#<blob>`: what the app sends. Chat apps make an
  *    `https://` link tappable, which a custom scheme does not get, and Android App Links can
  *    route it straight into the app instead of a browser.
- *  - `merapaisa://share#<blob>` — accepted so a link from a build predating the hosted page, or
+ *  - `merapaisa://share#<blob>`: accepted so a link from a build predating the hosted page, or
  *    typed by hand, still works.
  *
  * **The payload sits after the `#` deliberately.** A URL fragment is never sent to the server, so
- * the host named here only ever serves the fallback page — it cannot see anyone's ledger even in
+ * the host named here only ever serves the fallback page. It cannot see anyone's ledger even in
  * a log. It is a delivery address, not a backend. Moving the payload into the path or the query
  * would quietly turn this into a feature that uploads your debts to GitHub.
  */
@@ -33,7 +33,7 @@ fun buildShareLink(blob: String): String = "https://$SHARE_HOST$SHARE_PATH#$blob
  * The message that goes into the share sheet: a sentence a human can read, then the link.
  *
  * The sentence matters. A bare link asks the recipient to tap something unexplained, and this
- * one writes to their ledger — so it says who it is from and what it will do.
+ * one writes to their ledger, so it says who it is from and what it will do.
  */
 fun buildShareMessage(senderName: String, entryCount: Int, netText: String, link: String): String {
     val entries = if (entryCount == 1) "1 entry" else "$entryCount entries"
@@ -53,7 +53,7 @@ fun buildShareMessage(senderName: String, entryCount: Int, netText: String, link
  * Pulls the payload blob out of whatever the user actually gives us.
  *
  * Handles a bare link, a link with chat-app text wrapped around it, and a bare blob pasted on its
- * own — all three happen in practice, and an import screen that only accepted one of them would
+ * own. All three happen in practice, and an import screen that only accepted one of them would
  * look broken for the other two. Returns null when there is nothing payload-shaped present.
  *
  * Hand-parsed rather than via `android.net.Uri`, which is an Android framework stub that throws
@@ -66,7 +66,7 @@ fun extractPayloadBlob(input: String): String? {
 
     // The blob runs from the marker to the first character that could not be part of one.
     //
-    // The alphabet is known exactly, so that boundary is exact — and every way a chat app or a
+    // The alphabet is known exactly, so that boundary is exact, and every way a chat app or a
     // human mangles the end of a link falls outside it. A trailing full stop, a closing quote or
     // bracket, and a tracking fragment appended after the payload were all being read as part of
     // the blob, which failed later as "this link is damaged": a sentence that blames the sender

@@ -18,7 +18,7 @@ import org.junit.runner.RunWith
  *
  * `convertAll` is covered by JVM tests; what needs Room is that the rewritten rows actually land,
  * that the balance derived from them matches, and that the log is left wholly in one currency with
- * no adjustment entry — which was the whole complaint that produced this change.
+ * no adjustment entry, which was the whole complaint that produced this change.
  */
 @RunWith(AndroidJUnit4::class)
 class CurrencyConversionTest {
@@ -158,11 +158,11 @@ class CurrencyConversionTest {
 
     /**
      * A round trip through a coarser currency loses a little, and that is arithmetic rather than a
-     * defect — but it is worth pinning down, because conversion is irreversible.
+     * defect, but it is worth pinning down, because conversion is irreversible.
      *
      * ₹150.50 converts to $1.82105, which can only be stored as $1.82. Converting that back
      * multiplies the discarded 0.00105 by 1/0.0121 ≈ 82.6, giving ₹150.41. Nine paise vanish, and
-     * there is no undo — the original amounts were overwritten.
+     * there is no undo: the original amounts were overwritten.
      *
      * So the bound is not a fixed number of paise; it is the granularity of the currency passed
      * through. Asserting a tight tolerance here (the first version of this test said 2) fails for
@@ -178,7 +178,7 @@ class CurrencyConversionTest {
         repo.convertCurrency(id, "INR", 1.0 / rate)
 
         val after = dao.getBalanceNow(id)
-        // Half a US cent, expressed back in paise — the most a single rounding can cost.
+        // Half a US cent, expressed back in paise: the most a single rounding can cost.
         val bound = Math.ceil(0.5 / rate).toLong() + 1
         assertTrue(
             "round trip drifted $before -> $after, beyond the $bound paise the rounding can explain",
@@ -187,7 +187,7 @@ class CurrencyConversionTest {
         assertTrue("a round trip should not gain money", after <= before)
     }
 
-    /** With a rate whose inverse is exact, a round trip is exact too — no drift to explain away. */
+    /** With a rate whose inverse is exact, a round trip is exact too. No drift to explain away. */
     @Test
     fun aRoundTripAtAnExactRateIsLossless() = runBlocking {
         val id = seed()

@@ -9,7 +9,7 @@ import org.junit.Test
  *
  * The invariant that matters: **the converted entries must still sum to the converted total.**
  * Balances in this app are derived by summing entries, so if the two disagree the person's balance
- * contradicts the log that produces it — and nothing would report the inconsistency.
+ * contradicts the log that produces it, and nothing would report the inconsistency.
  */
 class ConvertAllTest {
 
@@ -75,7 +75,7 @@ class ConvertAllTest {
         assertEquals(5, convertAll(listOf(1L, 2L, 3L, 4L, 5L), 1.7).size)
     }
 
-    /** A settled person must stay settled — their entries cancel, and must keep cancelling. */
+    /** A settled person must stay settled: their entries cancel, and must keep cancelling. */
     @Test
     fun `a history summing to zero still sums to zero`() {
         val out = convertAll(listOf(25_000L, -25_000L), 0.0121)

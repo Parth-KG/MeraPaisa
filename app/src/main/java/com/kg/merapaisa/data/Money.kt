@@ -3,7 +3,7 @@ package com.kg.merapaisa.data
 import kotlin.math.absoluteValue
 
 /**
- * Money is stored as a [Long] count of minor units — hundredths of the major unit — for
+ * Money is stored as a [Long] count of minor units (hundredths of the major unit) for
  * every currency, including the zero-decimal ones. Zero-decimal display is handled here,
  * at the formatting layer, so the stored representation stays uniform.
  */
@@ -87,7 +87,7 @@ fun parseAmountToMinor(text: String): Long? {
  *
  * `Long.MIN_VALUE.absoluteValue` is still `Long.MIN_VALUE`, so dividing it by 100 gives a negative
  * body behind a minus sign: `-₹-92233720368547758.-8`. Negating it here leaves the same bit
- * pattern, which read as unsigned is exactly 2^63 — the true magnitude — so unsigned division
+ * pattern, which read as unsigned is exactly 2^63, the true magnitude, so unsigned division
  * renders it correctly rather than approximately. Every other value divides identically either way.
  *
  * It cannot arrive from the keypad or a share link, both of which are bounded well below this. A
@@ -125,7 +125,7 @@ fun formatMinor(amountMinor: Long, currencyCode: String): String {
 }
 
 /**
- * Digits only, no symbol — for text fields the user types back into.
+ * Digits only, no symbol, for text fields the user types back into.
  *
  * [trimZeros] drops decimals that carry no information, so an editable field agrees with the
  * amounts [formatMinor] shows everywhere else. The CSV leaves it off: a column that is always
@@ -214,12 +214,12 @@ fun formatSignedAmount(amountMinor: Long, currencyCode: String): String =
  * rupees and dollars with a correcting adjustment at the bottom is not a history anyone can read.
  * That creates a problem the naive version gets wrong: rounding each entry independently gives a
  * set of parts that need not add up to the rounded total. Convert 33.33 three times at 2.0 and you
- * get 66.66 three times — 199.98 — while the balance of 99.99 converts to 199.98. Those agree here,
+ * get 66.66 three times (199.98) while the balance of 99.99 converts to 199.98. Those agree here,
  * but at other rates they do not, and the entries would then contradict the balance derived from
  * them.
  *
  * So the total is converted once and treated as authoritative, and any residue is absorbed into the
- * largest-magnitude entry — the one where a paise is least visible. Same principle as [evenShares]
+ * largest-magnitude entry, the one where a paise is least visible. Same principle as [evenShares]
  * in SettleUp.kt, which gives leftover minor units to the earliest members rather than losing them.
  *
  * An empty list converts to an empty list. A list summing to zero stays summing to zero, so a

@@ -24,15 +24,15 @@ sealed interface ImportOutcome {
         val added: Int,
         val updated: Int,
         val removed: Int,
-        /** What the balance moved by. Updates and removals move it too — see the DAO. */
+        /** What the balance moved by. Updates and removals move it too; see the DAO. */
         val netMinor: Long
     ) : ImportOutcome {
         val changedNothing: Boolean get() = added == 0 && updated == 0 && removed == 0
     }
 
     /**
-     * This exact link had already been applied. Not an error — forwarding a message or tapping
-     * it twice is ordinary — so it reports when it first landed rather than complaining.
+     * This exact link had already been applied. Not an error: forwarding a message or tapping
+     * it twice is ordinary, so it reports when it first landed rather than complaining.
      */
     data class AlreadyApplied(val appliedAt: Long) : ImportOutcome
 

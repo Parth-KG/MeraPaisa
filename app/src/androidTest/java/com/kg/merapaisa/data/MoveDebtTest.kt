@@ -18,7 +18,7 @@ import org.junit.runner.RunWith
  *
  * The invariant worth protecting: **the total owed to you must not change.** Only who owes it. A
  * move that quietly created or destroyed money would be the worst possible bug in a ledger, and it
- * would be invisible — every individual balance would still look plausible.
+ * would be invisible: every individual balance would still look plausible.
  */
 @RunWith(AndroidJUnit4::class)
 class MoveDebtTest {
@@ -121,7 +121,7 @@ class MoveDebtTest {
     }
 
     // -----------------------------------------------------------------------------------------
-    // Refusals — each must write nothing
+    // Refusals: each must write nothing
     // -----------------------------------------------------------------------------------------
 
     private suspend fun assertWroteNothing(block: suspend () -> MoveDebtResult): MoveDebtResult {

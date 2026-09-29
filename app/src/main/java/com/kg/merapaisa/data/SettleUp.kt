@@ -10,12 +10,12 @@ data class Transfer(val fromPersonId: Long, val toPersonId: Long, val amountMino
  * Reduces a group's net positions to the fewest payments that square everyone up.
  *
  * Within a group, who paid whom for any individual expense stops mattering once you only care
- * about ending square — all that survives is each member's net position. If A owes B and B owes
+ * about ending square: all that survives is each member's net position. If A owes B and B owes
  * C the same amount, B is a pass-through and A can simply pay C.
  *
  * Repeatedly matching the largest debtor against the largest creditor settles at least one
  * member with every payment, so at most n-1 transfers are ever produced. That is not always the
- * theoretical minimum — finding that is NP-hard — but it is never worse than n-1 and is
+ * theoretical minimum (finding that is NP-hard), but it is never worse than n-1 and is
  * instant for the handful of people a group actually holds.
  *
  * Balances are expected to sum to zero, since every expense is fully shared out. Any residue
@@ -54,8 +54,8 @@ fun settleUp(balances: List<MemberBalance>): List<Transfer> {
 /**
  * The debts as they actually arose, netted only between each pair.
  *
- * The alternative to [settleUp]. Where that nets the whole group down to the fewest payments —
- * collapsing B out of "A owes B, B owes C" so A pays C — this keeps every debt attached to the
+ * The alternative to [settleUp]. Where that nets the whole group down to the fewest payments,
+ * collapsing B out of "A owes B, B owes C" so A pays C, this keeps every debt attached to the
  * expense that created it. If you shared a dinner Ravi paid for, you owe Ravi, and no amount of
  * other people's spending moves that.
  *

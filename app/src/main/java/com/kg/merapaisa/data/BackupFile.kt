@@ -3,7 +3,7 @@ package com.kg.merapaisa.data
 /**
  * A complete backup of the ledger, and the only thing in this app that can actually restore you.
  *
- * The CSV export is for reading — it opens in a spreadsheet and flattens nicely. It is *not* a
+ * The CSV export is for reading: it opens in a spreadsheet and flattens nicely. It is *not* a
  * backup: it carries people and transactions only, so a CSV round trip silently loses every group,
  * every expense and every share. This format carries all of it, which is why "restore" means this
  * file and not that one.
@@ -14,7 +14,7 @@ package com.kg.merapaisa.data
  *    image. Restoring onto a different phone leaves those people showing initials, which is what
  *    the app already falls back to when a photo file has gone missing. Nothing breaks; a picture
  *    is lost.
- *  - **Nothing else.** Every other table is here, including `applied_payloads` — leave that out and
+ *  - **Nothing else.** Every other table is here, including `applied_payloads`. Leave that out and
  *    restoring an old backup would let a share link you had already applied land a second time.
  */
 
@@ -114,7 +114,7 @@ fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String)
                     "timestamp" to e.timestamp.json(),
                     // Missed when the flag shipped in v2.4, alongside simplifyDebts. Without it a
                     // restore turned every repayment back into a purchase, putting settlements
-                    // back in the expense list — the exact confusion v2.4 existed to end.
+                    // back in the expense list, the exact confusion v2.4 existed to end.
                     "isSettlement" to e.isSettlement.json()
                 )
             }),
@@ -178,7 +178,7 @@ fun decodeBackup(text: String): BackupResult {
             amountMinor = o.long("amountMinor") ?: return BackupResult.Damaged,
             timestamp = o.long("timestamp") ?: return BackupResult.Damaged,
             note = o.string("note") ?: return BackupResult.Damaged,
-            // Absent in a backup written before v2.5. A fresh uid is the only honest answer — the
+            // Absent in a backup written before v2.5. A fresh uid is the only honest answer: the
             // entry has never been shared under any name, so inventing a stable-looking one from
             // its contents would risk colliding with the other phone's idea of a different debt.
             uid = o.string("uid") ?: newEntryUid(),
@@ -217,7 +217,7 @@ fun decodeBackup(text: String): BackupResult {
             // Absent in a backup from v2.4 or earlier, where the description was the only signal a
             // row carried. Falling back to it here is the same rule MIGRATION_7_8 applies to rows
             // already in the database, so an old backup restores to the same state an old database
-            // upgrades to — rather than the two disagreeing about what a settlement is.
+            // upgrades to, rather than the two disagreeing about what a settlement is.
             isSettlement = o.bool("isSettlement") ?: (o.string("description") == "Settlement")
         )
     } ?: return BackupResult.Damaged
@@ -247,7 +247,7 @@ fun decodeBackup(text: String): BackupResult {
     }
 
     // Referential integrity, checked before anything is offered as restorable. Room's foreign keys
-    // would reject these rows anyway, but they would do it halfway through writing — and a restore
+    // would reject these rows anyway, but they would do it halfway through writing, and a restore
     // that fails in the middle is how a half-ledger happens.
     val personIds = persons.map { it.id }.toSet()
     val groupIds = groups.map { it.id }.toSet()
@@ -272,5 +272,5 @@ fun decodeBackup(text: String): BackupResult {
     )
 }
 
-/** `mera-paisa-backup-20260928-143000.json` — sorts chronologically, readable at a glance. */
+/** `mera-paisa-backup-20260928-143000.json`: sorts chronologically, readable at a glance. */
 fun backupFileName(stamp: String): String = "mera-paisa-backup-$stamp.json"

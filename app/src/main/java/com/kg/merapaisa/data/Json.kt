@@ -13,8 +13,8 @@ package com.kg.merapaisa.data
  * corrupted or hand-edited file fails loudly at parse time instead of silently landing a rounded
  * amount in somebody's ledger. Every number here round-trips exactly.
  *
- * A backup file is untrusted input — it can be edited, truncated by a failed write, or handed over
- * by someone else — so the parser bounds its own recursion and refuses trailing junk.
+ * A backup file is untrusted input. It can be edited, truncated by a failed write, or handed over
+ * by someone else, so the parser bounds its own recursion and refuses trailing junk.
  */
 
 sealed interface JsonValue
@@ -116,7 +116,7 @@ fun parseJson(text: String): JsonValue? {
     val parser = JsonParser(text)
     val value = parser.parseValue(0) ?: return null
     parser.skipWhitespace()
-    // Trailing content means the file is not what it claims to be — a concatenation, or a partial
+    // Trailing content means the file is not what it claims to be: a concatenation, or a partial
     // overwrite of a longer previous backup. Either way it is not safe to use the first half.
     return if (parser.atEnd()) value else null
 }
@@ -237,7 +237,7 @@ private class JsonParser(private val text: String) {
     }
 
     /**
-     * Integers only. `1.5`, `1e3` and `-0` with a fraction are all refused — see the file header for
+     * Integers only. `1.5`, `1e3` and `-0` with a fraction are all refused. See the file header for
      * why a money format is better off rejecting them than rounding them.
      */
     private fun parseNumber(): JsonValue? {

@@ -1,6 +1,6 @@
 package com.kg.merapaisa.data
 
-/** A net position in one currency. Never zero — a currency that nets out is not reported. */
+/** A net position in one currency. Never zero: a currency that nets out is not reported. */
 data class CurrencyTotal(val currency: String, val amountMinor: Long)
 
 /**
@@ -14,7 +14,7 @@ fun netTotalsByCurrency(persons: List<PersonWithBalance>): List<CurrencyTotal> =
     persons
         // Normalised, not raw. A row written by an early version stores "₹" where a newer one
         // stores "INR", and grouped by the literal string those became two totals stacked on the
-        // main screen and the widget — both drawn with a ₹, as though there were two rupees. Every
+        // main screen and the widget, both drawn with a ₹, as though there were two rupees. Every
         // other comparison in the app already goes through normaliseCurrency.
         .groupingBy { normaliseCurrency(it.currency) }
         .fold(0L) { running, person -> running + person.balanceMinor }

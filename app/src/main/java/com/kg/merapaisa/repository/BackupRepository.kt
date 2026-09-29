@@ -17,7 +17,7 @@ import com.kg.merapaisa.data.planRestore
  * Reading the whole ledger out, and putting one back.
  *
  * Restores run inside a single database transaction spanning both DAOs. Room's `@Transaction` only
- * covers one DAO, and a restore touches every table — so a failure partway through without this
+ * covers one DAO, and a restore touches every table, so a failure partway through without this
  * would leave people with no transactions, or expenses with no shares, which is a worse state than
  * the one the user was trying to recover from.
  */
@@ -55,7 +55,7 @@ class BackupRepository(
      *
      * Deletes run first for Replace, in an order the foreign keys allow; inserts then run parents
      * before children for the same reason. The plan already resolved every id, so nothing here
-     * decides anything — which is what makes the decisions testable without a device.
+     * decides anything. That is what makes the decisions testable without a device.
      */
     suspend fun apply(plan: RestorePlan) {
         db.withTransaction {
@@ -85,7 +85,7 @@ class BackupRepository(
  * Turns a parsed CSV into a snapshot, so it can go through exactly the same planner as a JSON
  * backup rather than growing a second, less-tested restore path.
  *
- * The ids here are synthetic and local to this snapshot — a CSV has none. The planner only uses
+ * The ids here are synthetic and local to this snapshot (a CSV has none). The planner only uses
  * them to join its own rows together before allocating real ones.
  *
  * **There are no groups in it, and that is not an oversight.** A CSV carries no group data at all,

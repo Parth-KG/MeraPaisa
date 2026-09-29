@@ -51,7 +51,7 @@ interface GroupDao {
      * Flips how this group's settle-up plan is worked out.
      *
      * Writes one column and nothing else. Switching between simplified and unsimplified changes
-     * what the plan *says*, not what happened — so it leaves no trace in the expense list, and must
+     * what the plan *says*, not what happened, so it leaves no trace in the expense list, and must
      * not, or the log would fill with entries recording that somebody changed their mind about a
      * view.
      */
@@ -122,8 +122,8 @@ interface GroupDao {
     /**
      * Expenses this person has a share of but did not pay for.
      *
-     * Deleting them hands those shares to whoever fronted the money — see
-     * [PersonDao.reassignGroupSharesToPayer] — so the payer ends up absorbing what can no longer be
+     * Deleting them hands those shares to whoever fronted the money (see
+     * [PersonDao.reassignGroupSharesToPayer]), so the payer ends up absorbing what can no longer be
      * collected. That changes what somebody else is owed, which belongs in the sentence asking for
      * confirmation just as much as the expenses being removed outright do.
      */
@@ -160,7 +160,7 @@ interface GroupDao {
     suspend fun owedByMember(groupId: Long): List<PersonAmount>
 
     /**
-     * Records an expense and its shares together — a half-written expense would stop the
+     * Records an expense and its shares together. A half-written expense would stop the
      * group's balances netting to zero, and settle-up would produce nonsense.
      */
     @androidx.room.Transaction

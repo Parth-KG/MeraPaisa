@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 
 /**
- * Groups, and the person that is you. Every group includes you as a member — a trip you are
+ * Groups, and the person that is you. Every group includes you as a member. A trip you are
  * not part of is somebody else's ledger.
  */
 class GroupRepository(
@@ -167,7 +167,7 @@ data class GroupDetail(
     val expenses: List<com.kg.merapaisa.data.Expense>,
     val balances: List<com.kg.merapaisa.data.MemberBalance>,
     /**
-     * Who pays whom, and how much — computed by whichever method this group is set to.
+     * Who pays whom, and how much, computed by whichever method this group is set to.
      *
      * Carried here rather than worked out in the screen so the plan and the balances it squares
      * come from one read of the same rows. A screen recomputing it separately could show a plan
@@ -180,6 +180,6 @@ data class GroupDetail(
     /** Spending, as opposed to people paying each other back. */
     val purchases: List<com.kg.merapaisa.data.Expense> get() = expenses.filterNot { it.isSettlement }
 
-    /** Repayments. Same arithmetic as an expense, but not spending — see [Expense.isSettlement]. */
+    /** Repayments. Same arithmetic as an expense, but not spending; see [Expense.isSettlement]. */
     val settlements: List<com.kg.merapaisa.data.Expense> get() = expenses.filter { it.isSettlement }
 }

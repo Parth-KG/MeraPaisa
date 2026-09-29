@@ -3,8 +3,8 @@ package com.kg.merapaisa.data
 /**
  * Works out exactly what a restore would do, before it does any of it.
  *
- * Deliberately a pure function over two snapshots. The alternative — deciding what to insert while
- * inserting it, inside a database transaction — is both untestable without a device and impossible
+ * Deliberately a pure function over two snapshots. The alternative (deciding what to insert while
+ * inserting it, inside a database transaction) is both untestable without a device and impossible
  * to preview, and this is a screen whose entire job is to tell someone what is about to happen to
  * their ledger. Everything difficult (matching, id allocation, deduplication) happens here, in
  * plain Kotlin, under unit tests. Applying the result is then a dumb sequence of inserts.
@@ -21,7 +21,7 @@ enum class RestoreMode {
 
     /**
      * Wipe the ledger and lay the backup down exactly as it was. The right answer on a fresh
-     * install, and destructive anywhere else — which is why the preview counts the deletions.
+     * install, and destructive anywhere else, which is why the preview counts the deletions.
      */
     Replace
 }
@@ -30,7 +30,7 @@ enum class RestoreMode {
  * Rows to insert, plus what the preview needs to describe the change in a sentence.
  *
  * Every id in here is final. The planner resolves them so that applying is a dumb insert with no
- * further decisions — see [planRestore].
+ * further decisions. See [planRestore].
  */
 data class RestorePlan(
     val mode: RestoreMode,

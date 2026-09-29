@@ -16,7 +16,7 @@ interface PersonDao {
      *
      * A balance is their direct transactions plus your position with them inside groups:
      * their share of what you paid, less your share of what they paid. That slice of a group
-     * is exactly the part that is between the two of you, so it belongs on the home screen —
+     * is exactly the part that is between the two of you, so it belongs on the home screen,
      * and deriving it here means nothing is written twice or counted twice.
      */
     @Query(
@@ -237,8 +237,8 @@ interface PersonDao {
     suspend fun insertShareRows(shares: List<ExpenseShare>)
 
     /**
-     * Puts a settled person back in the active list. The closing entry stays in their history —
-     * it happened — so reopening does not resurrect the old balance, it just unfiles them.
+     * Puts a settled person back in the active list. The closing entry stays in their history
+     * (it happened), so reopening does not resurrect the old balance, it just unfiles them.
      */
     suspend fun reopen(personId: Long) = setSettled(personId, false)
 
@@ -353,7 +353,7 @@ interface PersonDao {
     /**
      * Rewrites every one of a person's entries at [rate], and relabels them.
      *
-     * The balance is derived from these rows, so converting them *is* converting the balance —
+     * The balance is derived from these rows, so converting them *is* converting the balance:
      * there is no separate figure to keep in step. `convertAll` guarantees the rewritten entries
      * still sum to the converted total, which is what stops the log contradicting the balance it
      * produces.
@@ -385,7 +385,7 @@ interface PersonDao {
         if (getBalanceNow(transaction.personId) != 0L) setSettled(transaction.personId, false)
     }
 
-    /** Removes one entry outright — a mistyped amount should not have to live in the history. */
+    /** Removes one entry outright. A mistyped amount should not have to live in the history. */
     @androidx.room.Transaction
     suspend fun removeTransaction(transaction: Transaction) {
         deleteTransaction(transaction.id)
@@ -448,7 +448,7 @@ interface PersonDao {
      * Every expense this person had a share of, that somebody else paid for.
      *
      * Their own expenses are excluded because those cascade away with them, taking their shares
-     * with them — there is nothing left to be inconsistent about.
+     * with them, so there is nothing left to be inconsistent about.
      */
     @Query(
         """
@@ -470,14 +470,14 @@ interface PersonDao {
      * Hands a departing member's share of other people's expenses to whoever fronted the money.
      *
      * `expense_shares` cascades on `personId`, so deleting someone used to silently remove their
-     * share of an expense that stayed behind — leaving a ₹300 dinner with ₹200 of shares against
+     * share of an expense that stayed behind, leaving a ₹300 dinner with ₹200 of shares against
      * it. Every group balance is derived as *paid minus shared*, so the group stopped summing to
      * zero, and `settleUp` documents that sum as the reason it can square everyone. It produced a
      * plan that left somebody holding a figure nobody owed, and said nothing.
      *
      * Giving the share to the payer is the honest answer rather than a convenient one. The money
      * was really spent and can no longer be collected from someone who is no longer tracked, so
-     * the person who put it up is the one out of pocket — which is what happens in life. It also
+     * the person who put it up is the one out of pocket, which is what happens in life. It also
      * leaves every *other* member's position exactly where it was, so deleting one person cannot
      * quietly change what a third party owes.
      */
@@ -533,7 +533,7 @@ interface PersonDao {
      * write the entries twice. The primary key on `applied_payloads` is the backstop if it ever
      * does, but the transaction is what makes the common case correct rather than lucky.
      *
-     * [entries] arrives already mirrored and already bounded by the caller — this method does not
+     * [entries] arrives already mirrored and already bounded by the caller. This method does not
      * flip signs, so a caller that forgets to would write a debt pointing the wrong way. That is
      * why mirroring lives in one place, `SharePayload.mirrored()`, and is tested on its own.
      */
@@ -553,7 +553,7 @@ interface PersonDao {
 
         if (entries.isNotEmpty()) {
             insertTransactions(entries)
-            // Money moved, so they are live again — same rule as recordEntries.
+            // Money moved, so they are live again. Same rule as recordEntries.
             if (entries.any { it.amountMinor != 0L }) setSettled(personId, false)
         }
 
@@ -577,7 +577,7 @@ interface PersonDao {
      * One transaction, for the same reason [applyPayload] is one: the dedupe read and the writes
      * have to be atomic or a link tapped twice in quick succession can pass the check twice. It
      * also means a plan that is half-applied cannot exist, which matters more here than it did
-     * before — a reconcile that added three entries and then failed before removing one would
+     * before: a reconcile that added three entries and then failed before removing one would
      * leave a ledger that matches neither phone.
      *
      * [write] is computed by `ReconcilePlan.writesFor` and arrives final: already mirrored, already
@@ -611,12 +611,12 @@ interface PersonDao {
         if (write.updates.isNotEmpty()) updateTransactions(write.updates)
         write.deleteIds.forEach { deleteTransaction(it) }
 
-        // Money moved, so they are live again — same rule as recordEntries. Deletions count: a
+        // Money moved, so they are live again (same rule as recordEntries). Deletions count: a
         // removed entry changes the balance just as an added one does.
         if (net != 0L) setSettled(personId, false)
 
         // Recorded as applied only when it actually wrote something. A link the user looked at and
-        // ticked nothing on has not been applied — it has been considered — and filing it here
+        // ticked nothing on has not been applied, only considered, and filing it here
         // would make re-opening it report "already applied" and offer no way to change their mind.
         if (!write.isEmpty) {
             insertAppliedPayload(
@@ -664,7 +664,7 @@ interface PersonDao {
      * Everyone, self included, for a Replace restore.
      *
      * The self row goes too, because the backup carries its own and keeping both would leave two
-     * rows claiming to be you — which `ensureSelf` would then pick between arbitrarily. Callers
+     * rows claiming to be you, which `ensureSelf` would then pick between arbitrarily. Callers
      * must run `ensureSelf()` afterwards so a backup without a self row still ends up with one.
      *
      * Cascades take transactions, group memberships, expenses and shares with it.

@@ -10,7 +10,7 @@ import org.junit.Test
  *
  * This is the part of Phase E that can quietly corrupt a ledger: matching too loosely merges two
  * different people, matching too tightly duplicates one, and either way the balances end up wrong
- * without anything failing. So the headline property here is idempotence — restoring the same
+ * without anything failing. So the headline property here is idempotence: restoring the same
  * backup twice must be indistinguishable from restoring it once.
  */
 class RestorePlanTest {
@@ -101,7 +101,7 @@ class RestorePlanTest {
     }
 
     // -----------------------------------------------------------------------------------------
-    // Idempotence — the property that matters
+    // Idempotence: the property that matters
     // -----------------------------------------------------------------------------------------
 
     @Test
@@ -288,7 +288,7 @@ class RestorePlanTest {
     @Test
     fun `replace lays the backup down exactly as it was`() {
         // One snapshot, compared against itself. `backup()` builds a fresh one on every call, and
-        // since v2.5 two separately built entries differ by their uid — so comparing the plan
+        // since v2.5 two separately built entries differ by their uid, so comparing the plan
         // against a second call was comparing two different backups and only ever passed by
         // accident of Transaction having nothing unique in it.
         val source = backup()

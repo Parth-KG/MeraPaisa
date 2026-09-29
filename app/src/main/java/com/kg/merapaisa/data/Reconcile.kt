@@ -8,8 +8,8 @@ package com.kg.merapaisa.data
  * landing twice. If they edited an amount, or deleted an entry, or you both recorded the same
  * dinner, the two ledgers drifted apart in silence and neither phone ever mentioned it.
  *
- * This file is the comparison that was missing. It is a pure function over two lists — the entries
- * a link carries and the entries already here — for the same reason [planRestore] is: this decides
+ * This file is the comparison that was missing. It is a pure function over two lists (the entries
+ * a link carries and the entries already here) for the same reason [planRestore] is: this decides
  * what happens to somebody's money, and deciding it inside a database transaction would make it
  * both untestable without a device and impossible to show anyone first.
  *
@@ -24,13 +24,13 @@ package com.kg.merapaisa.data
  *
  * Everything difficult here is about entries that are *not* in the payload, and the answer depends
  * entirely on [ShareScope]. In a [ShareScope.Full] link, an entry of theirs that is missing was
- * deleted by them. In a [ShareScope.Incremental] one, a missing entry means nothing at all — it is
+ * deleted by them. In a [ShareScope.Incremental] one, a missing entry means nothing at all. It is
  * simply older than their watermark. So deletions are only ever inferred from a full link, and
  * [reconcile] will not produce a single [ReconcileItem.DeletedBySender] from an incremental one.
  *
  * The second half of that rule is [Transaction.fromShare]. A missing entry that *you* typed was
- * never theirs to delete; they have just never seen it. That is worth telling you — you probably
- * want to share it back — but it is not a deletion, and the two must never be confused, because
+ * never theirs to delete; they have just never seen it. That is worth telling you (you probably
+ * want to share it back), but it is not a deletion, and the two must never be confused, because
  * one of them throws away your own record on somebody else's say-so.
  */
 
@@ -94,7 +94,7 @@ sealed interface ReconcileItem {
      * An entry that came from this sender, absent from a full link: they have deleted it.
      *
      * Only ever produced for rows with [Transaction.fromShare] set, and only from a
-     * [ShareScope.Full] payload. Both conditions are load-bearing — see the file header.
+     * [ShareScope.Full] payload. Both conditions are load-bearing; see the file header.
      */
     data class DeletedBySender(
         override val uid: String,
@@ -129,7 +129,7 @@ data class ReconcilePlan(
     val scope: ShareScope,
     /**
      * False when the payload predates uids (version 1) or is missing one. The import screen must
-     * then fall back to plain appending and say so — see [SharePayload.canReconcile].
+     * then fall back to plain appending and say so. See [SharePayload.canReconcile].
      */
     val comparable: Boolean
 ) {
@@ -149,7 +149,7 @@ data class ReconcilePlan(
     /**
      * What is ticked when the screen opens.
      *
-     * New entries, yes — that is what importing a link has always meant, and unticking them by
+     * New entries, yes: that is what importing a link has always meant, and unticking them by
      * default would make the ordinary case a chore. Edits and deletions, no: those overwrite or
      * destroy something that is already in the ledger, and nothing here can establish that the
      * sender is who they claim. A link that arrives while the phone is on a table must not be able
@@ -163,7 +163,7 @@ data class ReconcilePlan(
      *
      * Needed because the import screen promises a figure before anything is written, and that
      * promise has to follow the tick boxes. Found on a device: the screen said "you will owe ₹412"
-     * — the whole payload appended — while the default ticks actually produced ₹402, because the
+     * (the whole payload appended) while the default ticks actually produced ₹402, because the
      * edit and the deletion were correctly left alone. A screen whose entire job is to say what is
      * about to happen cannot be out by the exact amount the user chose to decline.
      *
@@ -200,7 +200,7 @@ data class ReconcileWrite(
 /**
  * Compares an incoming payload against what this phone already holds for that person.
  *
- * [incoming] must already be **mirrored** — the amounts as they will read here, not as the sender
+ * [incoming] must already be **mirrored**: the amounts as they will read here, not as the sender
  * wrote them. Mirroring stays in [SharePayload.mirrored] so there is exactly one place that can
  * get the sign wrong, and this function is not it. Passing raw entries would classify every
  * matching debt as an edit that doubles it.
@@ -232,7 +232,7 @@ fun reconcile(
         )
     }
 
-    // First row wins where a uid somehow appears twice locally — a restore that ran twice, say.
+    // First row wins where a uid somehow appears twice locally (a restore that ran twice, say).
     // The duplicates are still counted as present, so nothing offers to delete them as missing.
     val localByUid = LinkedHashMap<String, Transaction>()
     local.forEach { row -> if (row.uid.isNotEmpty()) localByUid.putIfAbsent(row.uid, row) }
@@ -267,8 +267,8 @@ fun reconcile(
     local.forEach { row ->
         if (row.uid.isNotEmpty() && row.uid in incomingUids) return@forEach
         when {
-            // Absence proves nothing in an incremental link, so it is not reported at all —
-            // listing everything older than their watermark as "they have not seen this" would
+            // Absence proves nothing in an incremental link, so it is not reported at all.
+            // Listing everything older than their watermark as "they have not seen this" would
             // be noise, and wrong.
             scope != ShareScope.Full -> Unit
 
@@ -290,7 +290,7 @@ fun reconcile(
 /**
  * Turns the chosen items into rows to write.
  *
- * [selected] holds the uids the user left ticked. Anything unticked is left exactly as it is —
+ * [selected] holds the uids the user left ticked. Anything unticked is left exactly as it is:
  * an unticked edit keeps the local amount, an unticked deletion keeps the entry. Doing nothing is
  * always a valid answer here, and has to remain one.
  */

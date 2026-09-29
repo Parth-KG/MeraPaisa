@@ -86,8 +86,8 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
  * 4 -> 5. Adds an index on transactions.personId and a cascading foreign key to persons.
  *
  * Nothing enforced that relationship before, so the table may already hold rows pointing at a
- * person who no longer exists. Those rows are counted by no balance and shown in no history —
- * they are invisible, and SQLite would refuse to apply the foreign key while they are present.
+ * person who no longer exists. Those rows are counted by no balance and shown in no history.
+ * They are invisible, and SQLite would refuse to apply the foreign key while they are present.
  * So they are deleted first, before the constrained table is built.
  */
 val MIGRATION_4_5 = object : Migration(4, 5) {
@@ -189,7 +189,7 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
  * where the last share got to so the next one carries only what is new.
  *
  * `lastSharedAt` defaults to 0 rather than to now. An existing install has never shared anything,
- * so its first link should offer the whole history — defaulting to the current time would silently
+ * so its first link should offer the whole history. Defaulting to the current time would silently
  * send an empty payload and look like the feature was broken.
  *
  * Note the absent foreign key on `applied_payloads.personId`: see [AppliedPayload] for why a
@@ -217,12 +217,12 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
  * 7 -> 8. How a group's settle-up is worked out, and telling a repayment from a purchase.
  *
  * `simplifyDebts` defaults to 1 because that is what every existing group has been doing since
- * groups shipped — `settleUp` has always netted positions down to the fewest payments. Defaulting
+ * groups shipped: `settleUp` has always netted positions down to the fewest payments. Defaulting
  * to 0 would silently change the plan shown for every group that already exists.
  *
  * `isSettlement` is backfilled from the description, which is the only signal older rows carry.
  * `recordTransfer` has always written exactly "Settlement", so the match is reliable for rows this
- * app produced — and a real expense somebody happened to name "Settlement" being reclassified is a
+ * app produced, and a real expense somebody happened to name "Settlement" being reclassified is a
  * cosmetic misfiling, not an arithmetic one. The flag changes how a row is displayed, never how it
  * is counted.
  */
@@ -239,15 +239,15 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
  * 8 -> 9. Stable entry ids, and where an entry came from. What makes reconcile possible.
  *
  * Until now the only name an entry had was its local autoincrement id, which is a different number
- * on each phone for the same debt. Two ledgers could disagree — an amount edited on one side, an
- * entry deleted on the other — and there was no way to line them up and say so. `uid` gives both
+ * on each phone for the same debt. Two ledgers could disagree (an amount edited on one side, an
+ * entry deleted on the other), and there was no way to line them up and say so. `uid` gives both
  * sides one name for the same debt; see [Transaction.uid].
  *
  * Existing rows are given a random uid each rather than one derived from their contents. Deriving
  * it would be reproducible across phones, which sounds useful and is exactly wrong: two people who
  * both recorded "Chai 20" on the same afternoon would mint the same uid for two genuinely
  * different debts, and reconcile would then offer to merge them. `randomblob(8)` is SQLite's own
- * CSPRNG, so this needs no round trip through Kotlin — the whole back-fill is one statement.
+ * CSPRNG, so this needs no round trip through Kotlin: the whole back-fill is one statement.
  *
  * `fromShare` is 0 for every existing row, and that is the honest answer rather than a convenient
  * one. Entries imported before v2.5 are indistinguishable from typed ones now, so they are treated

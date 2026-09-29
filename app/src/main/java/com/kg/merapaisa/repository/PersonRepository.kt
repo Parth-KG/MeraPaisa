@@ -96,10 +96,10 @@ class PersonRepository(
     }
 
     /**
-     * Moves part of one person's balance onto another. "Rondu owes you ₹624 — move ₹100 to Sasti."
+     * Moves part of one person's balance onto another. "Rondu owes you ₹624; move ₹100 to Sasti."
      *
      * Two equal and opposite entries sharing a timestamp, written together, so the total owed to
-     * you never changes — only who owes it. Useful when somebody pays on another's behalf, or when
+     * you never changes, only who owes it. Useful when somebody pays on another's behalf, or when
      * a debt genuinely changes hands.
      *
      * Returns a [MoveDebtResult] rather than throwing, because every refusal here is something the
@@ -217,7 +217,7 @@ class PersonRepository(
      * Renames the self row.
      *
      * This exists because the self row ships called "You", which is fine on your own screen and
-     * useless on anyone else's — a link whose sender is "You" gives the recipient nothing to match
+     * useless on anyone else's: a link whose sender is "You" gives the recipient nothing to match
      * against. The share sheet captures a real name and saves it here, once.
      */
     suspend fun renameSelf(name: String) {
@@ -232,7 +232,7 @@ class PersonRepository(
      *
      * Balances come along because the picker needs them: choosing where ₹340 lands is a lot
      * easier next to what each person already stands at. Excludes the self row, which
-     * `getPersonsWithBalancesNow` already filters out — you cannot owe yourself.
+     * `getPersonsWithBalancesNow` already filters out, since you cannot owe yourself.
      */
     suspend fun personsForImport(): List<PersonWithBalance> =
         dao.getPersonsWithBalancesNow(dao.ensureSelf().id)
@@ -241,7 +241,7 @@ class PersonRepository(
      * The entries the next link for this person would carry.
      *
      * [fullHistory] ignores the watermark, which is how someone recovers from a share that never
-     * arrived — the alternative would be a debt neither ledger can reconcile and no way back.
+     * arrived. The alternative would be a debt neither ledger can reconcile and no way back.
      */
     suspend fun entriesToShare(personId: Long, fullHistory: Boolean): List<Transaction> {
         val since = if (fullHistory) 0L else dao.getPersonNow(personId)?.lastSharedAt ?: 0L
@@ -280,10 +280,10 @@ class PersonRepository(
     /**
      * Moves the watermark, so the next link carries only what comes after this one.
      *
-     * Called when the share sheet is opened rather than when the message is confirmed sent —
-     * Android does not tell us whether the user went through with it. Advancing optimistically can
-     * therefore skip entries if they back out, which is exactly what `fullHistory` is the escape
-     * hatch for. The other way round would double-send by default, and a debt counted twice is
+     * Called when the share sheet is opened rather than when the message is confirmed sent,
+     * because Android does not tell us whether the user went through with it. Advancing
+     * optimistically can therefore skip entries if they back out, which is exactly what
+     * `fullHistory` is the escape hatch for. The other way round would double-send by default, and a debt counted twice is
      * worse than one that needs re-sending.
      */
     suspend fun markShared(personId: Long, upTo: Long) {
@@ -329,7 +329,7 @@ class PersonRepository(
      * What this link would change, without changing anything.
      *
      * Read against the person the link is about to be filed against, so switching the target in the
-     * import screen has to recompute it — the same payload compared against a different person is a
+     * import screen has to recompute it: the same payload compared against a different person is a
      * different answer, usually "all of this is new".
      */
     suspend fun previewReconcile(personId: Long, payload: SharePayload, now: Long): ReconcilePlan =
@@ -348,8 +348,8 @@ class PersonRepository(
      * Applies the ticked items of a plan.
      *
      * The plan is recomputed here rather than trusted from the screen. A plan built when the dialog
-     * opened can be stale by the time it is confirmed — an entry added in another window, a restore
-     * finishing in the background — and applying a stale plan would write row ids that have since
+     * opened can be stale by the time it is confirmed (an entry added in another window, a restore
+     * finishing in the background), and applying a stale plan would write row ids that have since
      * moved. The screen's selection is carried across by uid, which survives all of that.
      */
     suspend fun applyReconcile(
@@ -360,7 +360,7 @@ class PersonRepository(
          *
          * Null is not the same as empty. Empty means "they looked and chose nothing"; null means
          * the screen was confirmed before the comparison finished loading, and the safe reading of
-         * that is the default selection — additions only, nothing overwritten or deleted.
+         * that is the default selection: additions only, nothing overwritten or deleted.
          */
         selected: Set<String>?,
         now: Long

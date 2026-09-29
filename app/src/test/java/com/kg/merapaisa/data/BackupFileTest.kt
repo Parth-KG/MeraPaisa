@@ -167,7 +167,7 @@ class BackupFileTest {
     }
 
     /**
-     * Room's foreign keys would reject these anyway — but halfway through writing, which is how a
+     * Room's foreign keys would reject these anyway, but halfway through writing, which is how a
      * half-restored ledger happens. Catching it at parse time means the restore never starts.
      */
     @Test
@@ -429,7 +429,7 @@ class CsvImportTest {
     // ---------------------------------------------------------------------------------------
     // Fields added after the format shipped
     //
-    // Two of these were missed in a row — simplifyDebts and isSettlement, both from v2.4 — and
+    // Two of these were missed in a row (simplifyDebts and isSettlement, both from v2.4), and
     // neither failed anything: a restore simply put every group back on the default plan with its
     // repayments filed as purchases. The round trip has to be checked field by field, because
     // "it restored" and "it restored correctly" are not the same test.

@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 /**
  * The share/import round trip against a real database.
  *
- * The codec is covered by JVM tests; what needs a database is everything around it — that applying
+ * The codec is covered by JVM tests; what needs a database is everything around it: that applying
  * a link mirrors the signs, that applying the same link twice is a no-op, that a currency mismatch
  * is refused rather than converted, and that the watermark makes the next link carry only what is
  * new. Those are the ways this feature can silently produce two ledgers that disagree.
@@ -60,7 +60,7 @@ class ShareImportTest {
 
     /**
      * The defining behaviour. Parth records "Asha owes me ₹340"; on Asha's phone that same link has
-     * to become "I owe Parth ₹340" — the opposite sign. Importing it as sent would give two ledgers
+     * to become "I owe Parth ₹340", the opposite sign. Importing it as sent would give two ledgers
      * that agree on the number and disagree on who pays, which is worse than not syncing at all.
      */
     @Test
@@ -101,7 +101,7 @@ class ShareImportTest {
         assertEquals(-(34_000L - 10_000L + 500L), dao.getBalanceNow(id))
     }
 
-    /** A settled person receiving a link is live again — same rule as recording an entry by hand. */
+    /** A settled person receiving a link is live again: same rule as recording an entry by hand. */
     @Test
     fun importingReopensASettledPerson() = runBlocking {
         val id = newPerson()
@@ -148,7 +148,7 @@ class ShareImportTest {
         assertEquals("no duplicate entries", 1, dao.getTransactionsForPersonNow(id).size)
     }
 
-    /** Dedupe is by payload id, not by person — the same link must not apply to someone else. */
+    /** Dedupe is by payload id, not by person: the same link must not apply to someone else. */
     @Test
     fun theSameLinkCannotBeAppliedToADifferentPerson() = runBlocking {
         val asha = newPerson("Asha")
@@ -191,7 +191,7 @@ class ShareImportTest {
 
     /**
      * A payload's amounts are minor units with no exchange rate attached. Writing 34000 INR-shaped
-     * units onto a USD person would claim $340 instead of ₹340 — the same number, silently a
+     * units onto a USD person would claim $340 instead of ₹340: the same number, silently a
      * different amount of money. Refused rather than converted.
      */
     @Test
@@ -382,7 +382,7 @@ class ShareImportTest {
 
     /**
      * The whole feature in one test: Asha owes Parth ₹340 on Parth's phone, the link travels, and
-     * Asha's phone ends up owing ₹340. The two balances must be exact negations — that is the
+     * Asha's phone ends up owing ₹340. The two balances must be exact negations. That is the
      * definition of the two ledgers agreeing.
      */
     @Test

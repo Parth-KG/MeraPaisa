@@ -114,7 +114,7 @@ class JsonTest {
     }
 
     /**
-     * Trailing content means the file is not what it claims — a concatenation, or a partial
+     * Trailing content means the file is not what it claims: a concatenation, or a partial
      * overwrite of a longer previous backup, where the first half parses perfectly.
      */
     @Test
@@ -202,7 +202,7 @@ class JsonTest {
     /**
      * A deeply nested document must not take the app down with it.
      *
-     * The parser is recursive descent, so nesting depth maps straight onto stack depth — and a
+     * The parser is recursive descent, so nesting depth maps straight onto stack depth, and a
      * backup file is read from wherever the user points the picker, which includes a file that is
      * corrupt, truncated, or simply not a backup. A StackOverflowError is not a `Damaged` result;
      * it is a crash on a screen whose entire job is to fail safely.

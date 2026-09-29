@@ -14,7 +14,7 @@ import androidx.room.PrimaryKey
  * the person it belongs to, and this one must not: if you delete someone and then tap their old
  * link again, a cascade would have removed the row that remembers it and the entries would land a
  * second time. The dedupe record has to outlive the person it was about. The cost is that
- * `personId` may point at a row that no longer exists — which is why nothing reads it as a join.
+ * `personId` may point at a row that no longer exists, which is why nothing reads it as a join.
  * It is kept for the audit trail, so "where did this entry come from" has an answer.
  */
 @Entity(tableName = "applied_payloads")
@@ -22,7 +22,7 @@ data class AppliedPayload(
     @PrimaryKey
     val payloadId: String,
     val appliedAt: Long,
-    /** Who it was filed against at the time. Not a foreign key — see the class comment. */
+    /** Who it was filed against at the time. Not a foreign key; see the class comment. */
     val personId: Long,
     /** The name the payload claimed, kept as sent. Unverified, like everything in a link. */
     val senderName: String,

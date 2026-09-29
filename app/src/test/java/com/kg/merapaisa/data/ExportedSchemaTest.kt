@@ -7,7 +7,7 @@ import java.io.File
 /**
  * The exported schema JSON under app/schemas is the baseline that every migration is
  * validated against. If it is deleted, or a schema change lands without a new version
- * file, migration tests silently lose their reference point — so guard it here.
+ * file, migration tests silently lose their reference point, so guard it here.
  */
 class ExportedSchemaTest {
 
@@ -16,7 +16,7 @@ class ExportedSchemaTest {
         val json = readSchema(3)
         assertTrue("schema 3.json does not declare version 3", json.contains("\"version\": 3"))
         assertTrue(
-            "schema 3 identity hash changed — v3 is frozen history, do not regenerate it",
+            "schema 3 identity hash changed: v3 is frozen history, do not regenerate it",
             json.contains("\"identityHash\": \"7832b63c7294206c6a0df305a2bf54dc\"")
         )
         assertTrue("v3 persons should still carry the old balance column", json.contains("\"columnName\": \"balance\""))
@@ -27,7 +27,7 @@ class ExportedSchemaTest {
         val json = readSchema(4)
         assertTrue("schema 4.json does not declare version 4", json.contains("\"version\": 4"))
         assertTrue(
-            "schema 4 identity hash changed — regenerate and commit a new version instead",
+            "schema 4 identity hash changed: regenerate and commit a new version instead",
             json.contains("\"identityHash\": \"b59b0ce14101d0a8a004f49a30bbfe7c\"")
         )
         assertTrue("transactions should store amountMinor", json.contains("\"columnName\": \"amountMinor\""))
@@ -43,7 +43,7 @@ class ExportedSchemaTest {
         val json = readSchema(5)
         assertTrue("schema 5.json does not declare version 5", json.contains("\"version\": 5"))
         assertTrue(
-            "schema 5 identity hash changed — regenerate and commit a new version instead",
+            "schema 5 identity hash changed: regenerate and commit a new version instead",
             json.contains("\"identityHash\": \"d1de031b67b22ca90b2191074cd3661e\"")
         )
         assertTrue(

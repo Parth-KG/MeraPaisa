@@ -4,7 +4,7 @@ package com.kg.merapaisa.data
  * Reads back what [buildLedgerCsv] writes.
  *
  * **The `balance` column is deliberately ignored.** It is the balance the app displays, which since
- * v2.0.2 includes each person's slice of group activity — while the `amount` rows in the same file
+ * v2.0.2 includes each person's slice of group activity, while the `amount` rows in the same file
  * cover direct transactions only. For anyone in a group the two therefore disagree, by design.
  * Trusting the column would import a balance with no entries to explain it; deriving from the rows
  * gives a ledger that adds up, and the group activity comes back from a JSON backup instead.
@@ -34,7 +34,7 @@ sealed interface CsvImportResult {
     data object NotALedgerCsv : CsvImportResult
 
     /**
-     * Something in the file could not be read. Carries the line so the user can go and look — a
+     * Something in the file could not be read. Carries the line so the user can go and look. A
      * CSV is the one format here people genuinely do hand-edit, and "row 47 is broken" is worth
      * far more than "invalid file".
      */
@@ -88,7 +88,7 @@ fun readLedgerCsv(text: String): CsvImportResult {
         // Read once, from the person's first row. Written as an explicit absence check rather than
         // an elvis: `in` binds looser than `?:` in Kotlin, so `flags[key] ?: text in SETTLED_WORDS`
         // parses as `(flags[key] ?: text) in SETTLED_WORDS` and, on the second row, compares the
-        // stored Boolean against a set of Strings — quietly un-settling anyone with more than one
+        // stored Boolean against a set of Strings, quietly un-settling anyone with more than one
         // transaction.
         //
         // "yes"/"no" is what the exporter writes; the rest are tolerated because a spreadsheet
@@ -108,7 +108,7 @@ fun readLedgerCsv(text: String): CsvImportResult {
             ?: return CsvImportResult.Damaged(line, "\"$rawTimestamp\" is not a timestamp")
         if (timestamp < 0) return CsvImportResult.Damaged(line, "the timestamp is negative")
 
-        // The exporter writes amounts with formatMinorPlain, which parseAmountToMinor reads back —
+        // The exporter writes amounts with formatMinorPlain, which parseAmountToMinor reads back:
         // the same pair the numpad uses, so the rounding rules are identical.
         val amountMinor = parseAmountToMinor(rawAmount)
             ?: return CsvImportResult.Damaged(line, "\"$rawAmount\" is not an amount")
@@ -132,7 +132,7 @@ fun readLedgerCsv(text: String): CsvImportResult {
 /**
  * An RFC 4180 reader: quoted fields may contain commas, line breaks and doubled quotes.
  *
- * Returns null only for a structurally impossible file — an unterminated quoted field — because
+ * Returns null only for a structurally impossible file (an unterminated quoted field), because
  * everything else is better reported per line by the caller.
  */
 fun parseCsv(text: String): List<List<String>>? {

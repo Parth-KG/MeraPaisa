@@ -10,7 +10,7 @@ import kotlin.random.Random
  *
  * [decodePayload] and [extractPayloadBlob] are the app's entire attack surface: everything they
  * touch arrives from a chat message that anybody can craft. The contract they have to keep is
- * narrower than "be correct" — it is **never throw**. A crash here is a link that kills the app on
+ * narrower than "be correct": it is **never throw**. A crash here is a link that kills the app on
  * every tap, and the one screen standing between a stranger's payload and somebody's ledger is the
  * one that fails to open.
  *
@@ -170,7 +170,7 @@ class SharePayloadFuzzTest {
 
     /**
      * The value that defeated an overflow guard once already: `-Long.MIN_VALUE` is itself, so an
-     * entry carrying it would survive mirroring unflipped — a debt pointing the wrong way.
+     * entry carrying it would survive mirroring unflipped: a debt pointing the wrong way.
      */
     @Test
     fun `Long MIN_VALUE is refused rather than mirrored`() {

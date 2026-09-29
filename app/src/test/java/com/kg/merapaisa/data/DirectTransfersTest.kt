@@ -24,7 +24,7 @@ class DirectTransfersTest {
     private fun build(vararg parts: Pair<Expense, List<ExpenseShare>>) =
         parts.map { it.first } to parts.flatMap { it.second }
 
-    /** Net position from the raw rows — what each member is owed, positive, or owes, negative. */
+    /** Net position from the raw rows: what each member is owed, positive, or owes, negative. */
     private fun positions(expenses: List<Expense>, shares: List<ExpenseShare>): Map<Long, Long> {
         val ids = (expenses.map { it.paidByPersonId } + shares.map { it.personId }).distinct()
         return groupBalances(
@@ -113,7 +113,7 @@ class DirectTransfersTest {
     }
 
     /**
-     * The defining difference from [settleUp]. A owes B, B owes C the same amount — simplified
+     * The defining difference from [settleUp]. A owes B, B owes C the same amount. Simplified
      * collapses B out and has A pay C. Unsimplified keeps both, because both actually happened.
      */
     @Test
@@ -141,7 +141,7 @@ class DirectTransfersTest {
     // Agreement with the simplified plan
     // ---------------------------------------------------------------------------------------
 
-    /** Both routes must leave everyone at zero — they are alternatives, not different answers. */
+    /** Both routes must leave everyone at zero. They are alternatives, not different answers. */
     @Test
     fun `both plans square everyone up`() {
         val (e, s) = build(
@@ -159,7 +159,7 @@ class DirectTransfersTest {
         before.forEach { (p, b) -> assertEquals("simplified left $p unsquared", 0L, b) }
     }
 
-    /** Unsimplified never needs fewer payments than simplified — that is the trade being offered. */
+    /** Unsimplified never needs fewer payments than simplified; that is the trade being offered. */
     @Test
     fun `unsimplified needs at least as many payments as simplified`() {
         val (e, s) = build(
@@ -178,7 +178,7 @@ class DirectTransfersTest {
 
     /**
      * No rounding anywhere: shares are already whole minor units adding to their expense, so this
-     * is exact by construction. The awkward case — ₹100.01 split three ways — is where a
+     * is exact by construction. The awkward case, ₹100.01 split three ways, is where a
      * pro-rata approach would have to round and could drift.
      */
     @Test
