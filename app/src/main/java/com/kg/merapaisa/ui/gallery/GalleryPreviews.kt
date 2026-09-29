@@ -22,6 +22,7 @@ import com.kg.merapaisa.ui.NetPosition
 import com.kg.merapaisa.ui.NumPad
 import com.kg.merapaisa.ui.PersonRow
 import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.TextRowInset
 import com.kg.merapaisa.ui.SplitAdjustmentsContent
 import com.kg.merapaisa.ui.SplitAmountScreen
 import com.kg.merapaisa.ui.SplitPickerScreen
@@ -158,7 +159,7 @@ fun EmptyGroupsCase() = GroupsEmptyState(modifier = Modifier.fillMaxSize())
 fun GroupRowsCase() {
     Column(Modifier.fillMaxWidth()) {
         Fixtures.groupSummaries.forEachIndexed { index, summary ->
-            if (index > 0) RowDivider()
+            if (index > 0) RowDivider(TextRowInset)
             GroupRow(summary = summary, onClick = {}, onDelete = {})
         }
     }

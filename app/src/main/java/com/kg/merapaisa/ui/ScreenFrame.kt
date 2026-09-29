@@ -137,6 +137,7 @@ internal fun RowScope.PrimaryAction(label: String, enabled: Boolean, onClick: ()
         enabled = enabled,
         shape = Shapes.small,
         modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+        contentPadding = FootButtonPadding,
         colors = ButtonDefaults.buttonColors(
             containerColor = theme.primary,
             contentColor = theme.background
@@ -155,6 +156,7 @@ internal fun RowScope.SecondaryAction(label: String, enabled: Boolean, onClick: 
         enabled = enabled,
         shape = Shapes.small,
         modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+        contentPadding = FootButtonPadding,
         border = BorderStroke(1.dp, theme.outline),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
     ) {
@@ -189,3 +191,9 @@ internal fun Paragraph(text: String, colour: Color = LocalAppTheme.current.textS
         modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
     )
 }
+
+/**
+ * Less side padding than Material's 24dp. Two buttons share the width at the foot, and at the
+ * default "Restore from a file" and "Replace my ledger" broke onto a second line.
+ */
+private val FootButtonPadding = PaddingValues(horizontal = Spacing.md, vertical = Spacing.sm)

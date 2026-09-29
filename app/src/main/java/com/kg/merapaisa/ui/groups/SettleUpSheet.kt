@@ -30,6 +30,7 @@ import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.Transfer
 import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.TextRowInset
 import com.kg.merapaisa.ui.format.AmountText
 import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.format.amountParts
@@ -98,7 +99,7 @@ fun SettleUpSheet(
                 transfers,
                 key = { _, t -> "transfer-${t.fromPersonId}-${t.toPersonId}" }
             ) { index, t ->
-                if (index > 0) RowDivider()
+                if (index > 0) RowDivider(TextRowInset)
                 TransferRow(
                     line = "${nameOf(t.fromPersonId)} pays ${nameOf(t.toPersonId)}",
                     amountMinor = t.amountMinor,

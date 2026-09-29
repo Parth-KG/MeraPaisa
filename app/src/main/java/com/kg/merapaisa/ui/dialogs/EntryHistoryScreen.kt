@@ -48,6 +48,7 @@ import com.kg.merapaisa.data.Transaction
 import com.kg.merapaisa.ui.DecisionDialog
 import com.kg.merapaisa.ui.MainViewModel
 import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.TextRowInset
 import com.kg.merapaisa.ui.format.AmountText
 import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.format.amountSpoken
@@ -192,7 +193,7 @@ fun EntryHistoryContent(
                 // The index restarts inside each day, so the first line of a day carries no
                 // hairline: the heading above it is already the separation.
                 itemsIndexed(day.entries, key = { _, t -> "entry-${t.id}" }) { index, t ->
-                    if (index > 0) RowDivider()
+                    if (index > 0) RowDivider(TextRowInset)
                     EntryRow(
                         entry = t,
                         person = person,

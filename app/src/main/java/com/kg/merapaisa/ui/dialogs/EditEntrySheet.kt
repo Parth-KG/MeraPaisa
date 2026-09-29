@@ -62,8 +62,10 @@ fun EditEntrySheet(
     val theme = LocalAppTheme.current
     // The digits only, no symbol and no grouping, because this is a field the user types back
     // into and a comma would stop it parsing. A leading minus is how you flip which way it runs.
+    // Paise keep both digits, as every other amount does: trimming zeros turned 1200.50 into
+    // "1200.5". Only a whole ".00" is dropped.
     var amount by remember(entry.id) {
-        mutableStateOf(formatMinorPlain(entry.amountMinor, currency, trimZeros = true))
+        mutableStateOf(formatMinorPlain(entry.amountMinor, currency).removeSuffix(".00"))
     }
     var note by remember(entry.id) { mutableStateOf(entry.note) }
 

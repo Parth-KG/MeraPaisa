@@ -179,7 +179,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         contentPadding = PaddingValues(bottom = Spacing.xxl)
                     ) {
                         itemsIndexed(groups, key = { _, it -> it.group.id }) { index, summary ->
-                            if (index > 0) RowDivider()
+                            if (index > 0) RowDivider(TextRowInset)
                             GroupRow(
                                 summary = summary,
                                 onClick = { viewModel.openGroup(summary.group.id) },

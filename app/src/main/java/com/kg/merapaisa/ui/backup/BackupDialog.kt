@@ -35,6 +35,7 @@ import com.kg.merapaisa.ui.BackupFlowState
 import com.kg.merapaisa.ui.DecisionDialog
 import com.kg.merapaisa.ui.RestoreSource
 import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.TextRowInset
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
@@ -107,8 +108,8 @@ private fun MenuScreen(
             // The two things anyone opens this screen for, named, one tap away, the way the group
             // screen carries its own two.
             FootActions {
-                PrimaryAction("Save a backup", enabled = !state.busy, onClick = onSaveBackup)
                 SecondaryAction("Restore from a file", enabled = !state.busy, onClick = onRestore)
+                PrimaryAction("Save a backup", enabled = !state.busy, onClick = onSaveBackup)
             }
         }
     ) {
@@ -161,7 +162,7 @@ private fun MenuScreen(
                     onClick = onBackUpNow
                 )
             }
-            item { RowDivider() }
+            item { RowDivider(TextRowInset) }
             item {
                 ActionRow(
                     title = "Change folder",
@@ -170,7 +171,7 @@ private fun MenuScreen(
                     onClick = onPickFolder
                 )
             }
-            item { RowDivider() }
+            item { RowDivider(TextRowInset) }
             item {
                 ActionRow(
                     title = "Turn off weekly backups",
@@ -250,12 +251,12 @@ private fun ReviewScreen(
         onBack = if (state.busy) null else onDismiss,
         footer = {
             FootActions {
+                SecondaryAction("Don't restore", enabled = !state.busy, onClick = onDismiss)
                 PrimaryAction(
                     label = if (replacing) "Replace my ledger" else "Add what is missing",
                     enabled = !state.busy && !plan.changesNothing,
                     onClick = { if (destructive) confirming = true else onApply() }
                 )
-                SecondaryAction("Don't restore", enabled = !state.busy, onClick = onDismiss)
             }
         }
     ) {
@@ -282,7 +283,7 @@ private fun ReviewScreen(
                 onClick = { onModeChange(RestoreMode.Merge) }
             )
         }
-        item { RowDivider() }
+        item { RowDivider(TextRowInset) }
         item {
             ModeOption(
                 selected = replacing,
@@ -323,6 +324,8 @@ private fun ReviewScreen(
                     }
                 }
             }
+            // Air between the warning and the count under it, which sat against the box's edge.
+            item { Spacer(Modifier.height(Spacing.md)) }
         }
 
         item {

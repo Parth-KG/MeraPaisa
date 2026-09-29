@@ -45,6 +45,7 @@ import com.kg.merapaisa.data.claimedNameForDisplay
 import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.ui.ImportFlowState
 import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.TextRowInset
 import com.kg.merapaisa.ui.UnreadableReason
 import com.kg.merapaisa.ui.format.AmountText
 import com.kg.merapaisa.ui.format.amountString
@@ -238,15 +239,16 @@ private fun ConfirmingScreen(
         title = "Check this update link",
         onBack = if (state.busy) null else onDismiss,
         footer = {
+            // The way out on the left and the action on the right, as on every sheet and screen.
             FootActions {
+                // Disabled while writing, for the same reason the arrow is: "Don't record" cannot
+                // be offered at a moment when tapping it records anyway.
+                SecondaryAction("Don't record", enabled = !state.busy, onClick = onDismiss)
                 PrimaryAction(
                     label = "Record it",
                     enabled = state.canApply,
                     onClick = { if (tickedDeletions > 0) confirmingDeletions = true else onApply() }
                 )
-                // Disabled while writing, for the same reason the arrow is: "Don't record" cannot
-                // be offered at a moment when tapping it records anyway.
-                SecondaryAction("Don't record", enabled = !state.busy, onClick = onDismiss)
             }
         }
     ) {
@@ -279,7 +281,7 @@ private fun ConfirmingScreen(
         // a footnote; a screen has the height, and a preview that stops early is a preview of the
         // wrong link.
         itemsIndexed(payload.entries, key = { index, _ -> "payload-$index" }) { index, entry ->
-            if (index > 0) RowDivider()
+            if (index > 0) RowDivider(TextRowInset)
             EntryPreviewRow(
                 note = entry.note,
                 timestamp = entry.timestamp,
@@ -537,7 +539,7 @@ private fun LazyListScope.differences(
             )
         }
         itemsIndexed(plan.edited, key = { _, item -> "edited-${item.uid}" }) { index, item ->
-            if (index > 0) RowDivider()
+            if (index > 0) RowDivider(TextRowInset)
             DifferenceRow(
                 checked = item.uid in selected,
                 onToggle = { onToggleItem(item.uid) },
@@ -572,7 +574,7 @@ private fun LazyListScope.differences(
             )
         }
         itemsIndexed(plan.deletedBySender, key = { _, item -> "removed-${item.uid}" }) { index, item ->
-            if (index > 0) RowDivider()
+            if (index > 0) RowDivider(TextRowInset)
             DifferenceRow(
                 checked = item.uid in selected,
                 onToggle = { onToggleItem(item.uid) },
@@ -594,7 +596,7 @@ private fun LazyListScope.differences(
             )
         }
         itemsIndexed(plan.onlyYours, key = { _, item -> "yours-${item.uid}" }) { index, item ->
-            if (index > 0) RowDivider()
+            if (index > 0) RowDivider(TextRowInset)
             EntryPreviewRow(
                 note = item.note,
                 timestamp = item.timestamp,

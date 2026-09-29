@@ -50,6 +50,7 @@ import com.kg.merapaisa.AppTheme
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.themes
 import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.TextRowInset
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
@@ -150,7 +151,7 @@ fun SettingsScreen(
                     onClick = onImportLink
                 )
             }
-            item { RowDivider() }
+            item { RowDivider(TextRowInset) }
             item {
                 // Moved here from the main screen's top bar, where it was an unlabelled share
                 // icon beside Settings. Writing a CSV is a filing job that belongs with backup,
@@ -164,7 +165,7 @@ fun SettingsScreen(
                     onClick = onExportCsv
                 )
             }
-            item { RowDivider() }
+            item { RowDivider(TextRowInset) }
             item {
                 ActionRow(
                     title = "Back up and restore",
@@ -198,7 +199,7 @@ fun SettingsScreen(
 
             item { SectionHeading("Theme") }
             itemsIndexed(themes, key = { _, t -> "theme-${t.name}" }) { index, t ->
-                if (index > 0) RowDivider()
+                if (index > 0) RowDivider(TextRowInset)
                 ThemeRow(
                     preview = t,
                     selected = pendingTheme == t.name,

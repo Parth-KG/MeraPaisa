@@ -51,6 +51,7 @@ import com.kg.merapaisa.data.MemberBalance
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.Transfer
 import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.TextRowInset
 import com.kg.merapaisa.ui.format.AmountText
 import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.theme.MeraPaisaType
@@ -152,7 +153,7 @@ fun GroupDetailScreen(
                     transfers,
                     key = { _, t -> "transfer-${t.fromPersonId}-${t.toPersonId}" }
                 ) { index, t ->
-                    if (index > 0) RowDivider()
+                    if (index > 0) RowDivider(TextRowInset)
                     TransferRow(
                         line = "${nameOf(t.fromPersonId)} pays ${nameOf(t.toPersonId)}",
                         amountMinor = t.amountMinor,
@@ -189,7 +190,7 @@ fun GroupDetailScreen(
             // Person ids and expense ids both start at 1, so a bare id collides and Compose
             // throws. The prefix keeps the two ranges apart.
             itemsIndexed(balances, key = { _, b -> "balance-${b.personId}" }) { index, b ->
-                if (index > 0) RowDivider()
+                if (index > 0) RowDivider(TextRowInset)
                 MemberBalanceRow(
                     name = nameOf(b.personId),
                     amountMinor = b.amountMinor,
@@ -209,7 +210,7 @@ fun GroupDetailScreen(
                 }
             }
             itemsIndexed(purchases, key = { _, e -> "expense-${e.id}" }) { index, e ->
-                if (index > 0) RowDivider()
+                if (index > 0) RowDivider(TextRowInset)
                 EntryRow(
                     title = e.description,
                     subtitle = "paid by ${nameOf(e.paidByPersonId)}",
@@ -226,7 +227,7 @@ fun GroupDetailScreen(
             if (settlements.isNotEmpty()) {
                 item { SectionHeading("Payments between members") }
                 itemsIndexed(settlements, key = { _, e -> "settlement-${e.id}" }) { index, e ->
-                    if (index > 0) RowDivider()
+                    if (index > 0) RowDivider(TextRowInset)
                     EntryRow(
                         title = "${nameOf(e.paidByPersonId)} paid back",
                         subtitle = null,
