@@ -4,18 +4,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.*
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -24,9 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.parseAmountToMinor
@@ -62,7 +52,6 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.animation.core.tween
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.TabRowDefaults
@@ -501,64 +490,48 @@ fun MainScreen(viewModel: MainViewModel) {
         val transactionCount by viewModel.getTransactionCount(target.id).collectAsState(initial = 0)
         val groupExpenseCount by viewModel.getGroupExpenseCount(target.id).collectAsState(initial = 0)
         val groupSharedCount by viewModel.getGroupSharedCount(target.id).collectAsState(initial = 0)
-        AlertDialog(
-            onDismissRequest = { viewModel.confirmDelete(null) },
-                title = {
-                Text("Delete ${target.name}?", color = theme.textPrimary, style = MeraPaisaType.sectionTitle)
+        val entries = if (transactionCount == 1) "1 entry" else "$transactionCount entries"
+        // Deleting a person cascades away the group expenses they fronted, which moves what every
+        // other member of those groups owes. That is too large a consequence to leave out of the
+        // sentence asking for confirmation.
+        val groupNote = when (groupExpenseCount) {
+            0 -> ""
+            1 -> " It also removes 1 group expense they paid for, changing what the " +
+                "other members of that group owe."
+            else -> " It also removes $groupExpenseCount group expenses they paid for, " +
+                "changing what the other members of those groups owe."
+        }
+        // The other half of the same consequence: expenses they merely shared stay, and their part
+        // of them passes to whoever paid, who then absorbs what can no longer be collected.
+        // Silently moving what a third person is owed is exactly as large a consequence as
+        // removing an expense outright.
+        val sharedNote = when (groupSharedCount) {
+            0 -> ""
+            1 -> " Their share of 1 group expense someone else paid for passes to whoever " +
+                "paid it."
+            else -> " Their share of $groupSharedCount group expenses other people paid " +
+                "for passes to whoever paid them."
+        }
+        // An even balance is nothing to lose, so it is not named as a loss: "Removes their ₹0
+        // balance and 0 entries" read as though something were at stake. A balance with no
+        // entries behind it is possible too, when all of it comes from group expenses.
+        val balance = amountString(target.balanceMinor, target.currency)
+        val lead = when {
+            target.balanceMinor != 0L && transactionCount > 0 ->
+                "Removes their $balance balance and $entries."
+            target.balanceMinor != 0L -> "Removes their $balance balance."
+            transactionCount > 0 -> "They're even. Removes their $entries."
+            else -> "They're even and have no entries."
+        }
+        DecisionDialog(
+            title = "Delete ${target.name}?",
+            body = "$lead$groupNote$sharedNote This can't be undone.",
+            confirmLabel = "Delete",
+            onConfirm = {
+                viewModel.deletePerson(target.person)
+                viewModel.confirmDelete(null)
             },
-            text = {
-                val entries = if (transactionCount == 1) "1 entry" else "$transactionCount entries"
-                // Deleting a person cascades away the group expenses they fronted, which moves
-                // what every other member of those groups owes. That is too large a consequence
-                // to leave out of the sentence asking for confirmation.
-                val groupNote = when (groupExpenseCount) {
-                    0 -> ""
-                    1 -> " It also removes 1 group expense they paid for, changing what the " +
-                        "other members of that group owe."
-                    else -> " It also removes $groupExpenseCount group expenses they paid for, " +
-                        "changing what the other members of those groups owe."
-                }
-                // The other half of the same consequence: expenses they merely shared stay, and
-                // their part of them passes to whoever paid, who then absorbs what can no longer
-                // be collected. Silently moving what a third person is owed is exactly as large a
-                // consequence as removing an expense outright.
-                val sharedNote = when (groupSharedCount) {
-                    0 -> ""
-                    1 -> " Their share of 1 group expense someone else paid for passes to whoever " +
-                        "paid it."
-                    else -> " Their share of $groupSharedCount group expenses other people paid " +
-                        "for passes to whoever paid them."
-                }
-                // An even balance is nothing to lose, so it is not named as a loss: "Removes their
-                // ₹0 balance and 0 entries" read as though something were at stake. A balance with
-                // no entries behind it is possible too, when all of it comes from group expenses.
-                val balance = amountString(target.balanceMinor, target.currency)
-                val lead = when {
-                    target.balanceMinor != 0L && transactionCount > 0 ->
-                        "Removes their $balance balance and $entries."
-                    target.balanceMinor != 0L -> "Removes their $balance balance."
-                    transactionCount > 0 -> "They're even. Removes their $entries."
-                    else -> "They're even and have no entries."
-                }
-                Text(
-                    "$lead$groupNote$sharedNote This can't be undone.",
-                    color = theme.textSecondary,
-                    style = MeraPaisaType.body
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deletePerson(target.person)
-                    viewModel.confirmDelete(null)
-                }) {
-                    Text("Delete", color = theme.negative)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.confirmDelete(null) }) {
-                    Text("Cancel", color = theme.textSecondary)
-                }
-            }
+            onDismiss = { viewModel.confirmDelete(null) }
         )
     }
 
@@ -566,32 +539,16 @@ fun MainScreen(viewModel: MainViewModel) {
     // you and its members owe each other. It went straight through from the long-press menu, with
     // nothing to catch a mis-tap, which was the one destructive action in the app left unasked.
     pendingGroupDelete?.let { target ->
-        AlertDialog(
-            onDismissRequest = { viewModel.confirmDeleteGroup(null) },
-            title = {
-                Text("Delete ${target.group.name}?", color = theme.textPrimary, style = MeraPaisaType.sectionTitle)
+        DecisionDialog(
+            title = "Delete ${target.group.name}?",
+            body = "Removes every expense and payment in it, and whatever they added to its " +
+                "members' balances. This can't be undone.",
+            confirmLabel = "Delete",
+            onConfirm = {
+                viewModel.deleteGroup(target.group.id)
+                viewModel.confirmDeleteGroup(null)
             },
-            text = {
-                Text(
-                    "Removes every expense and payment in it, and whatever they added to its " +
-                        "members' balances. This can't be undone.",
-                    color = theme.textSecondary,
-                    style = MeraPaisaType.body
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteGroup(target.group.id)
-                    viewModel.confirmDeleteGroup(null)
-                }) {
-                    Text("Delete", color = theme.negative)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.confirmDeleteGroup(null) }) {
-                    Text("Cancel", color = theme.textSecondary)
-                }
-            }
+            onDismiss = { viewModel.confirmDeleteGroup(null) }
         )
     }
 

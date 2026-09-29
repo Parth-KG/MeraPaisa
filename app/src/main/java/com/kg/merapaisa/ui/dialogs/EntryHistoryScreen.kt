@@ -30,14 +30,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -46,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
+import com.kg.merapaisa.ui.DecisionDialog
 import com.kg.merapaisa.ui.MainViewModel
 import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.format.AmountText
@@ -53,7 +53,6 @@ import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.format.amountSpoken
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.theme.MeraPaisaType
-import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -200,7 +199,7 @@ fun EntryHistoryScreen(person: PersonWithBalance, viewModel: MainViewModel, onBa
     }
 
     pendingReversal?.let { target ->
-        ConfirmDialog(
+        DecisionDialog(
             title = "Reverse this entry and the newer ones?",
             body = "Adds one entry that cancels this one and every entry newer than it, so " +
                 "${person.name}'s balance goes back to what it was before. Nothing is deleted: " +
@@ -237,7 +236,7 @@ fun EntryHistoryScreen(person: PersonWithBalance, viewModel: MainViewModel, onBa
                     amountString(person.balanceMinor, person.currency, SignStyle.None) +
                     ", carried over as a single opening entry. This can't be undone."
         }
-        ConfirmDialog(
+        DecisionDialog(
             title = "Clear ${person.name}'s history?",
             body = body,
             confirmLabel = "Clear history",
@@ -394,38 +393,4 @@ private fun EntryRow(
             )
         }
     }
-}
-
-/**
- * A decision, which is the one thing a dialog is for: it names what will happen in the title and
- * in the button, so neither the question nor the answer depends on reading the sentence between
- * them.
- */
-@Composable
-private fun ConfirmDialog(
-    title: String,
-    body: String,
-    confirmLabel: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-    confirmColour: Color = LocalAppTheme.current.negative
-) {
-    val theme = LocalAppTheme.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = Shapes.medium,
-        containerColor = theme.surface,
-        title = { Text(title, style = MeraPaisaType.screenTitle, color = theme.textPrimary) },
-        text = { Text(body, style = MeraPaisaType.body, color = theme.textSecondary) },
-        confirmButton = {
-            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(confirmLabel, style = MeraPaisaType.action, color = confirmColour)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Cancel", style = MeraPaisaType.action, color = theme.textSecondary)
-            }
-        }
-    )
 }

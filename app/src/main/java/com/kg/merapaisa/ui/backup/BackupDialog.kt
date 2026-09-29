@@ -17,7 +17,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +32,7 @@ import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.RestoreCounts
 import com.kg.merapaisa.data.RestoreMode
 import com.kg.merapaisa.ui.BackupFlowState
+import com.kg.merapaisa.ui.DecisionDialog
 import com.kg.merapaisa.ui.RestoreSource
 import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.theme.MeraPaisaType
@@ -381,40 +381,14 @@ private fun ReplaceConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val theme = LocalAppTheme.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = theme.card,
-        shape = Shapes.medium,
-        title = {
-            Text("Replace your ledger?", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                Text(
-                    deletesSentence(deletes),
-                    style = MeraPaisaType.body,
-                    color = theme.textPrimary
-                )
-                if (losesGroups) {
-                    Text(
-                        "A CSV export puts no groups back.",
-                        style = MeraPaisaType.body,
-                        color = theme.negative
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Replace my ledger", style = MeraPaisaType.action, color = theme.negative)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Keep my ledger", style = MeraPaisaType.action, color = theme.textSecondary)
-            }
-        }
+    DecisionDialog(
+        title = "Replace your ledger?",
+        body = deletesSentence(deletes),
+        warning = if (losesGroups) "A CSV export puts no groups back." else null,
+        confirmLabel = "Replace my ledger",
+        dismissLabel = "Keep my ledger",
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
     )
 }
 

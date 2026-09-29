@@ -24,7 +24,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +51,7 @@ import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
+import com.kg.merapaisa.ui.DecisionDialog
 import com.kg.merapaisa.ui.FootActions
 import com.kg.merapaisa.ui.Paragraph
 import com.kg.merapaisa.ui.PrimaryAction
@@ -699,37 +699,15 @@ private fun DifferenceRow(
  */
 @Composable
 private fun DeleteConfirmDialog(count: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    val theme = LocalAppTheme.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = theme.card,
-        shape = Shapes.medium,
-        title = {
-            Text(
-                "Delete ${countOf(count, "entry", "entries")} here?",
-                style = MeraPaisaType.screenTitle,
-                color = theme.textPrimary
-            )
-        },
-        text = {
-            Text(
-                "You ticked " + countOf(count, "entry", "entries") + " the sender removed, so " +
-                    "recording this takes " + (if (count == 1) "it" else "them") +
-                    " out of your ledger too. This can't be undone.",
-                style = MeraPaisaType.body,
-                color = theme.textPrimary
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Delete and record", style = MeraPaisaType.action, color = theme.negative)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Go back", style = MeraPaisaType.action, color = theme.textSecondary)
-            }
-        }
+    DecisionDialog(
+        title = "Delete ${countOf(count, "entry", "entries")} here?",
+        body = "You ticked " + countOf(count, "entry", "entries") + " the sender removed, so " +
+            "recording this takes " + (if (count == 1) "it" else "them") +
+            " out of your ledger too. This can't be undone.",
+        confirmLabel = "Delete and record",
+        dismissLabel = "Go back",
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
     )
 }
 
