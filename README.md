@@ -53,13 +53,17 @@ Mera Paisa keeps all of that on your phone.
 | **Net position** | Where you stand overall, one line per currency, never added together |
 | **Multi-currency** | ₹, $, €, £, ¥ with live rates from [Frankfurter](https://www.frankfurter.app/). Balances stay in each person's currency and are never silently converted |
 | **Expense splitting** | Equal or custom shares, with lock-on-edit redistribution |
-| **Groups** | A trip or a flatshare: log who paid for what, then settle everyone in the fewest payments |
-| **Settle up** | Close a balance in one tap, and reopen it later without losing its history |
+| **Groups** | A trip or a flatshare: log who paid for what, then settle everyone in the fewest payments. Kept apart from your personal balances, in its own currency |
+| **Settle up** | Close a balance after one confirmation, and reopen it later without losing its history |
+| **Move a debt** | Hand part of what one person owes onto someone else, converted if they keep a different currency |
 | **History** | Notes, timestamps, edit or delete any entry, reverse an entry and everything newer, or clear the history |
 | **Export and summaries** | The whole ledger as CSV, or a plain-text summary of one person's balance |
 | **Update links** | Send a link that records the mirror of your entries in their app, and compares before writing |
 | **Reminders** | An editable message, optionally with the history attached |
 | **Home screen widget** | Your net position and who owes what, in your chosen theme |
+| **App lock** | Your fingerprint, face or screen lock before the ledger opens, and nothing on the widget or in screenshots while it is locked |
+| **In-app updates** | Checks GitHub for a newer release and installs it only if it is signed with the same key |
+| **Accessible** | TalkBack reads every figure with its direction in words, and every screen works at large text and on a phone turned sideways |
 | **Six themes** | Midnight, Amoled, Ocean, Sunset, Purple and Paper, each one tested for contrast |
 | **Backup** | Everything in one file, saved when you like or every week to a folder you pick, with a preview before any restore. Android's own backup also copies your ledger and settings to your Google account |
 
@@ -75,13 +79,13 @@ Mera Paisa keeps all of that on your phone.
 > The database has been through ten schema versions with seven hand-written migrations, each tested against a seeded database before release. There is no destructive fallback anywhere, so no update can wipe a ledger. The version that removed the stored balance column had to prove first that the entries summed to it, and wrote a reconciling entry where they did not.
 
 > **Lock-on-edit redistribution**
-> Change one person's share and that row locks, and the remaining unlocked rows split what is left. Leftover paise go to the first person rather than quietly disappearing. If the shares do not reconcile you get a warning rather than a block, because sometimes you really do mean it.
+> Change one person's share and that row locks, and the remaining unlocked rows split what is left. Leftover paise go to the first person rather than quietly disappearing. If the locked shares leave nothing that adds up, the screen says by how much and why, and the split cannot be saved until it does, because a split that does not add up records money nobody spent.
 
 > **Settling a group in the fewest payments**
-> Inside a group, who paid whom for any single expense stops mattering once you only care about ending even. All that survives is each member's net position. If A owes B and B owes C the same amount, B is a pass-through and A can pay C directly. Matching the largest debtor against the largest creditor settles at least one member with every payment, so a group of *n* people never needs more than *n* minus 1 payments. You can turn this off per group and keep every debt attached to the expense that created it.
+> Inside a group, who paid whom for any single expense stops mattering once you only care about ending even. All that survives is each member's net position. If A owes B and B owes C the same amount, B is a pass-through and A can pay C directly. Matching the largest debtor against the largest creditor settles at least one member with every payment, so a group of *n* people never needs more than *n* minus 1 payments. You can turn this off per group and keep every debt attached to the expense that created it. Either way, a group where everyone is even asks for no payments at all.
 
 > **Two ledgers that can disagree, and say so**
-> An update link carries a stable id per entry, so the receiving app can tell a new entry from an edited one from one the sender deleted. It shows you the differences and writes nothing you have not ticked. Additions are ticked for you; an edit or a deletion never is, because nothing about a link proves who sent it.
+> An update link carries a stable id per entry, so the receiving app can tell a new entry from an edited one from one the sender deleted. It shows you the differences and writes nothing you have not ticked. Additions are ticked for you; an edit or a deletion never is, because nothing about a link proves who sent it. The ids of entries you delete or clear are kept, so the other phone's next link cannot quietly bring them back: a cleared entry already counts in the opening balance, and a deleted one arrives unticked for you to decide.
 
 > **No account, no backend**
 > Data lives in Room on the device and rides Android's own backup to your Google account, which is a system feature rather than anything of ours. Reinstall on a new phone that uses the same Google account and it is there. There is no account to create, no server, and nothing of yours on a machine I control. Exactly three things leave the phone: that system backup, links and messages you choose to send, and requests to Frankfurter for an exchange rate and GitHub for an update check. No names, no notes, no analytics, no crash reporting. The manifest asks for `INTERNET` for those requests, and `REQUEST_INSTALL_PACKAGES` so the updater can hand a checked APK to Android's installer. Not contacts, not storage, not location.
@@ -93,15 +97,15 @@ Mera Paisa keeps all of that on your phone.
 
 ### Balances
 
-Add people with names, pictures and a currency. Record amounts through a numpad, with a note if you want one. The top of the list shows where you stand overall, a line per currency, closed with a double rule.
+Add people with names, pictures and a currency; a new person starts in the currency you used last. Tap a name to open the numpad, type the amount, add a note if you want one, and say which way it went: **You paid them** or **They paid you**. The top of the list shows where you stand overall, a line per currency, closed with a double rule. Long-press a name for everything else: settle up, a reminder, a summary, an update link, moving the debt, editing or deleting them.
 
 ### Active, Settled, and settling up
 
-A person is in **Settled** because you put them there, not because their balance happened to reach zero. **Settle up** records a closing entry for exactly what is outstanding, then files them away. **Reopen** brings them back without resurrecting the old balance, since the closing entry is real history and stays. Recording money against a settled person reopens them: if you are lending again, the balance is live again.
+A person is in **Settled** because you put them there, not because their balance happened to reach zero. **Settle up** says the amount it will record and asks first, then records a closing entry for exactly what is outstanding and files them away. **Reopen** brings them back without resurrecting the old balance, since the closing entry is real history and stays. Recording money against a settled person reopens them: if you are lending again, the balance is live again.
 
 ### Multi-currency
 
-Each person has their own currency and balances stay in it. Your net position is reported per currency and never summed across them: a rate is a guess about a day, and folding ₹ and $ together would report a number nobody owes. When a split crosses currencies, amounts convert through Frankfurter and are recorded in each recipient's own currency.
+Each person has their own currency and balances stay in it. Your net position is reported per currency and never summed across them: a rate is a guess about a day, and folding ₹ and $ together would report a number nobody owes. When a split or a moved debt crosses currencies, amounts convert through Frankfurter at the day's rate, fetched once and reused while you work, and are recorded in each recipient's own currency. Changing someone's currency can rewrite their whole history at that rate, or just relabel it; the first is irreversible, and the dialog says so.
 
 ### Splitting an expense
 
@@ -117,11 +121,11 @@ A group is a trip, a flatshare, a dinner: anywhere several people keep paying on
 
 Log an expense with a description, an amount and who paid. Shares are equal by default and split so the parts always add back to the whole, since paise cannot be divided three ways. Each member's position is what they paid out less what they were assigned, so a group always nets to zero.
 
-**Settle up** turns those positions into a list of payments, and records each one when it happens. Deleting a group takes its expenses and shares with it. Deleting a member hands their share of everyone else's expenses to whoever paid, so the group still adds up.
+**Settle up** turns those positions into a list of payments, and records each one when it happens. **Edit group** renames it or brings more people in; someone who joins late owes nothing for what was spent before. Deleting an expense or a group asks first, and touches nothing outside the group. Deleting a member hands their share of everyone else's expenses to whoever paid, so the group still adds up.
 
 ### History, corrections and rollback
 
-Every person has a log, grouped by day. Tap an entry to correct its amount or note, or delete it, because a mistyped figure does not have to live in the history forever. **Reverse entries** is the bulk version: the undo arrow beside an entry adds one entry that cancels it and everything newer, rather than deleting rows, so the correction stays visible as a correction. **Clear history** asks first and carries the balance across as one opening entry, so what you are owed never changes.
+Every person has a log, grouped by day. Tap an entry to correct its amount or note, or delete it after a confirmation, because a mistyped figure does not have to live in the history forever. **Reverse entries** is the bulk version: the undo arrow beside an entry names the amount and adds one entry that cancels it and everything newer, rather than deleting rows, so the correction stays visible as a correction. **Clear history** asks first and carries the balance across as an opening balance, so what you are owed never changes, and an update link sent afterwards does not send the other phone what it already has.
 
 ### Schema changes and updates
 
