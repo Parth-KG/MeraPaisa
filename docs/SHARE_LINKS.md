@@ -1,4 +1,6 @@
-# Share links (v2.1, Phase D)
+# Update links
+
+The code calls them share links; the app calls them update links.
 
 How the two-sided ledger travels, and the one hosting step that is not in this repo.
 
@@ -20,7 +22,7 @@ build is installed.
 
 Two separate things, and they do **not** live in the same place.
 
-### 1. The fallback page — this repo
+### 1. The fallback page, in this repo
 
 `docs/s/index.html` is served at `https://parth-kg.github.io/MeraPaisa/s` once GitHub Pages is
 enabled for this repository:
@@ -30,7 +32,7 @@ enabled for this repository:
 Anyone without the app, or whose Android has not yet verified the link, lands here and is told what
 to do.
 
-### 2. `assetlinks.json` — a *different* repo
+### 2. `assetlinks.json`, in a *different* repo
 
 This is the step that is easy to get wrong. Android verifies App Links against the **domain root**:
 
@@ -40,7 +42,7 @@ https://parth-kg.github.io/.well-known/assetlinks.json
 
 It will **not** look at `https://parth-kg.github.io/MeraPaisa/.well-known/assetlinks.json`. Because
 `parth-kg.github.io` is a GitHub *user* site, its root is served by a repository named
-`Parth-KG.github.io` — not by this one. So:
+`Parth-KG.github.io`, not by this one. So:
 
 1. Create a public repo named exactly **`Parth-KG.github.io`**.
 2. Copy `docs/.well-known/assetlinks.json` from this repo to `.well-known/assetlinks.json` at that
@@ -62,7 +64,7 @@ the copy Android reads.
 
 ### Until that file is live
 
-A tapped link opens a browser or a chooser rather than the app. **This is not a broken feature** —
+A tapped link opens a browser or a chooser rather than the app. **This is not a broken feature:**
 the app accepts a pasted link at *Settings → Record a shared update*, which is why that path
 exists and why the fallback page explains it. Everything works; it is one tap longer.
 
@@ -85,7 +87,7 @@ Two consequences worth knowing:
 - **Debug builds will never auto-verify.** They are `com.kg.merapaisa.debug` and are signed with the
   per-machine debug key, so neither the package name nor the fingerprint matches. Test the deep link
   with a release build; use paste for debug.
-- **If the signing key ever changes, this file must change too** — and see `docs/RELEASE.md` for why
+- **If the signing key ever changes, this file must change too.** See `docs/RELEASE.md` for why
   changing the key is already close to unthinkable.
 
 ## Verifying on a device
@@ -103,8 +105,8 @@ adb shell am start -a android.intent.action.VIEW \
 ```
 
 `pm get-app-links` should report `verified` for `parth-kg.github.io`. While it says
-`legacy_failure` or `1024`, the file is not being served correctly — usually Pages not enabled, or
-the file at the project path instead of the domain root.
+`legacy_failure` or `1024`, the file is not being served correctly. Usually Pages is not enabled,
+or the file sits at the project path instead of the domain root.
 
 ## What a link cannot do
 
