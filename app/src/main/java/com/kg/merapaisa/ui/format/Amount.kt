@@ -197,3 +197,18 @@ private val SPOKEN_UNITS = mapOf(
 
 /** The minus that leads what you owe: U+2212 and a thin space. */
 const val MINUS = "\u2212\u2009"
+
+/**
+ * What has been typed on a keypad so far, grouped, with the decimal part exactly as typed.
+ *
+ * The display used to parse what was typed and format the result, which made it jump: "1234."
+ * showed raw, "1234.0" then lost its ".0" and read ₹1,234, and "1234.05" brought the decimals
+ * back. Grouping only the whole part and keeping the rest as typed means every key press adds
+ * exactly what was pressed.
+ */
+fun groupedEntry(entry: String, currencyCode: String): String {
+    if (entry.isEmpty()) return "0"
+    val whole = entry.substringBefore(".").trimStart('0').ifEmpty { "0" }
+    val grouped = group(whole, lakhs = normaliseCurrency(currencyCode) == "INR")
+    return if ('.' in entry) grouped + "." + entry.substringAfter(".") else grouped
+}

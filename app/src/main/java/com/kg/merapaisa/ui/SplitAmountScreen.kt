@@ -31,20 +31,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.SUPPORTED_CURRENCIES
-import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.data.parseAmountToMinor
 import com.kg.merapaisa.ui.format.AmountText
-import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
+import com.kg.merapaisa.ui.format.TypedAmountText
 
 /**
  * Step one of a split: how much there is to divide, and the currency it is divided in.
@@ -127,30 +124,11 @@ fun SplitAmountScreen(
  */
 @Composable
 private fun TypedSplitAmount(entry: String, currency: String) {
-    val theme = LocalAppTheme.current
-    val minor = parseAmountToMinor(entry)
-    val midDecimal = entry.endsWith(".")
-    val gutter = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
-
-    if (minor != null && !midDecimal) {
-        AmountText(
-            amountMinor = minor,
-            currencyCode = currency,
-            style = MeraPaisaType.amountHero,
-            signStyle = SignStyle.None,
-            colourByDirection = false,
-            modifier = gutter
-        )
-    } else {
-        Text(
-            currencySymbol(currency) + entry.ifEmpty { "0" },
-            style = MeraPaisaType.amountHero,
-            color = theme.textPrimary,
-            textAlign = TextAlign.End,
-            maxLines = 1,
-            modifier = gutter
-        )
-    }
+    TypedAmountText(
+        entry = entry,
+        currencyCode = currency,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
+    )
 }
 
 /** The key that clears one digit, told apart from the digits by name rather than by a glyph. */

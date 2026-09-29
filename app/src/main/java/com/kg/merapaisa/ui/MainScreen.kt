@@ -73,6 +73,7 @@ import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.PaddingValues
+import com.kg.merapaisa.widget.WidgetLedgerNotifier
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
@@ -405,11 +406,21 @@ fun MainScreen(viewModel: MainViewModel) {
                 onCheckUpdates = viewModel::checkForUpdatesNow,
                 appVersion = BuildConfig.VERSION_NAME,
                 onAppLockChange = { enabled ->
-                    scope.launch { SecurityStore.setAppLockEnabled(context, enabled) }
+                    scope.launch {
+                        SecurityStore.setAppLockEnabled(context, enabled)
+                        // The widget reads the lock too. Without this it kept showing names and
+                        // amounts on the home screen after the lock went on, until the next entry.
+                        WidgetLedgerNotifier(context.applicationContext).onLedgerChanged()
+                    }
                 },
                 onDismiss = { viewModel.showSettingsDialog(false) },
                 onApply = { selectedTheme ->
-                    scope.launch { ThemeStore.setTheme(context, selectedTheme) }
+                    scope.launch {
+                        ThemeStore.setTheme(context, selectedTheme)
+                        // The widget wears the chosen theme, and otherwise kept the old one until
+                        // the ledger next changed.
+                        WidgetLedgerNotifier(context.applicationContext).onLedgerChanged()
+                    }
                     viewModel.showSettingsDialog(false)
                 }
             )

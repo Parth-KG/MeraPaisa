@@ -33,7 +33,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -42,12 +41,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
-import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.data.normaliseCurrency
-import com.kg.merapaisa.data.parseAmountToMinor
 import com.kg.merapaisa.ui.MoveDebtFlowState
 import com.kg.merapaisa.ui.format.AmountText
-import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.format.amountSpoken
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.theme.MeraPaisaType
@@ -56,6 +52,7 @@ import com.kg.merapaisa.ui.theme.Spacing
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import com.kg.merapaisa.ui.format.TypedAmountText
 
 /**
  * Moving part of what one person owes onto somebody else.
@@ -320,26 +317,7 @@ private fun TargetRow(person: PersonWithBalance, selected: Boolean, onSelect: ()
  */
 @Composable
 private fun TypedAmount(input: String, currency: String) {
-    val theme = LocalAppTheme.current
-    val minor = parseAmountToMinor(input)
-    val trailing = input.endsWith(".")
-
-    if (minor != null && !trailing) {
-        AmountText(
-            amountMinor = minor,
-            currencyCode = currency,
-            style = MeraPaisaType.amountHero,
-            signStyle = SignStyle.None,
-            colourByDirection = false
-        )
-    } else {
-        Text(
-            currencySymbol(currency) + input.ifEmpty { "0" },
-            style = MeraPaisaType.amountHero,
-            color = theme.textPrimary,
-            maxLines = 1
-        )
-    }
+    TypedAmountText(entry = input, currencyCode = currency)
 }
 
 /** The keypad, built the same way the one on the balances screen is, down to the backspace key. */

@@ -4,11 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -27,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextAlign
@@ -36,12 +33,10 @@ import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.isUsableAmount
-import com.kg.merapaisa.data.parseAmountToMinor
-import com.kg.merapaisa.ui.format.AmountText
-import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
+import com.kg.merapaisa.ui.format.TypedAmountText
 
 /** The key that clears one digit, told apart from the digits by name rather than by a glyph. */
 private const val BACKSPACE = "backspace"
@@ -175,26 +170,7 @@ fun NumPad(
  */
 @Composable
 private fun TypedAmount(input: String, currency: String) {
-    val theme = LocalAppTheme.current
-    val minor = parseAmountToMinor(input)
-    val trailing = input.endsWith(".")
-
-    if (minor != null && !trailing) {
-        AmountText(
-            amountMinor = minor,
-            currencyCode = currency,
-            style = MeraPaisaType.amountHero,
-            signStyle = SignStyle.None,
-            colourByDirection = false
-        )
-    } else {
-        Text(
-            com.kg.merapaisa.data.currencySymbol(currency) + input.ifEmpty { "0" },
-            style = MeraPaisaType.amountHero,
-            color = theme.textPrimary,
-            maxLines = 1
-        )
-    }
+    TypedAmountText(entry = input, currencyCode = currency)
 }
 
 @Composable

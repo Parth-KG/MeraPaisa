@@ -17,6 +17,7 @@ import com.kg.merapaisa.ui.theme.amountBlankFractionSpan
 import com.kg.merapaisa.ui.theme.amountSymbolSpan
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.unit.sp
+import com.kg.merapaisa.data.currencySymbol
 
 /**
  * Every amount the user sees.
@@ -146,3 +147,37 @@ fun AmountPlaceholder(modifier: Modifier = Modifier, style: TextStyle = MeraPais
  */
 private fun shrinkToFit(style: TextStyle) =
     TextAutoSize.StepBased(minFontSize = style.fontSize * 0.5f, maxFontSize = style.fontSize, stepSize = 1.sp)
+
+/**
+ * A keypad's figure while it is being typed: the symbol, the whole part grouped, and the decimals
+ * exactly as far as they have been typed. See [groupedEntry]. Used by every keypad in the app, so
+ * the three that had drifted apart now behave as one.
+ */
+@Composable
+fun TypedAmountText(
+    entry: String,
+    currencyCode: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = MeraPaisaType.amountHero,
+    textAlign: TextAlign = TextAlign.End
+) {
+    val theme = LocalAppTheme.current
+    val text = buildAnnotatedString {
+        withStyle(amountSymbolSpan(theme.textSecondary)) { append(currencySymbol(currencyCode)) }
+        append(groupedEntry(entry, currencyCode))
+    }
+    Text(
+        text = text,
+        style = style,
+        color = theme.textPrimary,
+        textAlign = textAlign,
+        maxLines = 1,
+        autoSize = shrinkToFit(style),
+        modifier = modifier.clearAndSetSemantics {
+            contentDescription = amountSpoken(
+                com.kg.merapaisa.data.parseAmountToMinor(entry) ?: 0L,
+                currencyCode
+            )
+        }
+    )
+}

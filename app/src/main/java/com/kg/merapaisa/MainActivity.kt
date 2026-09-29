@@ -73,7 +73,14 @@ class MainActivity : FragmentActivity() {
                 // Both ways: turning the lock on mid-session has to hide the ledger from screenshots
                 // and the recents preview straight away, not from the next launch.
                 when (lockEnabled) {
-                    false -> window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    // With the lock off, the ledger is open. Marking it unlocked here is what stops
+                    // switching the lock on in Settings from locking you out on the spot, mid-task,
+                    // with a fingerprint prompt over the screen you just used. It takes effect the
+                    // next time the app has been away long enough, like any other re-lock.
+                    false -> {
+                        lock.onUnlocked()
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    }
                     true -> window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
                     null -> Unit
                 }
