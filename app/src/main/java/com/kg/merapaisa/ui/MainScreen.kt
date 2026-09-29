@@ -121,7 +121,8 @@ fun MainScreen(viewModel: MainViewModel) {
     // Keyed on whether the row exists yet too: someone just added is picked before the list has
     // them, and the first run found nothing to scroll to.
     val selectedIndex = list.indexOfFirst { it.id == ui.selectedId }
-    LaunchedEffect(ui.selectedId, selectedIndex >= 0) {
+    // And again when the note field opens or closes, which moves the keypad's top edge.
+    LaunchedEffect(ui.selectedId, selectedIndex >= 0, ui.showNote) {
         val index = selectedIndex
         if (ui.selectedId == null || index < 0) return@LaunchedEffect
         delay(Motion.quick.toLong() + 50)
@@ -216,7 +217,9 @@ fun MainScreen(viewModel: MainViewModel) {
             Spacer(modifier = Modifier.height(Spacing.lg))
 
             val keypadTakesScreen = shortScreen && ui.selectedId != null && ui.tab != Tab.Groups
-            if (ui.tab == Tab.Active && ledgerReady && !keypadTakesScreen) {
+            // Hidden while the keypad is up: the amount being typed is for one person, and with two
+            // currencies the header left the list less than a row high, the chosen row cut in half.
+            if (ui.tab == Tab.Active && ledgerReady && ui.selectedId == null) {
                 NetPosition(
                     totals = netTotalsByCurrency(list),
                     modifier = Modifier.windowInsetsPadding(
@@ -634,9 +637,10 @@ fun MainScreen(viewModel: MainViewModel) {
         // sentence asking for confirmation.
         val groupNote = when (groupExpenseCount) {
             0 -> ""
-            1 -> " It also removes 1 group expense they paid for, changing what the " +
+            // Repayments count too: to the group they are money paid out, like an expense.
+            1 -> " It also removes 1 group expense or repayment they paid, changing what the " +
                 "other members of that group owe."
-            else -> " It also removes $groupExpenseCount group expenses they paid for, " +
+            else -> " It also removes $groupExpenseCount group expenses and repayments they paid, " +
                 "changing what the other members of those groups owe."
         }
         // The other half of the same consequence: expenses they merely shared stay, and their part

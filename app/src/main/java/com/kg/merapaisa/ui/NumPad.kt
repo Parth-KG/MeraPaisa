@@ -1,5 +1,7 @@
 package com.kg.merapaisa.ui
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Spacer
 import com.kg.merapaisa.data.currencyDecimals
 import androidx.compose.foundation.background
@@ -100,13 +102,18 @@ fun NumPad(
             TypedAmount(input, person.currency)
         }
 
+        // The whole row toggles, words included, and TalkBack hears one switch. Only the small
+        // switch at the end used to respond.
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(value = showNote, onValueChange = { onToggleNote() }, role = Role.Switch)
+                .heightIn(min = 48.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Add a note", style = MeraPaisaType.body, color = theme.textSecondary)
-            Switch(checked = showNote, onCheckedChange = { onToggleNote() })
+            Switch(checked = showNote, onCheckedChange = null)
         }
 
         if (showNote) {
