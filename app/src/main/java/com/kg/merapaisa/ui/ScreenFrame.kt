@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.ui.theme.MeraPaisaType
@@ -62,7 +63,7 @@ internal fun ScreenFrame(
 
     BackHandler(enabled = true) { onBack?.invoke() }
 
-    Column(modifier = Modifier.fillMaxSize().background(theme.background)) {
+    Column(modifier = Modifier.fillMaxSize().background(theme.background).coversLedger()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -197,3 +198,15 @@ internal fun Paragraph(text: String, colour: Color = LocalAppTheme.current.textS
  * default "Restore from a file" and "Replace my ledger" broke onto a second line.
  */
 private val FootButtonPadding = PaddingValues(horizontal = Spacing.md, vertical = Spacing.sm)
+
+/**
+ * For a full screen drawn over the ledger rather than in place of it.
+ *
+ * Screens here are switched on by state and laid over the people list, so a tap on an empty patch
+ * of one, with nothing of its own under the finger, fell through to whatever sat behind: tapping
+ * beside a person's history title opened Settings. This takes every touch that reaches the screen,
+ * after its own buttons and lists have had their turn, so nothing behind it ever gets one.
+ */
+fun Modifier.coversLedger(): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope { while (true) awaitPointerEvent() }
+}

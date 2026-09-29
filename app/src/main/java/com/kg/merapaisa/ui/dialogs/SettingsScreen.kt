@@ -54,6 +54,7 @@ import com.kg.merapaisa.ui.TextRowInset
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
+import com.kg.merapaisa.ui.coversLedger
 
 /**
  * Everything about the app itself rather than about who owes whom.
@@ -91,7 +92,7 @@ fun SettingsScreen(
     // Left alone it falls through to the people list underneath and closes the app.
     BackHandler(enabled = true) { onDismiss() }
 
-    Column(modifier = Modifier.fillMaxSize().background(theme.background)) {
+    Column(modifier = Modifier.fillMaxSize().background(theme.background).coversLedger()) {
 
         Row(
             modifier = Modifier

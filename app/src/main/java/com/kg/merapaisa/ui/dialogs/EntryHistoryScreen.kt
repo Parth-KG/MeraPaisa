@@ -59,6 +59,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.kg.merapaisa.ui.coversLedger
 
 /**
  * Everything ever recorded with one person, newest first.
@@ -113,7 +114,7 @@ fun EntryHistoryContent(
 
     val count = if (entries.size == 1) "1 entry" else "${entries.size} entries"
 
-    Column(modifier = Modifier.fillMaxSize().background(theme.background)) {
+    Column(modifier = Modifier.fillMaxSize().background(theme.background).coversLedger()) {
 
         Row(
             modifier = Modifier

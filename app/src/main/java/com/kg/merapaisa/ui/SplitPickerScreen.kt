@@ -64,7 +64,7 @@ fun SplitPickerScreen(
     val chosen = selectedIds.size + if (includeMe) 1 else 0
     val enoughPeople = chosen >= 2
 
-    Column(modifier = Modifier.fillMaxSize().background(theme.background)) {
+    Column(modifier = Modifier.fillMaxSize().background(theme.background).coversLedger()) {
 
         SplitStepBar(onCancel = onCancel, onBack = onBack)
 

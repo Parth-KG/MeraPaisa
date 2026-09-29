@@ -69,7 +69,7 @@ fun SplitAmountScreen(
     val theme = LocalAppTheme.current
     val typedMinor = parseAmountToMinor(amount)
 
-    Column(modifier = Modifier.fillMaxSize().background(theme.background)) {
+    Column(modifier = Modifier.fillMaxSize().background(theme.background).coversLedger()) {
 
         SplitStepBar(onCancel = onCancel)
 

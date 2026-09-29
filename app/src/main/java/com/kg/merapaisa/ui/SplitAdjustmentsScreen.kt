@@ -237,7 +237,7 @@ fun SplitAdjustmentsContent(
     val total = amountsInSource.values.sum()
     val totalsMatch = total == amountMinor
 
-    Column(modifier = Modifier.fillMaxSize().background(theme.background)) {
+    Column(modifier = Modifier.fillMaxSize().background(theme.background).coversLedger()) {
 
         SplitStepBar(onCancel = onCancel, onBack = onBack)
 

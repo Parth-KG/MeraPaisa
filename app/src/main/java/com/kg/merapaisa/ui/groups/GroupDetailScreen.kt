@@ -57,6 +57,7 @@ import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
+import com.kg.merapaisa.ui.coversLedger
 
 /**
  * One group: where everybody stands, what has been spent, and a way to square it up.
@@ -93,7 +94,7 @@ fun GroupDetailScreen(
     val memberCount = if (members.size == 1) "1 member" else "${members.size} members"
     val expenseCount = if (purchases.size == 1) "1 expense" else "${purchases.size} expenses"
 
-    Column(modifier = Modifier.fillMaxSize().background(theme.background)) {
+    Column(modifier = Modifier.fillMaxSize().background(theme.background).coversLedger()) {
 
         Row(
             modifier = Modifier

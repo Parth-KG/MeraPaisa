@@ -63,6 +63,7 @@ import com.kg.merapaisa.ui.theme.Motion
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.RowDivider
+import androidx.compose.ui.semantics.clearAndSetSemantics
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
@@ -98,8 +99,17 @@ fun MainScreen(viewModel: MainViewModel) {
     val pendingReminder = persons.find { it.id == ui.pendingReminderId }
 
     Box(modifier = Modifier.fillMaxSize()) {
+    // True while a full screen is laid over the ledger. The ledger stays composed underneath, so
+    // its scroll position survives, but TalkBack must not read or reach it: it was still offering
+    // the tabs and Settings from behind a person's history.
+    val covered = historyPerson != null || ui.showSettingsDialog || ui.openGroupId != null ||
+        ui.split != null || ui.backup != null || ui.import != null || ui.update != null
+
     Box(modifier = Modifier.fillMaxSize().background(theme.background)) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+                .then(if (covered) Modifier.clearAndSetSemantics { } else Modifier)
+        ) {
             // A real tab row. These were pill buttons, which look like three things you can
             // press rather than one place you are currently in, and gave no sense of which of
             // the three you were looking at beyond a fill colour.
