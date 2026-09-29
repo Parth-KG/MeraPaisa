@@ -299,7 +299,7 @@ private fun PersonWidgetRow(person: PersonWithBalance, palette: WidgetPalette) {
             modifier = GlanceModifier
                 .size(AvatarSize)
                 .background(avatarTint(person, palette))
-                .roundedSquare(),
+                .circle(),
             contentAlignment = Alignment.Center
         ) {
             Text(person.name.take(2).uppercase(), style = initialsStyle(palette), maxLines = 1)
@@ -377,9 +377,9 @@ private fun GlanceModifier.widgetSurface(
     }
 }
 
-/** PfpView's rounded square, wherever the platform will draw one. */
-private fun GlanceModifier.roundedSquare(): GlanceModifier =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) cornerRadius(Spacing.md) else this
+/** PfpView's circle, wherever the platform will draw one: a radius of half the avatar. */
+private fun GlanceModifier.circle(): GlanceModifier =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) cornerRadius(AvatarSize / 2) else this
 
 /**
  * The words NetPosition puts above the figure, kept short enough for a strip to hold one.

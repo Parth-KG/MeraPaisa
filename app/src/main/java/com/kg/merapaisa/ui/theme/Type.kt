@@ -1,6 +1,9 @@
 package com.kg.merapaisa.ui.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -141,6 +144,32 @@ object MeraPaisaType {
         lineHeight = 18.sp,
         letterSpacing = 0.1.sp
     )
+}
+
+/**
+ * Initials inside an avatar, sized to the avatar rather than to the reader's font scale.
+ *
+ * An avatar is a fixed-size picture, not reading text: the name beside it is the thing that grows
+ * with the system font size. Sized in sp the usual way, the initials doubled at font scale 2 and
+ * spilled out of a 40dp circle. Converting from dp keeps them inside it at any setting.
+ */
+@Composable
+fun avatarInitialsStyle(avatarSizeDp: Int): TextStyle {
+    val size = with(LocalDensity.current) { (avatarSizeDp * 0.36f).dp.toSp() }
+    return TextStyle(
+        fontFamily = Figtree,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = size,
+        lineHeight = size,
+        letterSpacing = 0.sp
+    )
+}
+
+/** An emoji chosen as a person's picture, held to the avatar the same way. */
+@Composable
+fun avatarEmojiStyle(avatarSizeDp: Int): TextStyle {
+    val size = with(LocalDensity.current) { (avatarSizeDp * 0.45f).dp.toSp() }
+    return TextStyle(fontSize = size, lineHeight = size)
 }
 
 /**

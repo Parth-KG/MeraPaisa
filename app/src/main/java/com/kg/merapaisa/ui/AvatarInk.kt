@@ -63,9 +63,12 @@ const val AVATAR_WASH = 0.12f
  * making the avatars glare.
  */
 fun avatarInk(stored: String, isDarkTheme: Boolean): Color {
-    val rgb = parseHex(stored) ?: return if (isDarkTheme) Color(0xFFB9C2D0) else Color(0xFF4A5566)
-    val (h, s, _) = toHsl(rgb)
-    val saturation = s.coerceIn(0.28f, 0.62f)
+    // Something that is not a colour becomes a neutral ink, lit exactly like a real one: no hue,
+    // no saturation, and the same target luminance. Two hand-picked fallback hexes would have been
+    // the one pair of avatar colours in the app that nothing measured.
+    val parsed = parseHex(stored)?.let(::toHsl)
+    val h = parsed?.first ?: 0f
+    val saturation = parsed?.second?.coerceIn(0.28f, 0.62f) ?: 0f
     val target = if (isDarkTheme) 0.42f else 0.10f
 
     // Lightness is monotonic in luminance at fixed hue and saturation, so a bisection converges.

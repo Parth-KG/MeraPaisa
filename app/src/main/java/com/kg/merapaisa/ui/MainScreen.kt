@@ -503,7 +503,7 @@ fun MainScreen(viewModel: MainViewModel) {
         AlertDialog(
             onDismissRequest = { viewModel.confirmDelete(null) },
                 title = {
-                Text("Delete ${target.name}?", color = theme.textPrimary, fontWeight = FontWeight.Bold)
+                Text("Delete ${target.name}?", color = theme.textPrimary, style = MeraPaisaType.sectionTitle)
             },
             text = {
                 val entries = if (transactionCount == 1) "1 entry" else "$transactionCount entries"
@@ -533,7 +533,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         "${amountString(target.balanceMinor, target.currency)}, and $entries." +
                         "$groupNote$sharedNote This can't be undone.",
                     color = theme.textSecondary,
-                    fontSize = 14.sp
+                    style = MeraPaisaType.body
                 )
             },
             confirmButton = {

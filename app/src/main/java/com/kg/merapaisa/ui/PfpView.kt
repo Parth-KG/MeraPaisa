@@ -17,6 +17,9 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.Person
+import com.kg.merapaisa.ui.theme.Shapes
+import com.kg.merapaisa.ui.theme.avatarEmojiStyle
+import com.kg.merapaisa.ui.theme.avatarInitialsStyle
 import java.io.File
 
 @Composable
@@ -26,12 +29,15 @@ fun PfpView(person: Person, size: Int) {
     // both Paper and Amoled. avatarInk keeps the hue somebody picked and gives it the lightness
     // this theme needs, which also rescues every avatar already in the ledger.
     val color = remember(person.pfpColor, theme.isDark) { avatarInk(person.pfpColor, theme.isDark) }
+    // A circle, which is the one shape the design reserves for avatars. It was a square rounded
+    // at 32 percent of its size: the same soft-tile family as everything else the redesign moved
+    // away from, and so a face in the list was shaped like a button beside it.
     Box(
         modifier = Modifier
             .size(size.dp)
-            .clip(RoundedCornerShape((size * 0.32f).dp))
+            .clip(Shapes.circle)
             .background(color.copy(alpha = AVATAR_WASH))
-            .border(1.5.dp, color.copy(alpha = 0.35f), RoundedCornerShape((size * 0.32f).dp)),
+            .border(1.5.dp, color.copy(alpha = 0.35f), Shapes.circle),
         contentAlignment = Alignment.Center
     ) {
         val photo = remember(person.pfpValue, person.pfpType) {
@@ -44,12 +50,12 @@ fun PfpView(person: Person, size: Int) {
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            person.pfpType == "emoji" -> Text(person.pfpValue, fontSize = (size * 0.45f).sp, textAlign = TextAlign.Center)
+            person.pfpType == "emoji" -> Text(person.pfpValue, style = avatarEmojiStyle(size), textAlign = TextAlign.Center)
             else -> Text(
                 person.name.take(2).uppercase(),
-                fontSize = (size * 0.35f).sp,
-                fontWeight = FontWeight.Bold,
-                color = color
+                style = avatarInitialsStyle(size),
+                color = color,
+                maxLines = 1
             )
         }
     }
