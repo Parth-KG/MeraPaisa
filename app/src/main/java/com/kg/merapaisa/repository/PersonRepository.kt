@@ -169,8 +169,9 @@ class PersonRepository(
         notifier.onLedgerChanged()
     }
 
+    /** Closes a person out entirely, their share of any group included. See [PersonDao.settle]. */
     suspend fun settle(personId: Long) {
-        dao.settle(personId)
+        dao.settle(personId, selfId = dao.ensureSelf().id)
         notifier.onLedgerChanged()
     }
 
@@ -248,7 +249,7 @@ class PersonRepository(
         if (entries.isEmpty()) return null
         val payload = SharePayload(
             payloadId = UUID.randomUUID().toString().replace("-", "").take(16),
-            senderName = senderName.trim().ifEmpty { "A friend" },
+            senderName = senderName.trim().ifEmpty { "Someone" },
             currency = com.kg.merapaisa.data.normaliseCurrency(person.currency),
             // The uid travels with each entry: it is what lets the other phone recognise this same
             // debt the next time either side shares. See Transaction.uid.

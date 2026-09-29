@@ -132,18 +132,73 @@ interface PersonDao {
     /**
      * Closes a debt out: records an entry for exactly what is outstanding and marks the person
      * settled. The balance is read inside the transaction so two fast taps cannot both act on
-     * the same stale figure. A person already at zero can still be settled — that is how you
+     * the same stale figure. A person already at zero can still be settled; that is how you
      * file someone away without inventing a transaction. There is no need to reorder them:
      * isSettled is what moves them out of the active list.
+     *
+     * Given [selfId], group activity is closed too. A person's balance includes their share of
+     * group expenses between them and you, and settling only the direct entries left them in the
+     * Settled tab still owing that share. Each group where the two of you still owe each other
+     * gets a real payment for exactly that amount, as the group's own Settle up would record, so
+     * the person, the group and your totals all end at zero together. A single direct entry for
+     * the whole amount would not do: the group would still show the debt, and recording it there
+     * later would count the same money twice.
      */
     @androidx.room.Transaction
-    suspend fun settle(personId: Long, note: String = "Settled") {
+    suspend fun settle(personId: Long, note: String = "Settled", selfId: Long? = null) {
+        val at = System.currentTimeMillis()
         val outstanding = getBalanceNow(personId)
         if (outstanding != 0L) {
-            insertTransaction(Transaction(personId = personId, amountMinor = -outstanding, note = note))
+            insertTransaction(Transaction(personId = personId, amountMinor = -outstanding, timestamp = at, note = note))
+        }
+        if (selfId != null && selfId != personId) {
+            groupPositionsWith(personId, selfId).filter { it.amountMinor != 0L }.forEach { position ->
+                // Positive: they owe you in this group, so they pay you. Negative: you pay them.
+                val theyPay = position.amountMinor > 0
+                val amount = if (theyPay) position.amountMinor else -position.amountMinor
+                val expenseId = insertExpenseRow(
+                    Expense(
+                        groupId = position.groupId,
+                        description = "Settlement",
+                        amountMinor = amount,
+                        paidByPersonId = if (theyPay) personId else selfId,
+                        timestamp = at,
+                        isSettlement = true
+                    )
+                )
+                insertShareRows(
+                    listOf(ExpenseShare(expenseId, personId = if (theyPay) selfId else personId, shareMinor = amount))
+                )
+            }
         }
         setSettled(personId, true)
     }
+
+    /**
+     * What a person and you owe each other inside each group, by group: their share of what you
+     * paid, less your share of what they paid. Positive means they owe you. The same terms the
+     * balance query adds to a person's direct entries, split out per group.
+     */
+    @Query(
+        """
+        SELECT e.groupId AS groupId,
+            COALESCE(SUM(CASE WHEN e.paidByPersonId = :selfId AND s.personId = :personId THEN s.shareMinor ELSE 0 END), 0)
+            - COALESCE(SUM(CASE WHEN e.paidByPersonId = :personId AND s.personId = :selfId THEN s.shareMinor ELSE 0 END), 0)
+            AS amountMinor
+        FROM expenses e
+        JOIN expense_shares s ON s.expenseId = e.id
+        WHERE (e.paidByPersonId = :selfId AND s.personId = :personId)
+           OR (e.paidByPersonId = :personId AND s.personId = :selfId)
+        GROUP BY e.groupId
+        """
+    )
+    suspend fun groupPositionsWith(personId: Long, selfId: Long): List<GroupPosition>
+
+    @Insert
+    suspend fun insertExpenseRow(expense: Expense): Long
+
+    @Insert
+    suspend fun insertShareRows(shares: List<ExpenseShare>)
 
     /**
      * Puts a settled person back in the active list. The closing entry stays in their history —
@@ -568,3 +623,6 @@ interface PersonDao {
     @Query("DELETE FROM applied_payloads")
     suspend fun deleteAllAppliedPayloads()
 }
+
+/** What a person and you owe each other inside one group. Positive: they owe you. */
+data class GroupPosition(val groupId: Long, val amountMinor: Long)
