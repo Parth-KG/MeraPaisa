@@ -63,9 +63,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
  * "Rondu owes you ₹624, move ₹100 of that to Sasti." Two entries, equal and opposite, so the total
  * owed to you does not change; only who owes it.
  *
- * Only people in the same currency are offered. Moving ₹100 onto a dollar balance would silently
- * claim $100, and converting would mean inventing a rate nobody agreed to, which is the same
- * reasoning that makes an incoming share link in the wrong currency refuse rather than convert.
+ * Anyone can take it. Someone kept in another currency takes it in theirs, converted at today's
+ * rate when the move is saved, and the sheet says so once they are picked: moving ₹100 onto a
+ * dollar balance must never silently claim $100.
  *
  * It was an AlertDialog holding a keypad, a list of people and two fields, in a box sized for a
  * question. It is a sheet now, which is what a form this size belongs on.
@@ -83,9 +83,9 @@ fun MoveDebtDialog(
 ) {
     val theme = LocalAppTheme.current
     val scope = rememberCoroutineScope()
-    val eligible = people.filter {
-        it.id != state.fromPersonId && normaliseCurrency(it.currency) == state.currency
-    }
+    val eligible = people.filter { it.id != state.fromPersonId }
+    val target = eligible.firstOrNull { it.id == state.toPersonId }
+    val converting = target != null && normaliseCurrency(target.currency) != state.currency
     val typed = state.amountMinor
     val overAvailable = typed != null && typed > state.availableMinor
 
@@ -165,9 +165,7 @@ fun MoveDebtDialog(
 
             if (eligible.isEmpty()) {
                 Text(
-                    "Nobody else is kept in ${state.currency}, so there is nowhere for this to " +
-                        "go. A debt can only move between people in the same currency. Add " +
-                        "a person in ${state.currency} first, then move it.",
+                    "There is nobody else to move this to. Add a person first, then move it.",
                     style = MeraPaisaType.body,
                     color = theme.textSecondary,
                     modifier = Modifier.padding(horizontal = Spacing.lg)
@@ -179,6 +177,17 @@ fun MoveDebtDialog(
                     person = person,
                     selected = state.toPersonId == person.id,
                     onSelect = { onTargetChange(person.id) }
+                )
+            }
+
+            if (converting) {
+                Text(
+                    "${target!!.name} is kept in ${normaliseCurrency(target.currency)}, so this " +
+                        "moves as ${normaliseCurrency(target.currency)} at today's rate. Both " +
+                        "entries say what it was converted to.",
+                    style = MeraPaisaType.label,
+                    color = theme.textSecondary,
+                    modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                 )
             }
 

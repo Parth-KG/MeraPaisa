@@ -21,6 +21,7 @@ import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import com.kg.merapaisa.data.formatMinor
 
 /**
  * The only thing that touches the ledger. Every write goes through here and notifies the
@@ -123,6 +124,37 @@ class PersonRepository(
         if (amountMinor > available) return MoveDebtResult.MoreThanOwed(available)
 
         dao.moveDebt(fromPersonId, toPersonId, amountMinor, from.name, to.name, note)
+        notifier.onLedgerChanged()
+        return MoveDebtResult.Moved(amountMinor)
+    }
+
+    /**
+     * [moveDebt] across currencies, at a rate the caller has just fetched.
+     *
+     * [moveDebt] still refuses a currency mismatch on its own: it has no rate, and inventing one
+     * would claim ₹100 as $100. This is the path that has one. [convertedMinor] is [amountMinor]
+     * in the receiver's currency. The checks are the same, run against the sender's balance.
+     */
+    suspend fun moveDebtConverted(
+        fromPersonId: Long,
+        toPersonId: Long,
+        amountMinor: Long,
+        convertedMinor: Long,
+        note: String = ""
+    ): MoveDebtResult {
+        if (fromPersonId == toPersonId) return MoveDebtResult.SamePerson
+        if (amountMinor <= 0L || convertedMinor <= 0L) return MoveDebtResult.NotAnAmount
+
+        val from = dao.getPersonNow(fromPersonId) ?: return MoveDebtResult.NotAnAmount
+        val to = dao.getPersonNow(toPersonId) ?: return MoveDebtResult.NotAnAmount
+
+        val available = dao.getBalanceNow(fromPersonId)
+        if (available <= 0L) return MoveDebtResult.NothingToMove(available)
+        if (amountMinor > available) return MoveDebtResult.MoreThanOwed(available)
+
+        val conversion = "${formatMinor(amountMinor, from.currency)} as " +
+            "${formatMinor(convertedMinor, to.currency)} at the day's rate"
+        dao.moveDebtConverted(fromPersonId, toPersonId, amountMinor, convertedMinor, from.name, to.name, conversion, note)
         notifier.onLedgerChanged()
         return MoveDebtResult.Moved(amountMinor)
     }

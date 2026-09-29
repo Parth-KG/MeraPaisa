@@ -1174,12 +1174,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(moveDebt = m.copy(busy = true, problem = null)) }
 
         viewModelScope.launch {
-            val result = repository.moveDebt(
-                fromPersonId = m.fromPersonId,
-                toPersonId = m.toPersonId!!,
-                amountMinor = m.amountMinor!!,
-                note = m.note.trim()
-            )
+            // Someone in another currency takes the debt in theirs, at today's rate. Without a rate
+            // nothing is written, and the sheet says why.
+            val toCurrency = persons.value.firstOrNull { it.id == m.toPersonId }?.currency
+                ?.let { normaliseCurrency(it) }
+            val result = if (toCurrency != null && toCurrency != m.currency) {
+                val converted = convertCurrency(m.amountMinor!!, m.currency, toCurrency)
+                if (converted == null) {
+                    _uiState.update { state ->
+                        state.copy(moveDebt = m.copy(busy = false, problem =
+                            "Couldn't get today's ${m.currency} to $toCurrency rate, so nothing " +
+                                "was moved. Try again once you're connected."))
+                    }
+                    return@launch
+                }
+                repository.moveDebtConverted(
+                    fromPersonId = m.fromPersonId,
+                    toPersonId = m.toPersonId!!,
+                    amountMinor = m.amountMinor!!,
+                    convertedMinor = converted,
+                    note = m.note.trim()
+                )
+            } else {
+                repository.moveDebt(
+                    fromPersonId = m.fromPersonId,
+                    toPersonId = m.toPersonId!!,
+                    amountMinor = m.amountMinor!!,
+                    note = m.note.trim()
+                )
+            }
             _uiState.update { state ->
                 when (result) {
                     is MoveDebtResult.Moved -> state.copy(moveDebt = null, selectedId = null)

@@ -202,6 +202,46 @@ interface PersonDao {
         setSettled(toPersonId, false)
     }
 
+    /**
+     * [moveDebt] between two people kept in different currencies.
+     *
+     * The sender goes down by [fromAmountMinor] in their currency and the receiver up by
+     * [toAmountMinor] in theirs, converted by the caller at the day's rate. [conversion] says what
+     * was converted to what, and goes on both entries, so either half explains the other a year
+     * later. Same timestamp, one transaction: a failure writes neither.
+     */
+    @androidx.room.Transaction
+    suspend fun moveDebtConverted(
+        fromPersonId: Long,
+        toPersonId: Long,
+        fromAmountMinor: Long,
+        toAmountMinor: Long,
+        fromName: String,
+        toName: String,
+        conversion: String,
+        note: String = ""
+    ) {
+        val at = System.currentTimeMillis()
+        val suffix = if (note.isBlank()) "" else ": $note"
+        insertTransactions(
+            listOf(
+                Transaction(
+                    personId = fromPersonId,
+                    amountMinor = -fromAmountMinor,
+                    timestamp = at,
+                    note = "Moved to $toName, $conversion$suffix"
+                ),
+                Transaction(
+                    personId = toPersonId,
+                    amountMinor = toAmountMinor,
+                    timestamp = at,
+                    note = "Moved from $fromName, $conversion$suffix"
+                )
+            )
+        )
+        setSettled(toPersonId, false)
+    }
+
     /** As [recordEntry], for a split that touches several people at once. */
     @androidx.room.Transaction
     suspend fun recordEntries(transactions: List<Transaction>) {
