@@ -70,11 +70,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.automirrored.outlined.CallSplit
-import androidx.compose.material.icons.outlined.GroupAdd
-import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material3.Icon
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.PaddingValues
 import com.kg.merapaisa.widget.WidgetLedgerNotifier
 
@@ -307,58 +303,55 @@ fun MainScreen(viewModel: MainViewModel) {
         }
         // Add a person (a new group on the Groups tab), and Split beside it on the people tabs.
         //
-        // These were once two identical icon squares in opposite corners, neither saying what it
-        // did. They became named full-width buttons, and then, at Parth's request, icons again:
-        // together at the bottom right, one filled and one outlined so they read as different
-        // actions, each with its name as the description TalkBack reads.
+        // Named buttons, each with its words on it. They were icon squares at the bottom right
+        // for a while; the words came back because an icon alone left you guessing which did what.
         AnimatedVisibility(
             visible = ui.selectedId == null,
             enter = fadeIn(tween(Motion.quick)),
             exit = fadeOut(tween(Motion.quick)),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            // Icons rather than words, at the bottom right where a thumb rests. The words are still
-            // there for TalkBack, as each button's description.
             Row(
-                modifier = Modifier
+                modifier = Modifier.height(IntrinsicSize.Min)
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.safeDrawing)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (ui.tab != Tab.Groups) {
-                    OutlinedButton(
-                        onClick = { viewModel.startSplit() },
-                        shape = Shapes.medium,
-                        modifier = Modifier.size(56.dp),
-                        contentPadding = PaddingValues(0.dp),
-                        border = BorderStroke(1.dp, theme.outline),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = theme.background,
-                            contentColor = theme.textPrimary
-                        )
-                    ) {
-                        Icon(Icons.AutoMirrored.Outlined.CallSplit, contentDescription = "Split an expense")
-                    }
-                }
                 Button(
                     onClick = {
                         if (ui.tab == Tab.Groups) viewModel.showCreateGroupDialog(true)
                         else viewModel.showAddDialog(true)
                     },
-                    shape = Shapes.medium,
-                    modifier = Modifier.size(56.dp),
-                    contentPadding = PaddingValues(0.dp),
+                    shape = Shapes.small,
+                    modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = theme.primary,
                         contentColor = theme.background
                     )
                 ) {
-                    Icon(
-                        if (ui.tab == Tab.Groups) Icons.Outlined.GroupAdd else Icons.Outlined.PersonAdd,
-                        contentDescription = if (ui.tab == Tab.Groups) "New group" else "Add a person"
+                    Text(
+                        if (ui.tab == Tab.Groups) "New group" else "Add a person",
+                        style = MeraPaisaType.action
                     )
+                }
+
+                if (ui.tab != Tab.Groups) {
+                    OutlinedButton(
+                        onClick = { viewModel.startSplit() },
+                        shape = Shapes.small,
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
+                        border = BorderStroke(1.dp, theme.outline),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            // Filled with the background so a row scrolled beneath it does not
+                            // show through the outline.
+                            containerColor = theme.background,
+                            contentColor = theme.textPrimary
+                        )
+                    ) {
+                        Text("Split an expense", style = MeraPaisaType.action)
+                    }
                 }
             }
         }
