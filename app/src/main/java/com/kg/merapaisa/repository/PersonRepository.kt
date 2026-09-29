@@ -182,6 +182,15 @@ class PersonRepository(
         notifier.onLedgerChanged()
     }
 
+    /**
+     * Whether settling would record anything. An even overall balance can still be +₹500 direct
+     * and −₹500 in a group, and settling that writes a closing entry and a group payment.
+     */
+    suspend fun settleWouldWrite(personId: Long): Boolean {
+        if (dao.getBalanceNow(personId) != 0L) return true
+        return dao.groupPositionsWith(personId, dao.ensureSelf().id).any { it.amountMinor != 0L }
+    }
+
     suspend fun reopen(personId: Long) {
         dao.reopen(personId)
         notifier.onLedgerChanged()

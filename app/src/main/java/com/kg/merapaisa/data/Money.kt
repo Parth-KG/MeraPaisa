@@ -47,7 +47,9 @@ fun parseAmountToMinor(text: String): Long? {
     val trimmed = text.trim()
     if (trimmed.isEmpty()) return null
 
-    val negative = trimmed.startsWith("-")
+    // The app's own minus (U+2212) as well as a typed hyphen, since a figure copied from the app
+    // and pasted back carries the former.
+    val negative = trimmed.startsWith("-") || trimmed.startsWith("\u2212")
     val unsigned = if (negative) trimmed.substring(1) else trimmed
     if (unsigned.isEmpty()) return null
 

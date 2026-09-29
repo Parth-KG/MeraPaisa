@@ -366,7 +366,7 @@ fun MainScreen(viewModel: MainViewModel) {
             val conversionError by viewModel.conversionError.collectAsState()
             val groupCount by remember(editingPerson.person.id) {
                 viewModel.getGroupCount(editingPerson.person.id)
-            }.collectAsState(initial = 0)
+            }.collectAsState(initial = null)
             EditPersonDialog(
                 person = editingPerson.person,
                 groupCount = groupCount,
@@ -533,18 +533,34 @@ fun MainScreen(viewModel: MainViewModel) {
     }
     confirmSettle?.let { target ->
         val live = persons.find { it.id == target.id } ?: target
-        if (live.balanceMinor == 0L) {
-            // Nothing to record, so nothing to ask.
-            LaunchedEffect(live.id) { viewModel.settlePerson(live); confirmSettle = null }
+        // Null while it is being worked out whether settling would write anything. An even
+        // balance usually writes nothing and is filed away without a question, but even overall
+        // can be owed one way directly and the other way in a group, and settling that records a
+        // closing entry and a group payment.
+        var asks by remember(live.id) { mutableStateOf(if (live.balanceMinor != 0L) true else null) }
+        if (asks == null) {
+            LaunchedEffect(live.id) {
+                if (viewModel.settleWouldWrite(live.id)) {
+                    asks = true
+                } else {
+                    viewModel.settlePerson(live)
+                    confirmSettle = null
+                }
+            }
         } else {
             val figure = amountString(kotlin.math.abs(live.balanceMinor), live.currency)
-            val what = if (live.balanceMinor > 0) "${live.name} paying you $figure" else "you paying ${live.name} $figure"
+            val what = when {
+                live.balanceMinor > 0 -> "Records ${live.name} paying you $figure, which squares you"
+                live.balanceMinor < 0 -> "Records you paying ${live.name} $figure, which squares you"
+                else -> "You two are even overall but not in each place. Records a closing entry " +
+                    "here and a payment in your groups, so each reads zero"
+            }
             val typed = if (ui.selectedId == live.id && ui.input.isNotEmpty()) {
                 " The amount you typed isn't added."
             } else ""
             DecisionDialog(
                 title = "Settle up with ${live.name}?",
-                body = "Records $what, which squares you, and moves them to Settled.$typed " +
+                body = "$what, and moves them to Settled.$typed " +
                     "Reopening them later doesn't undo the payment.",
                 confirmLabel = "Settle up",
                 dismissLabel = "Not yet",

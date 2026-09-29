@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 
 /**
@@ -46,6 +47,8 @@ class GroupRepository(
 
     /** Group expenses this person fronted, which deleting them would take with it. */
     fun expensesPaidBy(personId: Long): Flow<Int> = groupDao.expenseCountPaidBy(personId)
+
+    suspend fun isInAnyGroup(personId: Long): Boolean = groupDao.groupCountFor(personId).first() > 0
 
     /** How many groups this person is in. */
     fun groupCountFor(personId: Long): Flow<Int> = groupDao.groupCountFor(personId)

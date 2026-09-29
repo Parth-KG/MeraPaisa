@@ -50,7 +50,12 @@ class MainActivity : FragmentActivity() {
         // on white paper, and Midnight on a phone set to light drew dark icons on near black.
         enableEdgeToEdge()
 
-        pendingShareLink = shareLinkFrom(intent)
+        // Only on a fresh start. A rotation, a theme or a locale change recreates the activity
+        // with the same intent, and reading it again reopened an import the user had already
+        // finished or dismissed, and dropped the person they were choosing mid-flow. Reopening
+        // from Recents replays the launch intent too.
+        val fromHistory = (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0
+        if (savedInstanceState == null && !fromHistory) pendingShareLink = shareLinkFrom(intent)
 
         // Start secure and relax later. The lock setting is read from disk, so for the first
         // frames we do not yet know whether this ledger is meant to be private; assuming it is
@@ -114,8 +119,7 @@ class MainActivity : FragmentActivity() {
                             val viewModel: MainViewModel = viewModel()
 
                             // Reached only once unlocked, so an incoming link waits for the
-                            // fingerprint like everything else. Cleared immediately so a rotation
-                            // does not re-open an import the user already dismissed.
+                            // fingerprint like everything else. Cleared once handed over.
                             LaunchedEffect(pendingShareLink) {
                                 pendingShareLink?.let { link ->
                                     pendingShareLink = null

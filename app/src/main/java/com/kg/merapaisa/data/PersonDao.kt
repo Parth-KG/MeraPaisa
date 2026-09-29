@@ -124,18 +124,16 @@ interface PersonDao {
     @Query("DELETE FROM transactions WHERE personId = :personId")
     suspend fun deleteTransactionsForPerson(personId: Long)
 
-    /**
-     * The next free position. Counting the existing rows collided after any deletion — delete
-     * the middle of three people and the next person added would reuse an order already taken.
-     */
+    /** Entries typed on this phone after [since], which the other phone has not been sent. */
+    @Query(
+        "SELECT COALESCE(SUM(amountMinor), 0) FROM transactions " +
+            "WHERE personId = :personId AND timestamp > :since AND fromShare = 0"
+    )
+    suspend fun sumTypedHereSince(personId: Long, since: Long): Long
+
     @Query("SELECT * FROM persons WHERE isSelf = 1 LIMIT 1")
     suspend fun getSelf(): Person?
 
-    /**
-     * Returns the row that represents you, creating it if absent. Migration 5 -> 6 makes one
-     * for existing installs, but a fresh install builds the schema directly and never runs it.
-     */
-    @androidx.room.Transaction
     /**
      * Your own row's id, as it changes. A Replace restore deletes it and writes the backup's, or a
      * new one, so anything that works balances out against "you" has to follow this rather than
@@ -144,12 +142,23 @@ interface PersonDao {
     @Query("SELECT id FROM persons WHERE isSelf = 1 LIMIT 1")
     fun selfIdFlow(): Flow<Long?>
 
+    /**
+     * Returns the row that represents you, creating it if absent. Migration 5 -> 6 makes one
+     * for existing installs, but a fresh install builds the schema directly and never runs it.
+     * A transaction, because on first launch several readers ask at once and each would
+     * otherwise find no row and insert its own.
+     */
+    @androidx.room.Transaction
     suspend fun ensureSelf(): Person {
         getSelf()?.let { return it }
         insertPerson(Person(name = "You", pfpValue = "You", sortOrder = -1, isSelf = true))
         return getSelf()!!
     }
 
+    /**
+     * The next free position. Counting the existing rows collided after any deletion: delete
+     * the middle of three people and the next person added would reuse an order already taken.
+     */
     @Query("SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM persons WHERE isSelf = 0")
     suspend fun nextSortOrder(): Int
 
@@ -401,10 +410,11 @@ interface PersonDao {
     suspend fun clearTransactionsForPerson(personId: Long) {
         val outstanding = getBalanceNow(personId)
         val sharedUpTo = getPersonNow(personId)?.lastSharedAt ?: 0L
-        // What the other phone has already been sent, and what it has not. A single opening entry
+        // What the other phone already holds, and what it does not. A single opening entry
         // stamped now would ride out on the next update link as new, and their phone would add
-        // the whole balance on top of the entries it already holds.
-        val notYetShared = if (sharedUpTo > 0L) sumTransactionsSince(personId, sharedUpTo + 1) else outstanding
+        // the whole balance on top of the entries it already has. It holds everything up to the
+        // watermark, and every entry that came from its own links whenever it arrived.
+        val notYetShared = sumTypedHereSince(personId, sharedUpTo)
         val alreadyShared = outstanding - notYetShared
         deleteTransactionsForPerson(personId)
         val now = System.currentTimeMillis()
@@ -413,7 +423,7 @@ interface PersonDao {
                 Transaction(personId = personId, amountMinor = alreadyShared, timestamp = now, note = "Opening balance")
             )
         }
-        if (sharedUpTo > 0L) setLastSharedAt(personId, now)
+        if (sharedUpTo > 0L || alreadyShared != 0L) setLastSharedAt(personId, now)
         if (notYetShared != 0L) {
             // One millisecond later, so it is past the watermark and still goes in the next link.
             insertTransaction(

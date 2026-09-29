@@ -83,7 +83,13 @@ class LedgerSummaryTest {
         val text = summary(person(balanceMinor = 700_00), listOf(entry(200_00, 1, "cab")))
         assertTrue(text.startsWith("Asha: you owe me ₹700"))
         assertTrue(text.contains("(cab)  →  ₹200"))
-        assertTrue(text.endsWith("Plus ₹500 from groups we share"))
+        assertTrue(text.endsWith("Plus ₹500 you owe me in groups we share"))
+    }
+
+    @Test
+    fun aGroupPartTheOtherWayIsWordedNotSigned() {
+        val text = summary(person(balanceMinor = 0), listOf(entry(200_00, 1, "cab")))
+        assertTrue(text.endsWith("Less ₹200 I owe you in groups we share"))
     }
 
     @Test

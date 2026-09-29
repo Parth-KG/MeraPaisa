@@ -35,4 +35,9 @@ class TypableAmountTest {
         assertTrue(isTypableAmount("-40", "INR", allowNegative = true))
         assertTrue(isTypableAmount("−40", "INR", allowNegative = true))
     }
+
+    @Test
+    fun whatTheFilterLetsThroughTheParserCanRead() {
+        assertTrue(parseAmountToMinor("\u221240") == -40_00L)
+    }
 }

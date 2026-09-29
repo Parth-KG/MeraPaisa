@@ -237,6 +237,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    suspend fun settleWouldWrite(personId: Long): Boolean = repository.settleWouldWrite(personId)
+
     fun reopenPerson(person: PersonWithBalance) {
         viewModelScope.launch {
             repository.reopen(person.id)
@@ -314,7 +316,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         viewModelScope.launch {
             _conversionError.value = null
-            val currencyChanged = currency != snapshot.currency
+            // Checked here as well as in the sheet: the sheet learns about groups a moment after it
+            // opens, and a group keeps every amount in its one currency.
+            val target = if (currency != snapshot.currency && groupRepository.isInAnyGroup(snapshot.id)) {
+                snapshot.currency
+            } else currency
+            val currencyChanged = target != snapshot.currency
 
             // Converting rewrites every entry rather than recording a correction. The balance is
             // derived from those entries, so converting them is converting the balance. It also
@@ -327,18 +334,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (convertBalance && currencyChanged) {
                 _converting.value = true
                 val rate = try {
-                    exchangeRates.rate(snapshot.currency, currency)
+                    exchangeRates.rate(snapshot.currency, target)
                 } finally {
                     _converting.value = false
                 }
                 if (rate == null) {
                     _conversionError.value =
-                        "Couldn't get today's ${snapshot.currency} to $currency rate, so nothing " +
+                        "Couldn't get today's ${snapshot.currency} to $target rate, so nothing " +
                         "was saved. Try again once you're connected, or keep the amounts as they " +
                         "are and only change the currency."
                     return@launch
                 }
-                repository.convertCurrency(snapshot.id, currency, rate)
+                repository.convertCurrency(snapshot.id, target, rate)
             }
 
             // The edit is committed, so the photo it replaced is now unreferenced.
@@ -352,10 +359,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     pfpType = pfpType,
                     pfpValue = pfpValue,
                     pfpColor = pfpColor,
-                    currency = currency
+                    currency = target
                 )
             )
-            CurrencyStore.setLastCurrency(getApplication(), currency)
+            CurrencyStore.setLastCurrency(getApplication(), target)
             onSaved()
         }
     }
@@ -388,7 +395,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getGroupSharedCount(personId: Long) = groupRepository.expensesSharedBy(personId)
 
-    fun getGroupCount(personId: Long) = groupRepository.groupCountFor(personId)
+    /** Nullable so a screen can start at "not known yet" rather than at zero. */
+    fun getGroupCount(personId: Long): kotlinx.coroutines.flow.Flow<Int?> = groupRepository.groupCountFor(personId).map { it }
 
     suspend fun convertCurrency(amountMinor: Long, from: String, to: String): Long? =
         exchangeRates.convert(amountMinor, from, to)

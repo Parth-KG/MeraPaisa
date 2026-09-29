@@ -70,12 +70,18 @@ fun EditEntrySheet(
     // into and a comma would stop it parsing. A leading minus is how you flip which way it runs.
     // Paise keep both digits, as every other amount does: trimming zeros turned 1200.50 into
     // "1200.5". Only a whole ".00" is dropped.
+    val initialAmount = remember(entry.id) {
+        formatMinorPlain(entry.amountMinor, currency).removeSuffix(".00")
+    }
     var amount by remember(entry.id) {
-        mutableStateOf(formatMinorPlain(entry.amountMinor, currency).removeSuffix(".00"))
+        mutableStateOf(initialAmount)
     }
     var note by remember(entry.id) { mutableStateOf(entry.note) }
 
-    val amountMinor = parseAmountToMinor(amount)
+    // An untouched field keeps the stored figure. Yen is kept in hundredths and a split can leave
+    // ¥33.34 in one entry, which the field shows as 33; saving a new note used to write back 33
+    // and lose the rest.
+    val amountMinor = if (amount == initialAmount) entry.amountMinor else parseAmountToMinor(amount)
     val isValid = amountMinor != null && amountMinor != 0L
     var confirmingDelete by remember(entry.id) { mutableStateOf(false) }
 

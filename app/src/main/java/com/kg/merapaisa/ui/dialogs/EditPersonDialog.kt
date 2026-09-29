@@ -61,7 +61,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 @Composable
 fun EditPersonDialog(
     person: Person,
-    groupCount: Int,
+    /** Null until known; the currency can't be changed until it is. */
+    groupCount: Int?,
     converting: Boolean,
     conversionError: String?,
     onDismiss: () -> Unit,
@@ -159,7 +160,7 @@ fun EditPersonDialog(
             SheetHeading("Currency")
             // Fixed for anyone in a group. A group's amounts are all in its one currency, and
             // converting this person's entries would leave their balance half in each.
-            if (groupCount > 0) {
+            if (groupCount != null && groupCount > 0) {
                 Text(
                     "Stays ${person.currency}: ${person.name.trim().ifEmpty { "they" }} " +
                         (if (groupCount == 1) "is in a group" else "is in $groupCount groups") +
@@ -170,7 +171,7 @@ fun EditPersonDialog(
                 )
             } else CurrencyChips(
                 selected = selectedCurrency,
-                enabled = !converting,
+                enabled = !converting && groupCount == 0,
                 onSelect = { code ->
                     when {
                         code == selectedCurrency -> Unit

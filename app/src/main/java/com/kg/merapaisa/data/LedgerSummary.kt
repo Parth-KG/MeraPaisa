@@ -48,8 +48,13 @@ fun buildPersonSummary(
  */
 fun groupPartLine(person: PersonWithBalance, transactions: List<Transaction>): String? {
     val fromGroups = person.balanceMinor - transactions.sumOf { it.amountMinor }
-    return if (fromGroups == 0L) null
-    else "Plus ${amountString(fromGroups, person.currency)} from groups we share"
+    // Direction in words, as the headline does: "Plus − ₹200" read as arithmetic.
+    val figure = amountString(fromGroups.absoluteValue, person.currency, SignStyle.None)
+    return when {
+        fromGroups > 0 -> "Plus $figure you owe me in groups we share"
+        fromGroups < 0 -> "Less $figure I owe you in groups we share"
+        else -> null
+    }
 }
 
 /**

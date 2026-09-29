@@ -171,6 +171,19 @@ class PersonDaoTest {
     }
 
     @Test
+    fun clearingTheLogDoesNotSendTheirOwnEntriesBack() = runBlocking {
+        val id = newPerson()
+        dao.recordEntry(Transaction(personId = id, amountMinor = 300_00, timestamp = 5_000, note = "theirs", fromShare = true))
+        dao.recordEntry(Transaction(personId = id, amountMinor = 20_00, timestamp = 6_000, note = "mine"))
+
+        dao.clearTransactionsForPerson(id)
+
+        assertEquals(320_00L, dao.getBalanceNow(id))
+        val nextLink = dao.getTransactionsSinceNow(id, dao.getPersonNow(id)!!.lastSharedAt)
+        assertEquals("their ₹300 came from them, so only mine goes out", listOf(20_00L), nextLink.map { it.amountMinor })
+    }
+
+    @Test
     fun clearingANeverSharedLogLeavesTheWholeBalanceToShare() = runBlocking {
         val id = newPerson()
         dao.recordEntry(Transaction(personId = id, amountMinor = 75_00, note = "one"))
