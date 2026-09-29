@@ -22,15 +22,16 @@ import java.io.File
 @Composable
 fun PfpView(person: Person, size: Int) {
     val theme = LocalAppTheme.current
-    val color = remember(person.pfpColor, theme.primary) {
-        try { Color(android.graphics.Color.parseColor(person.pfpColor)) } catch (e: Exception) { theme.primary }
-    }
+    // The stored colour is a choice of hue, not of luminance: no single value can be legible on
+    // both Paper and Amoled. avatarInk keeps the hue somebody picked and gives it the lightness
+    // this theme needs, which also rescues every avatar already in the ledger.
+    val color = remember(person.pfpColor, theme.isDark) { avatarInk(person.pfpColor, theme.isDark) }
     Box(
         modifier = Modifier
             .size(size.dp)
             .clip(RoundedCornerShape((size * 0.32f).dp))
-            .background(color.copy(alpha = 0.2f))
-            .border(1.5.dp, color.copy(alpha = 0.4f), RoundedCornerShape((size * 0.32f).dp)),
+            .background(color.copy(alpha = AVATAR_WASH))
+            .border(1.5.dp, color.copy(alpha = 0.35f), RoundedCornerShape((size * 0.32f).dp)),
         contentAlignment = Alignment.Center
     ) {
         val photo = remember(person.pfpValue, person.pfpType) {

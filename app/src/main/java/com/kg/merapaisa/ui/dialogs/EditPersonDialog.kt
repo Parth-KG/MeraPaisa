@@ -58,7 +58,8 @@ fun EditPersonDialog(
         }
     }
 
-    val colors = listOf("#E84B3A","#3A8FE8","#2ECC71","#F39C12","#9B59B6","#E91E63","#00BCD4","#FF5722")
+    // See AvatarInk: only the hue survives, since the ink is re-lit for the theme.
+    val colors = com.kg.merapaisa.ui.AVATAR_HUES
     var showConvertAlert by remember { mutableStateOf(false) }
     var pendingCurrency by remember { mutableStateOf("") }
 

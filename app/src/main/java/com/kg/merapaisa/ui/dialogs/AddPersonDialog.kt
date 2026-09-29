@@ -52,11 +52,12 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
     LaunchedEffect(lastCurrency) { selectedCurrency = lastCurrency }
     var name by remember { mutableStateOf("") }
     var emoji by remember { mutableStateOf("😊") }
-    var selectedColor by remember { mutableStateOf("#4CAF50") }
+    var selectedColor by remember { mutableStateOf(com.kg.merapaisa.ui.AVATAR_HUES.first()) }
 
 
 
-    val colors = listOf("#E84B3A","#3A8FE8","#2ECC71","#F39C12","#9B59B6","#E91E63","#00BCD4","#FF5722")
+    // See AvatarInk: only the hue survives, since the ink is re-lit for the theme.
+    val colors = com.kg.merapaisa.ui.AVATAR_HUES
 
     val dismiss = {
         // Nothing was saved, so the picked file has no owner.
