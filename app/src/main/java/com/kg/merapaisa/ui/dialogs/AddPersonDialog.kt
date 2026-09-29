@@ -81,7 +81,12 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
     var pfpType by remember { mutableStateOf("initials") }
     var photoPath by remember { mutableStateOf<String?>(null) }
     var emoji by remember { mutableStateOf("") }
-    var selectedColour by remember { mutableStateOf(AVATAR_HUES.first()) }
+    // Until a colour is picked by hand, the name picks one. Defaulting to the first swatch gave
+    // every person added without opening the picker the same indigo, which is the all-green
+    // problem the eight hues were meant to end. A name always lands on the same hue, so the
+    // swatch does not flicker between visits, and two people rarely share one.
+    var pickedColour by remember { mutableStateOf<String?>(null) }
+    val selectedColour = pickedColour ?: hueForName(name)
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -147,7 +152,7 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                 onEmojiChange = { emoji = it },
                 hasPhoto = photoPath != null,
                 selectedColour = selectedColour,
-                onColourChange = { selectedColour = it },
+                onColourChange = { pickedColour = it },
                 onPickPhoto = {
                     launcher.launch(
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -411,3 +416,7 @@ private val AVATAR_HUE_NAMES = mapOf(
     "#8C4A7D" to "Plum",
     "#5B5F8C" to "Slate"
 )
+
+/** The hue a name lands on when nobody has picked one. Stable: String.hashCode is specified. */
+internal fun hueForName(name: String): String =
+    AVATAR_HUES[Math.floorMod(name.trim().lowercase().hashCode(), AVATAR_HUES.size)]
