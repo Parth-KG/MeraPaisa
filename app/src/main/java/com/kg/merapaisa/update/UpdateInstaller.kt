@@ -134,13 +134,6 @@ object UpdateInstaller {
     }
 
     /**
-     * True when [apk] carries exactly the same signing certificate as the running app.
-     *
-     * Compares SHA-256 digests of the full certificate sets. Returning **false on any failure** is
-     * deliberate: if the check cannot be completed, the safe answer is to refuse, not to shrug and
-     * install.
-     */
-    /**
      * Whether [apkPath] carries the same signing certificate as the running app.
      *
      * Public so it can be tested directly against a deliberately mis-signed APK. This is the one
@@ -150,6 +143,13 @@ object UpdateInstaller {
     fun isSignedLikeThisApp(context: Context, apkPath: String): Boolean =
         signedLikeUs(context, File(apkPath))
 
+    /**
+     * True when [apk] carries exactly the same signing certificate as the running app.
+     *
+     * Compares SHA-256 digests of the full certificate sets. Returning **false on any failure** is
+     * deliberate: if the check cannot be completed, the safe answer is to refuse, not to shrug and
+     * install.
+     */
     private fun signedLikeUs(context: Context, apk: File): Boolean = runCatching {
         val ours = certificateDigests(context, context.packageName, null)
         val theirs = certificateDigests(context, null, apk.absolutePath)

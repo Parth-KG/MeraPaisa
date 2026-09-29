@@ -140,15 +140,15 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    /**
-     * The activity is `singleTask`, so a link tapped while the app is already open arrives here
-     * rather than starting a second copy. Without this the link would be silently ignored.
-     */
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         pendingShareLink?.let { outState.putString(PENDING_LINK_KEY, it) }
     }
 
+    /**
+     * The activity is `singleTask`, so a link tapped while the app is already open arrives here
+     * rather than starting a second copy. Without this the link would be silently ignored.
+     */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)

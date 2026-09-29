@@ -254,6 +254,16 @@ class PersonRepository(
     }
 
     /**
+     * True when an update would be empty only because everything new came from their own links,
+     * so the share sheet can say that rather than "nothing new since you last sent".
+     */
+    suspend fun onlyTheirEntriesAreNew(personId: Long): Boolean {
+        val since = dao.getPersonNow(personId)?.lastSharedAt ?: 0L
+        val pending = dao.getTransactionsSinceNow(personId, since)
+        return pending.isNotEmpty() && pending.all { it.fromShare }
+    }
+
+    /**
      * Builds the payload for [personId], newest entries only unless [fullHistory].
      *
      * The id is 16 hex characters rather than a full UUID: 64 bits is far more than enough to keep

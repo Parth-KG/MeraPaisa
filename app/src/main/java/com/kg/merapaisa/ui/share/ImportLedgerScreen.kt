@@ -1,5 +1,6 @@
 package com.kg.merapaisa.ui.share
 
+import com.kg.merapaisa.data.ShareScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -239,7 +240,8 @@ private fun ConfirmingScreen(
     var confirmingDeletions by remember { mutableStateOf(false) }
 
     ScreenFrame(
-        title = "Check this update link",
+        // A full link carries the whole ledger, which is not an update.
+        title = if (payload.scope == ShareScope.Full) "Check this ledger link" else "Check this update link",
         onBack = if (state.busy) null else onDismiss,
         footer = {
             // The way out on the left and the action on the right, as on every sheet and screen.
@@ -569,6 +571,29 @@ private fun LazyListScope.differences(
         }
     }
 
+    if (plan.theirOpenings.isNotEmpty()) {
+        item {
+            GroupIntro(
+                heading = "They cleared their history",
+                explanation = "Their ledger now starts from an opening balance that stands in for " +
+                    "entries you may already have. Tick it only together with removing those " +
+                    "entries, or the same money is counted twice."
+            )
+        }
+        itemsIndexed(plan.theirOpenings, key = { _, item -> "their-opening-${item.uid}" }) { index, item ->
+            if (index > 0) RowDivider(TextRowInset)
+            DifferenceRow(
+                checked = item.uid in selected,
+                onToggle = { onToggleItem(item.uid) },
+                title = item.note.ifBlank { "Opening balance" },
+                detail = "",
+                date = dateOf(item.timestamp),
+                amountMinor = item.amountMinor,
+                currency = currency
+            )
+        }
+    }
+
     if (plan.newBeforeClear.isNotEmpty()) {
         item {
             GroupIntro(
@@ -596,7 +621,11 @@ private fun LazyListScope.differences(
         item {
             GroupIntro(
                 heading = "They removed " + countOf(plan.deletedBySender.size, "entry", "entries"),
-                explanation = "Tick to remove it here too. This deletes it from your ledger."
+                explanation = if (plan.deletedBySender.size == 1) {
+                    "Tick to remove it here too. This deletes it from your ledger."
+                } else {
+                    "Tick the ones to remove here too. This deletes them from your ledger."
+                }
             )
         }
         itemsIndexed(plan.deletedBySender, key = { _, item -> "removed-${item.uid}" }) { index, item ->

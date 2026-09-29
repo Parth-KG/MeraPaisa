@@ -57,8 +57,17 @@ sealed interface ReconcileItem {
          * Dated before this history was cleared here. Clearing folded everything into an opening
          * balance and dropped the uids, so this may be counted already. Arrives unticked.
          */
-        val predatesClear: Boolean = false
-    ) : ReconcileItem
+        val predatesClear: Boolean = false,
+        /**
+         * The opening balance their phone wrote when they cleared their history. It stands in for
+         * entries this phone may already hold, so taking it as well counts them twice. Arrives
+         * unticked.
+         */
+        val theirOpening: Boolean = false
+    ) : ReconcileItem {
+        /** Held back for a decision rather than ticked like an ordinary new entry. */
+        val heldBack: Boolean get() = predatesClear || theirOpening
+    }
 
     /**
      * Both sides hold this debt and agree about it. Listed rather than dropped, because "17 of
@@ -139,7 +148,8 @@ data class ReconcilePlan(
     val comparable: Boolean
 ) {
     val new: List<ReconcileItem.New> get() = items.filterIsInstance<ReconcileItem.New>()
-    val newBeforeClear: List<ReconcileItem.New> get() = new.filter { it.predatesClear }
+    val newBeforeClear: List<ReconcileItem.New> get() = new.filter { it.predatesClear && !it.theirOpening }
+    val theirOpenings: List<ReconcileItem.New> get() = new.filter { it.theirOpening }
     val edited: List<ReconcileItem.Edited> get() = items.filterIsInstance<ReconcileItem.Edited>()
     val unchanged: List<ReconcileItem.Unchanged> get() = items.filterIsInstance<ReconcileItem.Unchanged>()
     val deletedBySender: List<ReconcileItem.DeletedBySender>
@@ -151,7 +161,7 @@ data class ReconcilePlan(
 
     /** Anything the user is being asked to decide about, as opposed to told about. */
     val needsDecision: Boolean
-        get() = edited.isNotEmpty() || deletedBySender.isNotEmpty() || newBeforeClear.isNotEmpty()
+        get() = edited.isNotEmpty() || deletedBySender.isNotEmpty() || new.any { it.heldBack }
 
     /**
      * What is ticked when the screen opens.
@@ -163,7 +173,7 @@ data class ReconcilePlan(
      * to delete anything by being tapped twice.
      */
     val defaultSelection: Set<String>
-        get() = new.filterNot { it.predatesClear }.map { it.uid }.toSet()
+        get() = new.filterNot { it.heldBack }.map { it.uid }.toSet()
 
     /**
      * What the ticked items would move the balance by.
@@ -256,7 +266,10 @@ fun reconcile(
             existing == null ->
                 ReconcileItem.New(
                     entry.uid, stamp, entry.amountMinor, entry.note,
-                    predatesClear = clearedAt != null && stamp < clearedAt
+                    // Full links only. An update carries only what the sender had not sent before,
+                    // so this phone cannot have had it, whatever its date.
+                    predatesClear = scope == ShareScope.Full && clearedAt != null && stamp < clearedAt,
+                    theirOpening = entry.uid.startsWith(OPENING_UID_PREFIX)
                 )
 
             existing.amountMinor == entry.amountMinor && existing.note == entry.note ->

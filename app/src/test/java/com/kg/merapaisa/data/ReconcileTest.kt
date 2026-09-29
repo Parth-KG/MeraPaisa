@@ -65,6 +65,25 @@ class ReconcileTest {
     }
 
     @Test
+    fun `an update link is never held back by a clear`() {
+        val opening = local(1, OPENING_UID_PREFIX + "x", 100_00, note = "Opening balance", timestamp = 5_000L)
+        val p = plan(listOf(incoming("typed-earlier", 300_00, timestamp = 1_000L)), listOf(opening), ShareScope.Incremental)
+        assertEquals("they had never sent it, so it cannot be counted already", setOf("typed-earlier"), p.defaultSelection)
+    }
+
+    @Test
+    fun `their opening balance after they cleared is held back`() {
+        val p = plan(
+            listOf(incoming(OPENING_UID_PREFIX + "theirs", 500_00, note = "Opening balance", timestamp = 9_000L)),
+            listOf(local(1, "e1", 500_00, fromShare = true))
+        )
+        assertTrue(p.theirOpenings.single().theirOpening)
+        assertTrue("nothing ticked, so accepting the defaults cannot double it", p.defaultSelection.isEmpty())
+        assertEquals(0L, p.netChangeFor(p.defaultSelection))
+        assertTrue(p.needsDecision)
+    }
+
+    @Test
     fun `without a clear nothing is held back`() {
         val p = plan(listOf(incoming("old", 100_00, timestamp = 1_000L)), listOf(local(1, "mine", 20_00, timestamp = 5_000L)))
         assertEquals(setOf("old"), p.defaultSelection)

@@ -477,7 +477,6 @@ private fun ModeOption(selected: Boolean, title: String, subtitle: String, onCli
     }
 }
 
-/** What Replace is about to destroy, in the same words wherever it is said. */
 /**
  * Whether the stored result of the last backup run is a success.
  *
@@ -489,6 +488,7 @@ private fun ModeOption(selected: Boolean, title: String, subtitle: String, onCli
 internal fun lastRunSucceeded(result: String): Boolean =
     result.startsWith("Saved a backup") || result.startsWith("Backed up")
 
+/** What Replace is about to destroy, in the same words wherever it is said. */
 private fun deletesSentence(deletes: RestoreCounts): String =
     "Deletes ${countPhrase(deletes.people, "person", "people")}, " +
         "${countPhrase(deletes.transactions, "entry", "entries")}" +

@@ -120,6 +120,10 @@ fun ShareLedgerSheet(
                     if (state.fullHistory) {
                         "There are no entries for ${state.personName} yet, so there is nothing " +
                             "to send. Record one and the link will have something to carry."
+                    } else if (state.onlyTheirsAreNew) {
+                        "Everything new here came from ${state.personName}'s own links, so there " +
+                            "is nothing to send back. Turn on \"Send everything\" below to send " +
+                            "their full history."
                     } else {
                         "Nothing new since you last sent ${state.personName} an update link. " +
                             "Turn on \"Send everything\" below to send their full history again."

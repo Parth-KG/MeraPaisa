@@ -77,12 +77,6 @@ fun parseAmountToMinor(text: String): Long? {
 }
 
 /**
- * Renders minor units with the currency's symbol, using its real number of decimals.
- *
- * A round amount is shown without them: most entries are whole rupees, and a column of
- * ".00" is noise that makes the amounts that *do* have paise harder to pick out.
- */
-/**
  * The magnitude of an amount, as bits, safe for the one value that has no positive counterpart.
  *
  * `Long.MIN_VALUE.absoluteValue` is still `Long.MIN_VALUE`, so dividing it by 100 gives a negative
@@ -103,6 +97,12 @@ private inline fun paiseOf(magnitude: Long): Long = java.lang.Long.remainderUnsi
 private inline fun roundedWholeUnits(magnitude: Long): Long =
     java.lang.Long.divideUnsigned(magnitude + 50, 100)
 
+/**
+ * Renders minor units with the currency's symbol, using its real number of decimals.
+ *
+ * A round amount is shown without them: most entries are whole rupees, and a column of
+ * ".00" is noise that makes the amounts that *do* have paise harder to pick out.
+ */
 fun formatMinor(amountMinor: Long, currencyCode: String): String {
     val symbol = currencySymbol(currencyCode)
     val sign = if (amountMinor < 0) "-" else ""

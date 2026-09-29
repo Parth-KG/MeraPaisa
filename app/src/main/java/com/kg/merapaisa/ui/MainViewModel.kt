@@ -427,6 +427,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val person = persons.value.firstOrNull { it.id == personId }
             val entries = repository.entriesToShare(personId, fullHistory = false)
+            val onlyTheirs = entries.isEmpty() && repository.onlyTheirEntriesAreNew(personId)
             // Blank rather than "You": the sheet asks for a real name the first time, because
             // "You" means nothing on the recipient's phone.
             //
@@ -443,7 +444,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         currency = normaliseCurrency(person?.currency ?: "INR"),
                         senderName = myName,
                         entryCount = entries.size,
-                        netMinor = entries.sumOf { e -> e.amountMinor }
+                        netMinor = entries.sumOf { e -> e.amountMinor },
+                        onlyTheirsAreNew = onlyTheirs
                     )
                 )
             }
@@ -461,10 +463,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val current = _uiState.value.share ?: return
         viewModelScope.launch {
             val entries = repository.entriesToShare(current.personId, fullHistory = full)
+            val onlyTheirs = !full && entries.isEmpty() && repository.onlyTheirEntriesAreNew(current.personId)
             _uiState.update {
                 it.copy(
                     share = it.share?.copy(
                         fullHistory = full,
+                        onlyTheirsAreNew = onlyTheirs,
                         entryCount = entries.size,
                         netMinor = entries.sumOf { e -> e.amountMinor }
                     )

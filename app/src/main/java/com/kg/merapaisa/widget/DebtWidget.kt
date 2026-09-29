@@ -90,7 +90,6 @@ private fun paletteFor(themeName: String): WidgetPalette {
     }
 }
 
-/** Three cells by one: room for where you stand overall and nothing else. */
 /** Four rows is what the taller widget holds, including the line that says what is left out. */
 private const val MAX_WIDGET_ROWS = 4
 
@@ -110,6 +109,7 @@ private const val LARGE_TYPE_ROWS = 3
 @Composable
 private fun largeType(): Boolean = LocalContext.current.resources.configuration.fontScale >= 1.3f
 
+/** Three cells by one: room for where you stand overall and nothing else. */
 private val NetOnly = DpSize(180.dp, 40.dp)
 
 /** Four cells by two, the smallest size that can hold the net position and a name under it. */

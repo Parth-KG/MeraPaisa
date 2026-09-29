@@ -74,6 +74,8 @@ data class ShareFlowState(
     val netMinor: Long,
     /** Ignore the watermark and send everything (the way back from a link that never arrived). */
     val fullHistory: Boolean = false,
+    /** Nothing to update with because every new entry came from their own links. */
+    val onlyTheirsAreNew: Boolean = false,
     val busy: Boolean = false
 ) {
     val hasNothingToSend: Boolean get() = entryCount == 0
