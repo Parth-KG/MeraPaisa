@@ -108,14 +108,14 @@ interface GroupDao {
     @Query("DELETE FROM expenses WHERE id = :expenseId")
     suspend fun deleteExpense(expenseId: Long)
 
-    /**
-     * How many group expenses this person fronted. Deleting them cascades those expenses away,
-     * which moves every other member's position, so the confirmation has to say so.
-     */
     /** How many groups this person is in. Their currency is fixed while it is above zero. */
     @Query("SELECT COUNT(*) FROM group_members WHERE personId = :personId")
     fun groupCountFor(personId: Long): Flow<Int>
 
+    /**
+     * How many group expenses this person fronted. Deleting them cascades those expenses away,
+     * which moves every other member's position, so the confirmation has to say so.
+     */
     @Query("SELECT COUNT(*) FROM expenses WHERE paidByPersonId = :personId")
     fun expenseCountPaidBy(personId: Long): Flow<Int>
 

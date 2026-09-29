@@ -688,7 +688,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val personId = confirming.targetPersonId ?: repository.addPerson(
                 Person(
                     name = confirming.newPersonName!!.trim(),
-                    pfpValue = confirming.newPersonName.trim().take(2).uppercase(),
+                    pfpValue = com.kg.merapaisa.data.initialsOf(confirming.newPersonName),
                     pfpColor = com.kg.merapaisa.ui.dialogs.hueForName(confirming.newPersonName),
                     sortOrder = repository.nextSortOrder(),
                     currency = confirming.payload.currency

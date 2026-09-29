@@ -316,7 +316,7 @@ object Fixtures {
         Person(
             id = id,
             name = name,
-            pfpValue = name.take(2).uppercase(),
+            pfpValue = com.kg.merapaisa.data.initialsOf(name),
             // A different hue each, walking the picker's palette. Leaving these at the stored
             // default made every avatar in every screenshot the same green, which is faithful to
             // an untouched ledger and useless for judging a palette of eight.

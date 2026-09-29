@@ -420,7 +420,13 @@ interface PersonDao {
         val now = System.currentTimeMillis()
         if (alreadyShared != 0L) {
             insertTransaction(
-                Transaction(personId = personId, amountMinor = alreadyShared, timestamp = now, note = "Opening balance")
+                Transaction(
+                    personId = personId,
+                    amountMinor = alreadyShared,
+                    timestamp = now,
+                    note = "Opening balance",
+                    uid = OPENING_UID_PREFIX + newEntryUid()
+                )
             )
         }
         if (sharedUpTo > 0L || alreadyShared != 0L) setLastSharedAt(personId, now)
@@ -431,7 +437,8 @@ interface PersonDao {
                     personId = personId,
                     amountMinor = notYetShared,
                     timestamp = now + 1,
-                    note = if (alreadyShared == 0L) "Opening balance" else "Not yet shared"
+                    note = if (alreadyShared == 0L) "Opening balance" else "Not yet shared",
+                    uid = OPENING_UID_PREFIX + newEntryUid()
                 )
             )
         }

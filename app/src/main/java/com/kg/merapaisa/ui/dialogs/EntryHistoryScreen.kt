@@ -254,16 +254,16 @@ fun EntryHistoryContent(
         val groupsNote = if (direct != person.balanceMinor) " What your groups add is not touched." else ""
         val body = when {
             direct == 0L ->
-                "Deletes $count. These entries come to zero, so nothing is carried over.$groupsNote " +
+                "Deletes $count. They come to zero, so the balance stays where it is.$groupsNote " +
                     "This can't be undone."
 
             direct > 0 ->
-                "Deletes $count. The $figure ${person.name} owes you from them is carried over " +
-                    "as an opening entry.$groupsNote This can't be undone."
+                "Deletes $count. The $figure ${person.name} owes you from them is kept as an " +
+                    "opening balance.$groupsNote This can't be undone."
 
             else ->
-                "Deletes $count. The $figure you owe ${person.name} from them is carried over " +
-                    "as an opening entry.$groupsNote This can't be undone."
+                "Deletes $count. The $figure you owe ${person.name} from them is kept as an " +
+                    "opening balance.$groupsNote This can't be undone."
         }
         DecisionDialog(
             title = "Clear ${person.name}'s history?",

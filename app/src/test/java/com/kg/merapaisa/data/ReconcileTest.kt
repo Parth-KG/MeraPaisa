@@ -50,6 +50,27 @@ class ReconcileTest {
     // -----------------------------------------------------------------------------------------
 
     @Test
+    fun `after a clear, an unknown entry dated before it is held back`() {
+        val opening = local(1, OPENING_UID_PREFIX + "x", 100_00, note = "Opening balance", timestamp = 5_000L)
+        val p = plan(
+            listOf(incoming("old", 100_00, timestamp = 1_000L), incoming("fresh", 50_00, timestamp = 9_000L)),
+            listOf(opening)
+        )
+
+        assertTrue(p.new.single { it.uid == "old" }.predatesClear)
+        assertFalse(p.new.single { it.uid == "fresh" }.predatesClear)
+        assertEquals("only the entry after the clear is ticked", setOf("fresh"), p.defaultSelection)
+        assertTrue("held-back entries are shown for a decision", p.needsDecision)
+        assertEquals(50_00L, p.netChangeFor(p.defaultSelection))
+    }
+
+    @Test
+    fun `without a clear nothing is held back`() {
+        val p = plan(listOf(incoming("old", 100_00, timestamp = 1_000L)), listOf(local(1, "mine", 20_00, timestamp = 5_000L)))
+        assertEquals(setOf("old"), p.defaultSelection)
+    }
+
+    @Test
     fun `an entry this phone has never seen is new`() {
         val p = plan(listOf(incoming("a", -34_000)), emptyList())
 

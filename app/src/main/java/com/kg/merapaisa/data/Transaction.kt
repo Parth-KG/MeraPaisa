@@ -73,5 +73,14 @@ data class Transaction(
  * [java.util.UUID.randomUUID] rather than [kotlin.random.Random], since this is an identity the
  * sender cannot be allowed to guess or replay for anyone else's entries.
  */
+/**
+ * Leads the uid of an entry written by clearing a history. Clearing deletes the rows, and with
+ * them the uids a link matches on, so an entry that arrives later with one of those uids looks new.
+ * The prefix lets the import screen find when the history was cleared and hold back anything
+ * dated before it, which the opening balance may already count. It rides in links and backups
+ * like any other uid, and needs no schema change.
+ */
+const val OPENING_UID_PREFIX = "open-"
+
 fun newEntryUid(): String =
     java.util.UUID.randomUUID().toString().replace("-", "").take(16)

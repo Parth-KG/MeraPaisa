@@ -32,3 +32,14 @@ data class Person(
      */
     val lastSharedAt: Long = 0
 )
+
+/**
+ * The first two characters of a name, for an avatar. Counted in code points, so a name that
+ * starts "A🙂" keeps the emoji whole rather than ending on half of it, which drew as a box.
+ */
+fun initialsOf(name: String): String {
+    val trimmed = name.trim()
+    val end = if (trimmed.codePointCount(0, trimmed.length) <= 2) trimmed.length
+    else trimmed.offsetByCodePoints(0, 2)
+    return trimmed.substring(0, end).uppercase()
+}

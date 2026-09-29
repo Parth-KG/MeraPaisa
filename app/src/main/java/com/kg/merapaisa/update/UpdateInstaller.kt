@@ -111,6 +111,10 @@ object UpdateInstaller {
                 }
             }
             connection.disconnect()
+            // A connection closed partway through ends the loop as cleanly as a finished one. The
+            // cut-off file then failed the signature check and was reported as a security
+            // problem, when all that happened was the network.
+            if (total > 0 && written != total) return@runCatching null
             target
         }.getOrNull()
 

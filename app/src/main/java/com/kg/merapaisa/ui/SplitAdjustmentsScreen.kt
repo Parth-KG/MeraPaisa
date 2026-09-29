@@ -1,5 +1,6 @@
 package com.kg.merapaisa.ui
 
+import com.kg.merapaisa.data.isTypableAmount
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -519,8 +520,14 @@ private fun SplitShareRow(
             BasicTextField(
                 value = text,
                 onValueChange = { newText ->
-                    typed = newText
-                    parseAmountToMinor(newText)?.let { onAmountChange(it) }
+                    // The same filter as every other amount field: no sign, no point in yen, and
+                    // no more digits than the keypad allows. An emptied field is a zero share,
+                    // not the old share hidden behind a blank box.
+                    if (isTypableAmount(newText, sourceCurrency)) {
+                        typed = newText
+                        if (newText.isEmpty()) onAmountChange(0L)
+                        else parseAmountToMinor(newText)?.let { onAmountChange(it) }
+                    }
                 },
                 textStyle = MeraPaisaType.amount.copy(
                     color = theme.textPrimary,

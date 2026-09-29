@@ -103,7 +103,7 @@ fun List<ImportedPerson>.toSnapshot(): BackupSnapshot {
             Person(
                 id = personId,
                 name = imported.name,
-                pfpValue = imported.name.take(2).uppercase(),
+                pfpValue = com.kg.merapaisa.data.initialsOf(imported.name),
                 sortOrder = index,
                 isSettled = imported.isSettled,
                 currency = imported.currency

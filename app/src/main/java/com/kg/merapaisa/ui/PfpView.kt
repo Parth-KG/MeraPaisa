@@ -52,7 +52,7 @@ fun PfpView(person: Person, size: Int) {
             )
             person.pfpType == "emoji" -> Text(person.pfpValue, style = avatarEmojiStyle(size), textAlign = TextAlign.Center)
             else -> Text(
-                person.name.take(2).uppercase(),
+                com.kg.merapaisa.data.initialsOf(person.name),
                 style = avatarInitialsStyle(size),
                 color = color,
                 maxLines = 1

@@ -52,7 +52,12 @@ sealed interface ReconcileItem {
         override val timestamp: Long,
         /** Already mirrored: what it will read as *here*. */
         val amountMinor: Long,
-        val note: String
+        val note: String,
+        /**
+         * Dated before this history was cleared here. Clearing folded everything into an opening
+         * balance and dropped the uids, so this may be counted already. Arrives unticked.
+         */
+        val predatesClear: Boolean = false
     ) : ReconcileItem
 
     /**
@@ -134,6 +139,7 @@ data class ReconcilePlan(
     val comparable: Boolean
 ) {
     val new: List<ReconcileItem.New> get() = items.filterIsInstance<ReconcileItem.New>()
+    val newBeforeClear: List<ReconcileItem.New> get() = new.filter { it.predatesClear }
     val edited: List<ReconcileItem.Edited> get() = items.filterIsInstance<ReconcileItem.Edited>()
     val unchanged: List<ReconcileItem.Unchanged> get() = items.filterIsInstance<ReconcileItem.Unchanged>()
     val deletedBySender: List<ReconcileItem.DeletedBySender>
@@ -144,7 +150,8 @@ data class ReconcilePlan(
     val hasChanges: Boolean get() = new.isNotEmpty() || edited.isNotEmpty() || deletedBySender.isNotEmpty()
 
     /** Anything the user is being asked to decide about, as opposed to told about. */
-    val needsDecision: Boolean get() = edited.isNotEmpty() || deletedBySender.isNotEmpty()
+    val needsDecision: Boolean
+        get() = edited.isNotEmpty() || deletedBySender.isNotEmpty() || newBeforeClear.isNotEmpty()
 
     /**
      * What is ticked when the screen opens.
@@ -156,7 +163,7 @@ data class ReconcilePlan(
      * to delete anything by being tapped twice.
      */
     val defaultSelection: Set<String>
-        get() = new.map { it.uid }.toSet()
+        get() = new.filterNot { it.predatesClear }.map { it.uid }.toSet()
 
     /**
      * What the ticked items would move the balance by.
@@ -239,13 +246,18 @@ fun reconcile(
 
     val incomingUids = incoming.map { it.uid }.toHashSet()
     val items = mutableListOf<ReconcileItem>()
+    // When this history was last cleared, if it was: the newest opening entry a clear wrote.
+    val clearedAt = local.filter { it.uid.startsWith(OPENING_UID_PREFIX) }.maxOfOrNull { it.timestamp }
 
     incoming.forEach { entry ->
         val existing = localByUid[entry.uid]
         val stamp = clamp(entry.timestamp, now)
         items += when {
             existing == null ->
-                ReconcileItem.New(entry.uid, stamp, entry.amountMinor, entry.note)
+                ReconcileItem.New(
+                    entry.uid, stamp, entry.amountMinor, entry.note,
+                    predatesClear = clearedAt != null && stamp < clearedAt
+                )
 
             existing.amountMinor == entry.amountMinor && existing.note == entry.note ->
                 ReconcileItem.Unchanged(entry.uid, existing.timestamp, existing.amountMinor, existing.note)

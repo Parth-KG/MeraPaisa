@@ -227,7 +227,7 @@ internal fun avatarValueFor(
 ): String = when (type) {
     "emoji" -> emoji.trim()
     "photo" -> photoPath.orEmpty()
-    else -> personName.take(2)
+    else -> com.kg.merapaisa.data.initialsOf(personName)
 }
 
 /**

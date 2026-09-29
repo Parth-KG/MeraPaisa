@@ -1,5 +1,6 @@
 package com.kg.merapaisa.repository
 
+import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.AppliedPayload
 import com.kg.merapaisa.data.ImportOutcome
 import com.kg.merapaisa.data.MoveDebtResult
@@ -24,7 +25,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
-import com.kg.merapaisa.data.formatMinor
 
 /**
  * The only thing that touches the ledger. Every write goes through here and notifies the
@@ -159,8 +159,9 @@ class PersonRepository(
         if (available <= 0L) return MoveDebtResult.NothingToMove(available)
         if (amountMinor > available) return MoveDebtResult.MoreThanOwed(available)
 
-        val conversion = "${formatMinor(amountMinor, from.currency)} as " +
-            "${formatMinor(convertedMinor, to.currency)} at the day's rate"
+        // Grouped like every other figure in the history: "₹1,50,000", not "₹150000".
+        val conversion = "${amountString(amountMinor, from.currency)} as " +
+            "${amountString(convertedMinor, to.currency)} at the day's rate"
         dao.moveDebtConverted(fromPersonId, toPersonId, amountMinor, convertedMinor, from.name, to.name, conversion, note)
         notifier.onLedgerChanged()
         return MoveDebtResult.Moved(amountMinor)
@@ -244,8 +245,12 @@ class PersonRepository(
      * arrived. The alternative would be a debt neither ledger can reconcile and no way back.
      */
     suspend fun entriesToShare(personId: Long, fullHistory: Boolean): List<Transaction> {
-        val since = if (fullHistory) 0L else dao.getPersonNow(personId)?.lastSharedAt ?: 0L
-        return dao.getTransactionsSinceNow(personId, since)
+        if (fullHistory) return dao.getTransactionsSinceNow(personId, 0L)
+        val since = dao.getPersonNow(personId)?.lastSharedAt ?: 0L
+        // An update leaves out what came from their own links: sending it back told them "1 new
+        // entry, they owe you ₹500" about the entry they had just sent. A full share keeps it,
+        // because the other phone reads a full share as the whole ledger.
+        return dao.getTransactionsSinceNow(personId, since).filterNot { it.fromShare }
     }
 
     /**

@@ -71,7 +71,8 @@ fun EditEntrySheet(
     // Paise keep both digits, as every other amount does: trimming zeros turned 1200.50 into
     // "1200.5". Only a whole ".00" is dropped.
     val initialAmount = remember(entry.id) {
-        formatMinorPlain(entry.amountMinor, currency).removeSuffix(".00")
+        // The app's own minus, as the history beside it shows. The parser reads either.
+        formatMinorPlain(entry.amountMinor, currency).removeSuffix(".00").replaceFirst("-", "\u2212")
     }
     var amount by remember(entry.id) {
         mutableStateOf(initialAmount)

@@ -569,6 +569,29 @@ private fun LazyListScope.differences(
         }
     }
 
+    if (plan.newBeforeClear.isNotEmpty()) {
+        item {
+            GroupIntro(
+                heading = countOf(plan.newBeforeClear.size, "entry", "entries") +
+                    " from before you cleared this history",
+                explanation = "Clearing kept the balance as one opening entry, which may already " +
+                    "count these. Tick one only if you know it isn't counted."
+            )
+        }
+        itemsIndexed(plan.newBeforeClear, key = { _, item -> "before-clear-${item.uid}" }) { index, item ->
+            if (index > 0) RowDivider(TextRowInset)
+            DifferenceRow(
+                checked = item.uid in selected,
+                onToggle = { onToggleItem(item.uid) },
+                title = item.note.ifBlank { "No note" },
+                detail = "",
+                date = dateOf(item.timestamp),
+                amountMinor = item.amountMinor,
+                currency = currency
+            )
+        }
+    }
+
     if (plan.deletedBySender.isNotEmpty()) {
         item {
             GroupIntro(

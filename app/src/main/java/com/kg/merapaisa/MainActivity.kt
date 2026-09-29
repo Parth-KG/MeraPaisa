@@ -55,7 +55,12 @@ class MainActivity : FragmentActivity() {
         // finished or dismissed, and dropped the person they were choosing mid-flow. Reopening
         // from Recents replays the launch intent too.
         val fromHistory = (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0
-        if (savedInstanceState == null && !fromHistory) pendingShareLink = shareLinkFrom(intent)
+        pendingShareLink = when {
+            // A link still waiting, typically for the fingerprint, survives the recreation.
+            savedInstanceState != null -> savedInstanceState.getString(PENDING_LINK_KEY)
+            fromHistory -> null
+            else -> shareLinkFrom(intent)
+        }
 
         // Start secure and relax later. The lock setting is read from disk, so for the first
         // frames we do not yet know whether this ledger is meant to be private; assuming it is
@@ -139,6 +144,11 @@ class MainActivity : FragmentActivity() {
      * The activity is `singleTask`, so a link tapped while the app is already open arrives here
      * rather than starting a second copy. Without this the link would be silently ignored.
      */
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        pendingShareLink?.let { outState.putString(PENDING_LINK_KEY, it) }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -160,5 +170,9 @@ class MainActivity : FragmentActivity() {
     override fun onStart() {
         super.onStart()
         lock.onStarted()
+    }
+
+    private companion object {
+        const val PENDING_LINK_KEY = "pending_share_link"
     }
 }

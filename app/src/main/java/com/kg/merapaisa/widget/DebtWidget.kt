@@ -341,7 +341,7 @@ private fun PersonWidgetRow(person: PersonWithBalance, palette: WidgetPalette) {
                     .circle(),
                 contentAlignment = Alignment.Center
             ) {
-                Text(person.name.take(2).uppercase(), style = initialsStyle(palette), maxLines = 1)
+                Text(com.kg.merapaisa.data.initialsOf(person.name), style = initialsStyle(palette), maxLines = 1)
             }
             Spacer(GlanceModifier.width(Spacing.md))
         }
