@@ -1,6 +1,5 @@
 package com.kg.merapaisa.ui.dialogs
 
-import com.kg.merapaisa.ui.LabelAndAmount
 import com.kg.merapaisa.ui.format.entrySpoken
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -170,38 +169,6 @@ fun EntryHistoryContent(
             }
         }
 
-        // The balance counts group expenses too, and they are not entries here. Without this line
-        // the entries added up to less than the figure on the main screen and nothing said why.
-        val fromGroups = person.balanceMinor - entries.sumOf { it.amountMinor }
-        if (fromGroups != 0L) {
-            LabelAndAmount(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
-                    .clearAndSetSemantics {
-                        contentDescription = "From groups you share, " + entrySpoken(fromGroups, person.currency)
-                    },
-                label = {
-                    Column {
-                        Text("From groups you share", style = MeraPaisaType.bodyStrong, color = theme.textPrimary)
-                        Text(
-                            "Not entries here. Open the group to see them.",
-                            style = MeraPaisaType.label,
-                            color = theme.textSecondary
-                        )
-                    }
-                },
-                amount = {
-                    AmountText(
-                        amountMinor = fromGroups,
-                        currencyCode = person.currency,
-                        style = MeraPaisaType.amount
-                    )
-                }
-            )
-        }
-
         if (entries.isEmpty()) {
             Text(
                 "Nothing recorded with ${person.name} yet.",
@@ -292,23 +259,20 @@ fun EntryHistoryContent(
         // carries the outstanding amount across as one opening entry. Saying so is the difference
         // between a warning somebody reads and one they guess at. The figure is written into the
         // sentence with no sign, because the words either side of it already say which way it runs.
-        // Only these entries are carried over. Whatever group expenses add stays in the groups, so
-        // quoting the whole balance here named a figure the opening entry would not hold.
         val direct = entries.sumOf { it.amountMinor }
         val figure = amountString(direct, person.currency, SignStyle.None)
-        val groupsNote = if (direct != person.balanceMinor) " What your groups add is not touched." else ""
         val body = when {
             direct == 0L ->
-                "Deletes $count. They come to zero, so the balance stays where it is.$groupsNote " +
+                "Deletes $count. They come to zero, so the balance stays where it is. " +
                     "This can't be undone."
 
             direct > 0 ->
                 "Deletes $count. The $figure ${person.name} owes you from them is kept as an " +
-                    "opening balance.$groupsNote This can't be undone."
+                    "opening balance. This can't be undone."
 
             else ->
                 "Deletes $count. The $figure you owe ${person.name} from them is kept as an " +
-                    "opening balance.$groupsNote This can't be undone."
+                    "opening balance. This can't be undone."
         }
         DecisionDialog(
             title = "Clear ${person.name}'s history?",

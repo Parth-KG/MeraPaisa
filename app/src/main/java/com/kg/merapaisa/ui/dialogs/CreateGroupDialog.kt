@@ -39,7 +39,6 @@ import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.SUPPORTED_CURRENCIES
 import com.kg.merapaisa.data.currencySymbol
-import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
@@ -70,11 +69,9 @@ fun CreateGroupDialog(
     // Defaults to on, which is what every group has done since groups shipped.
     var simplifyDebts by remember { mutableStateOf(true) }
 
-    // Only people kept in the group's currency can join it. A member's group share is added to
-    // their own balance, so a dollar person in a rupee group had rupees added to dollars: a
-    // figure nobody owes. Changing the currency drops anyone picked who no longer fits.
-    val eligible = people.filter { normaliseCurrency(it.currency) == normaliseCurrency(currency) }
-    val leftOut = people.size - eligible.size
+    // Anyone can join, whatever currency their own balance is kept in. A group is its own
+    // ledger in its own currency and moves nothing on the main screen.
+    val eligible = people
     val chosen = selected.filterTo(mutableSetOf()) { id -> eligible.any { it.id == id } }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -161,28 +158,9 @@ fun CreateGroupDialog(
                 else "${chosen.size} selected, plus you"
             )
 
-            if (leftOut > 0 && eligible.isNotEmpty()) {
-                Text(
-                    "Only people kept in ${currencySymbol(currency)} can join a group in " +
-                        "${currencySymbol(currency)}. ${if (leftOut == 1) "1 person uses" else "$leftOut people use"} " +
-                        "another currency.",
-                    style = MeraPaisaType.label,
-                    color = theme.textSecondary,
-                    modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.sm)
-                )
-            }
-
             if (people.isEmpty()) {
                 Text(
                     "Add some people first. A group needs somebody to split with.",
-                    style = MeraPaisaType.body,
-                    color = theme.textSecondary,
-                    modifier = Modifier.padding(horizontal = Spacing.lg)
-                )
-            } else if (eligible.isEmpty()) {
-                Text(
-                    "Nobody is kept in ${currencySymbol(currency)}. Pick another currency, or add " +
-                        "a person in ${currencySymbol(currency)} first.",
                     style = MeraPaisaType.body,
                     color = theme.textSecondary,
                     modifier = Modifier.padding(horizontal = Spacing.lg)

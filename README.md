@@ -97,7 +97,7 @@ Add people with names, pictures and a currency. Record amounts through a numpad,
 
 ### Active, Settled, and settling up
 
-A person is in **Settled** because you put them there, not because their balance happened to reach zero. **Settle up** records a closing entry for exactly what is outstanding, and a payment in each group where the two of you still owe each other, then files them away. **Reopen** brings them back without resurrecting the old balance, since the closing entry is real history and stays. Recording money against a settled person reopens them: if you are lending again, the balance is live again.
+A person is in **Settled** because you put them there, not because their balance happened to reach zero. **Settle up** records a closing entry for exactly what is outstanding, then files them away. **Reopen** brings them back without resurrecting the old balance, since the closing entry is real history and stays. Recording money against a settled person reopens them: if you are lending again, the balance is live again.
 
 ### Multi-currency
 
@@ -113,7 +113,7 @@ Each person has their own currency and balances stay in it. Your net position is
 
 ### Groups
 
-A group is a trip, a flatshare, a dinner: anywhere several people keep paying on each other's behalf. You are always a member, because a trip you are not part of is somebody else's ledger.
+A group is a trip, a flatshare, a dinner: anywhere several people keep paying on each other's behalf. You are always a member, because a trip you are not part of is somebody else's ledger. A group is its own ledger in its own currency: nothing in it changes anyone's balance on Active or Settled, and settling someone there leaves their groups alone. Anyone can join a group, whatever currency their own balance is kept in.
 
 Log an expense with a description, an amount and who paid. Shares are equal by default and split so the parts always add back to the whole, since paise cannot be divided three ways. Each member's position is what they paid out less what they were assigned, so a group always nets to zero.
 

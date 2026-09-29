@@ -79,26 +79,6 @@ class LedgerSummaryTest {
     }
 
     @Test
-    fun theGroupPartIsNamedSoTheLogAgreesWithTheHeadline() {
-        val text = summary(person(balanceMinor = 700_00), listOf(entry(200_00, 1, "cab")))
-        assertTrue(text.startsWith("Asha: you owe me ₹700"))
-        assertTrue(text.contains("(cab)  →  ₹200"))
-        assertTrue(text.endsWith("Plus ₹500 you owe me in groups we share"))
-    }
-
-    @Test
-    fun aGroupPartTheOtherWayIsWordedNotSigned() {
-        val text = summary(person(balanceMinor = 0), listOf(entry(200_00, 1, "cab")))
-        assertTrue(text.endsWith("Less ₹200 I owe you in groups we share"))
-    }
-
-    @Test
-    fun noGroupLineWhenTheEntriesAreTheWholeBalance() {
-        val text = summary(person(balanceMinor = 20_00), listOf(entry(10_00, 1), entry(10_00, 2)))
-        assertFalse(text.contains("groups"))
-    }
-
-    @Test
     fun aPersonWithNoHistoryIsJustTheHeadline() {
         assertEquals("Asha: you owe me ₹10", summary(person(balanceMinor = 10_00), emptyList()))
     }

@@ -31,29 +31,10 @@ fun buildPersonSummary(
 
     if (transactions.isEmpty()) return headline
 
-    // The headline counts group expenses too; the log below is direct entries only. Without this
-    // line the last running total disagreed with the headline and neither said why.
     return buildString {
         append(headline)
         append("\n\nRecent activity:\n")
         append(buildActivityLog(transactions, person.currency, limit, locale, timeZone))
-        groupPartLine(person, transactions)?.let { append("\n").append(it) }
-    }
-}
-
-/**
- * What group expenses add to [person]'s balance, as a closing line for a log of their direct
- * entries, or null when there is none. The log's last running total is direct entries only, so
- * without this it disagreed with the balance and nothing said why.
- */
-fun groupPartLine(person: PersonWithBalance, transactions: List<Transaction>): String? {
-    val fromGroups = person.balanceMinor - transactions.sumOf { it.amountMinor }
-    // Direction in words, as the headline does: "Plus − ₹200" read as arithmetic.
-    val figure = amountString(fromGroups.absoluteValue, person.currency, SignStyle.None)
-    return when {
-        fromGroups > 0 -> "Plus $figure you owe me in groups we share"
-        fromGroups < 0 -> "Less $figure I owe you in groups we share"
-        else -> null
     }
 }
 

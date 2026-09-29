@@ -14,24 +14,14 @@ interface PersonDao {
     /**
      * Every person with their balance derived in one pass, for the list screen and widget.
      *
-     * A balance is their direct transactions plus your position with them inside groups:
-     * their share of what you paid, less your share of what they paid. That slice of a group
-     * is exactly the part that is between the two of you, so it belongs on the home screen,
-     * and deriving it here means nothing is written twice or counted twice.
+     * A balance is their direct entries and nothing else. Groups are kept apart: what anyone owes
+     * inside a group is settled inside that group, and none of it reaches this list. Mixing the two
+     * let a settled group leave debts on the main screen that nobody owed, and made the main screen
+     * and the group screen disagree about the same money.
      */
     @Query(
         """
-        SELECT persons.*,
-            COALESCE(SUM(transactions.amountMinor), 0)
-            + COALESCE((SELECT SUM(s.shareMinor) FROM expense_shares s
-                        JOIN expenses e ON e.id = s.expenseId
-                        WHERE s.personId = persons.id AND e.paidByPersonId = :selfId
-                          AND e.groupId NOT IN ($EVEN_GROUPS)), 0)
-            - COALESCE((SELECT SUM(s2.shareMinor) FROM expense_shares s2
-                        JOIN expenses e2 ON e2.id = s2.expenseId
-                        WHERE s2.personId = :selfId AND e2.paidByPersonId = persons.id
-                          AND e2.groupId NOT IN ($EVEN_GROUPS)), 0)
-            AS balanceMinor
+        SELECT persons.*, COALESCE(SUM(transactions.amountMinor), 0) AS balanceMinor
         FROM persons
         LEFT JOIN transactions ON transactions.personId = persons.id
         WHERE persons.isSelf = 0
@@ -39,22 +29,12 @@ interface PersonDao {
         ORDER BY persons.sortOrder ASC
         """
     )
-    fun getPersonsWithBalances(selfId: Long): Flow<List<PersonWithBalance>>
+    fun getPersonsWithBalances(): Flow<List<PersonWithBalance>>
 
     /** One-shot version of the same query, for a snapshot such as an export. */
     @Query(
         """
-        SELECT persons.*,
-            COALESCE(SUM(transactions.amountMinor), 0)
-            + COALESCE((SELECT SUM(s.shareMinor) FROM expense_shares s
-                        JOIN expenses e ON e.id = s.expenseId
-                        WHERE s.personId = persons.id AND e.paidByPersonId = :selfId
-                          AND e.groupId NOT IN ($EVEN_GROUPS)), 0)
-            - COALESCE((SELECT SUM(s2.shareMinor) FROM expense_shares s2
-                        JOIN expenses e2 ON e2.id = s2.expenseId
-                        WHERE s2.personId = :selfId AND e2.paidByPersonId = persons.id
-                          AND e2.groupId NOT IN ($EVEN_GROUPS)), 0)
-            AS balanceMinor
+        SELECT persons.*, COALESCE(SUM(transactions.amountMinor), 0) AS balanceMinor
         FROM persons
         LEFT JOIN transactions ON transactions.personId = persons.id
         WHERE persons.isSelf = 0
@@ -62,7 +42,7 @@ interface PersonDao {
         ORDER BY persons.sortOrder ASC
         """
     )
-    suspend fun getPersonsWithBalancesNow(selfId: Long): List<PersonWithBalance>
+    suspend fun getPersonsWithBalancesNow(): List<PersonWithBalance>
 
     @Query("SELECT * FROM transactions ORDER BY personId ASC, timestamp ASC")
     suspend fun getAllTransactionsNow(): List<Transaction>
@@ -73,26 +53,6 @@ interface PersonDao {
     @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM transactions WHERE personId = :personId")
     suspend fun getBalanceNow(personId: Long): Long
 
-    /**
-     * The balance the screen shows: direct entries plus what the two of you owe each other in
-     * groups. [getBalanceNow] is the direct part alone, which is right for closing entries but not
-     * for asking how much someone owes you: moving a debt checked it, so the sheet offered ₹2,450
-     * and then refused anything above the ₹1,450 of it that was direct.
-     */
-    @Query(
-        """
-        SELECT COALESCE((SELECT SUM(amountMinor) FROM transactions WHERE personId = :personId), 0)
-            + COALESCE((SELECT SUM(s.shareMinor) FROM expense_shares s
-                        JOIN expenses e ON e.id = s.expenseId
-                        WHERE s.personId = :personId AND e.paidByPersonId = :selfId
-                        AND e.groupId NOT IN ($EVEN_GROUPS)), 0)
-            - COALESCE((SELECT SUM(s2.shareMinor) FROM expense_shares s2
-                        JOIN expenses e2 ON e2.id = s2.expenseId
-                        WHERE s2.personId = :selfId AND e2.paidByPersonId = :personId
-                        AND e2.groupId NOT IN ($EVEN_GROUPS)), 0)
-        """
-    )
-    suspend fun getFullBalanceNow(personId: Long, selfId: Long): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPerson(person: Person): Long
@@ -178,70 +138,16 @@ interface PersonDao {
      * file someone away without inventing a transaction. There is no need to reorder them:
      * isSettled is what moves them out of the active list.
      *
-     * Given [selfId], group activity is closed too. A person's balance includes their share of
-     * group expenses between them and you, and settling only the direct entries left them in the
-     * Settled tab still owing that share. Each group where the two of you still owe each other
-     * gets a real payment for exactly that amount, as the group's own Settle up would record, so
-     * the person, the group and your totals all end at zero together. A single direct entry for
-     * the whole amount would not do: the group would still show the debt, and recording it there
-     * later would count the same money twice.
+     * Direct entries only. Groups are settled inside the group, and nothing here touches them.
      */
     @androidx.room.Transaction
-    suspend fun settle(personId: Long, note: String = "Settled", selfId: Long? = null) {
-        val at = System.currentTimeMillis()
+    suspend fun settle(personId: Long, note: String = "Settled") {
         val outstanding = getBalanceNow(personId)
         if (outstanding != 0L) {
-            insertTransaction(Transaction(personId = personId, amountMinor = -outstanding, timestamp = at, note = note))
-        }
-        if (selfId != null && selfId != personId) {
-            groupPositionsWith(personId, selfId).filter { it.amountMinor != 0L }.forEach { position ->
-                // Positive: they owe you in this group, so they pay you. Negative: you pay them.
-                val theyPay = position.amountMinor > 0
-                val amount = if (theyPay) position.amountMinor else -position.amountMinor
-                val expenseId = insertExpenseRow(
-                    Expense(
-                        groupId = position.groupId,
-                        description = "Settlement",
-                        amountMinor = amount,
-                        paidByPersonId = if (theyPay) personId else selfId,
-                        timestamp = at,
-                        isSettlement = true
-                    )
-                )
-                insertShareRows(
-                    listOf(ExpenseShare(expenseId, personId = if (theyPay) selfId else personId, shareMinor = amount))
-                )
-            }
+            insertTransaction(Transaction(personId = personId, amountMinor = -outstanding, note = note))
         }
         setSettled(personId, true)
     }
-
-    /**
-     * What a person and you owe each other inside each group, by group: their share of what you
-     * paid, less your share of what they paid. Positive means they owe you. The same terms the
-     * balance query adds to a person's direct entries, split out per group.
-     */
-    @Query(
-        """
-        SELECT e.groupId AS groupId,
-            COALESCE(SUM(CASE WHEN e.paidByPersonId = :selfId AND s.personId = :personId THEN s.shareMinor ELSE 0 END), 0)
-            - COALESCE(SUM(CASE WHEN e.paidByPersonId = :personId AND s.personId = :selfId THEN s.shareMinor ELSE 0 END), 0)
-            AS amountMinor
-        FROM expenses e
-        JOIN expense_shares s ON s.expenseId = e.id
-        WHERE ((e.paidByPersonId = :selfId AND s.personId = :personId)
-           OR (e.paidByPersonId = :personId AND s.personId = :selfId))
-          AND e.groupId NOT IN ($EVEN_GROUPS)
-        GROUP BY e.groupId
-        """
-    )
-    suspend fun groupPositionsWith(personId: Long, selfId: Long): List<GroupPosition>
-
-    @Insert
-    suspend fun insertExpenseRow(expense: Expense): Long
-
-    @Insert
-    suspend fun insertShareRows(shares: List<ExpenseShare>)
 
     /**
      * Puts a settled person back in the active list. The closing entry stays in their history
@@ -720,23 +626,3 @@ interface PersonDao {
     @Query("DELETE FROM applied_payloads")
     suspend fun deleteAllAppliedPayloads()
 }
-
-/** What a person and you owe each other inside one group. Positive: they owe you. */
-data class GroupPosition(val groupId: Long, val amountMinor: Long)
-
-/**
- * Groups where every member stands at zero. They add nothing to anyone's balance with you,
- * however the payments that squared them were routed: a group settled by fewest payments can
- * leave one member having paid you what another owed, which reads as a debt between you and each
- * of them that nobody has.
- */
-internal const val EVEN_GROUPS = """
-    SELECT g.id FROM expense_groups g WHERE NOT EXISTS (
-        SELECT 1 FROM group_members m WHERE m.groupId = g.id
-          AND COALESCE((SELECT SUM(x.amountMinor) FROM expenses x
-                        WHERE x.groupId = g.id AND x.paidByPersonId = m.personId), 0)
-           != COALESCE((SELECT SUM(y.shareMinor) FROM expense_shares y
-                        JOIN expenses z ON z.id = y.expenseId
-                        WHERE z.groupId = g.id AND y.personId = m.personId), 0)
-    )
-"""

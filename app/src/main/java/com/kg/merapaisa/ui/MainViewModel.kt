@@ -250,8 +250,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    suspend fun settleWouldWrite(personId: Long): Boolean = repository.settleWouldWrite(personId)
-
     fun reopenPerson(person: PersonWithBalance) {
         viewModelScope.launch {
             repository.reopen(person.id)
@@ -329,11 +327,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         viewModelScope.launch {
             _conversionError.value = null
-            // Checked here as well as in the sheet: the sheet learns about groups a moment after it
-            // opens, and a group keeps every amount in its one currency.
-            val target = if (currency != snapshot.currency && groupRepository.isInAnyGroup(snapshot.id)) {
-                snapshot.currency
-            } else currency
+            val target = currency
             val currencyChanged = target != snapshot.currency
 
             // Converting rewrites every entry rather than recording a correction. The balance is
@@ -408,9 +402,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getGroupSharedCount(personId: Long) = groupRepository.expensesSharedBy(personId)
 
-    /** Nullable so a screen can start at "not known yet" rather than at zero. */
-    fun getGroupCount(personId: Long): kotlinx.coroutines.flow.Flow<Int?> = groupRepository.groupCountFor(personId).map { it }
-
     /**
      * Converts at today's rate, asked for once per pair and reused for ten minutes.
      *
@@ -459,7 +450,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val person = persons.value.firstOrNull { it.id == personId }
             val entries = repository.entriesToShare(personId, fullHistory = false)
             val onlyTheirs = entries.isEmpty() && repository.onlyTheirEntriesAreNew(personId)
-            val groupPart = (person?.balanceMinor ?: 0L) - repository.transactionsNow(personId).sumOf { it.amountMinor }
             // Blank rather than "You": the sheet asks for a real name the first time, because
             // "You" means nothing on the recipient's phone.
             //
@@ -477,8 +467,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         senderName = myName,
                         entryCount = entries.size,
                         netMinor = entries.sumOf { e -> e.amountMinor },
-                        onlyTheirsAreNew = onlyTheirs,
-                        groupPartMinor = groupPart
+                        onlyTheirsAreNew = onlyTheirs
                     )
                 )
             }

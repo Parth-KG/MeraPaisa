@@ -14,7 +14,6 @@ import com.kg.merapaisa.data.Transfer
 import com.kg.merapaisa.data.directTransfers
 import com.kg.merapaisa.data.groupBalances
 import com.kg.merapaisa.data.settleUp
-import com.kg.merapaisa.data.settleUpAroundSelf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -48,11 +47,6 @@ class GroupRepository(
 
     /** Group expenses this person fronted, which deleting them would take with it. */
     fun expensesPaidBy(personId: Long): Flow<Int> = groupDao.expenseCountPaidBy(personId)
-
-    suspend fun isInAnyGroup(personId: Long): Boolean = groupDao.groupCountFor(personId).first() > 0
-
-    /** How many groups this person is in. */
-    fun groupCountFor(personId: Long): Flow<Int> = groupDao.groupCountFor(personId)
 
     /** Group expenses this person only shared. Deleting them passes those shares to the payer. */
     fun expensesSharedBy(personId: Long): Flow<Int> = groupDao.expenseCountSharedBy(personId)
@@ -95,9 +89,8 @@ class GroupRepository(
         groupDao.getMembers(groupId),
         groupDao.getExpenses(groupId),
         groupDao.getSharesForGroup(groupId),
-        groupDao.getGroup(groupId),
-        selfIds()
-    ) { members, expenses, shares, group, selfId ->
+        groupDao.getGroup(groupId)
+    ) { members, expenses, shares, group ->
         val balances = groupBalances(
             memberIds = members.map { it.id },
             paidByPerson = expenses.groupBy { it.paidByPersonId }
@@ -111,11 +104,11 @@ class GroupRepository(
             balances = balances,
             // Computed here rather than in the screen, so the plan and the balances it squares are
             // always derived from the same read of the same rows.
-            transfers = if (group?.simplifyDebts != false) {
-                settleUpAroundSelf(selfId, balances, expenses, shares)
-            } else if (balances.all { it.amountMinor == 0L }) {
+            transfers = if (balances.all { it.amountMinor == 0L }) {
                 // Even is even, however the payments that got there were routed.
                 emptyList()
+            } else if (group?.simplifyDebts != false) {
+                settleUp(balances)
             } else {
                 directTransfers(expenses, shares)
             },
@@ -169,12 +162,12 @@ class GroupRepository(
     }
 
     suspend fun deleteExpense(expenseId: Long) {
-        groupDao.deleteExpenseAndReopen(expenseId)
+        groupDao.deleteExpense(expenseId)
         notifier.onLedgerChanged()
     }
 
     suspend fun deleteGroup(groupId: Long) {
-        groupDao.deleteGroupAndReopen(groupId)
+        groupDao.deleteGroup(groupId)
         notifier.onLedgerChanged()
     }
 }

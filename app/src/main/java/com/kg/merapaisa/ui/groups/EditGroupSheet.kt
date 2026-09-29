@@ -39,8 +39,6 @@ import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.Group
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonWithBalance
-import com.kg.merapaisa.data.currencySymbol
-import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
@@ -68,12 +66,8 @@ fun EditGroupSheet(
     var name by remember(group.id) { mutableStateOf(group.name) }
     var selected by remember(group.id) { mutableStateOf(setOf<Long>()) }
 
-    // The same rule as creating a group: only people kept in the group's currency, and only those
-    // not already in it.
     val memberIds = members.map { it.id }.toSet()
-    val candidates = people.filter {
-        it.id !in memberIds && normaliseCurrency(it.currency) == normaliseCurrency(group.currency)
-    }
+    val candidates = people.filter { it.id !in memberIds }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -120,7 +114,7 @@ fun EditGroupSheet(
 
             if (candidates.isEmpty()) {
                 Text(
-                    "Everyone kept in ${currencySymbol(group.currency)} is already in this group.",
+                    "Everyone you track is already in this group.",
                     style = MeraPaisaType.body,
                     color = theme.textSecondary,
                     modifier = Modifier.padding(horizontal = Spacing.lg)

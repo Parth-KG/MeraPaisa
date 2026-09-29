@@ -136,33 +136,3 @@ fun evenShares(amountMinor: Long, memberIds: List<Long>): Map<Long, Long> {
         base + extra
     }
 }
-
-/**
- * Fewest payments among the other members, with your own debts kept as they are.
- *
- * [settleUp] alone can route one member's debt through you: xyz owes you 333 and Asha 150, so the
- * plan has xyz pay you 483 and Asha pay you 150 less. The group ends even, but each person's
- * balance on the main screen counts only what is between them and you, so it was left reading
- * "you owe xyz 150" and "Asha owes you 150" about money nobody owes. Here what is between you and
- * each member is paid directly, and only what remains among the others is simplified.
- *
- * A group where everyone is even needs nothing at all, whatever payments got it there.
- */
-fun settleUpAroundSelf(
-    selfId: Long,
-    balances: List<MemberBalance>,
-    expenses: List<Expense>,
-    shares: List<ExpenseShare>
-): List<Transfer> {
-    if (balances.all { it.amountMinor == 0L }) return emptyList()
-    val withYou = directTransfers(expenses, shares)
-        .filter { it.fromPersonId == selfId || it.toPersonId == selfId }
-    // As if those were paid: what each member still stands at among the others.
-    val remaining = balances.associate { it.personId to it.amountMinor }.toMutableMap()
-    withYou.forEach { t ->
-        remaining[t.fromPersonId] = (remaining[t.fromPersonId] ?: 0L) + t.amountMinor
-        remaining[t.toPersonId] = (remaining[t.toPersonId] ?: 0L) - t.amountMinor
-    }
-    val others = remaining.filterKeys { it != selfId }.map { (id, amount) -> MemberBalance(id, amount) }
-    return withYou + settleUp(others)
-}

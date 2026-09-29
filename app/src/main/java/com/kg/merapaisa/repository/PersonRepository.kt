@@ -20,10 +20,7 @@ import com.kg.merapaisa.data.reconcile
 import com.kg.merapaisa.data.writesFor
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
 
 /**
@@ -35,13 +32,9 @@ class PersonRepository(
     private val notifier: LedgerChangeNotifier = LedgerChangeNotifier.None
 ) {
 
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    /** Everyone with their balance: direct entries only, since groups are kept apart. */
     fun personsWithBalances(): Flow<List<PersonWithBalance>> =
-        selfIds().flatMapLatest { dao.getPersonsWithBalances(it) }
-
-    /** Your own row's id, created if missing, and followed across a restore. */
-    fun selfIds(): Flow<Long> =
-        flow { dao.ensureSelf(); emitAll(dao.selfIdFlow().filterNotNull().distinctUntilChanged()) }
+        flow { dao.ensureSelf(); emitAll(dao.getPersonsWithBalances()) }
 
     fun transactions(personId: Long): Flow<List<Transaction>> = dao.getTransactionsForPerson(personId)
 
@@ -53,7 +46,7 @@ class PersonRepository(
     /** Everyone and everything they have, read together, for an export. */
     suspend fun ledgerSnapshot(): List<PersonLedger> {
         val byPerson = dao.getAllTransactionsNow().groupBy { it.personId }
-        return dao.getPersonsWithBalancesNow(dao.ensureSelf().id).map { person ->
+        return dao.getPersonsWithBalancesNow().map { person ->
             PersonLedger(person, byPerson[person.id].orEmpty())
         }
     }
@@ -126,7 +119,7 @@ class PersonRepository(
             return MoveDebtResult.CurrencyMismatch(fromCurrency, toCurrency)
         }
 
-        val available = dao.getFullBalanceNow(fromPersonId, dao.ensureSelf().id)
+        val available = dao.getBalanceNow(fromPersonId)
         if (available <= 0L) return MoveDebtResult.NothingToMove(available)
         if (amountMinor > available) return MoveDebtResult.MoreThanOwed(available)
 
@@ -155,7 +148,7 @@ class PersonRepository(
         val from = dao.getPersonNow(fromPersonId) ?: return MoveDebtResult.PersonGone
         val to = dao.getPersonNow(toPersonId) ?: return MoveDebtResult.PersonGone
 
-        val available = dao.getFullBalanceNow(fromPersonId, dao.ensureSelf().id)
+        val available = dao.getBalanceNow(fromPersonId)
         if (available <= 0L) return MoveDebtResult.NothingToMove(available)
         if (amountMinor > available) return MoveDebtResult.MoreThanOwed(available)
 
@@ -177,19 +170,10 @@ class PersonRepository(
         notifier.onLedgerChanged()
     }
 
-    /** Closes a person out entirely, their share of any group included. See [PersonDao.settle]. */
+    /** Closes a person's direct balance. Groups are settled inside the group. */
     suspend fun settle(personId: Long) {
-        dao.settle(personId, selfId = dao.ensureSelf().id)
+        dao.settle(personId)
         notifier.onLedgerChanged()
-    }
-
-    /**
-     * Whether settling would record anything. An even overall balance can still be +₹500 direct
-     * and −₹500 in a group, and settling that writes a closing entry and a group payment.
-     */
-    suspend fun settleWouldWrite(personId: Long): Boolean {
-        if (dao.getBalanceNow(personId) != 0L) return true
-        return dao.groupPositionsWith(personId, dao.ensureSelf().id).any { it.amountMinor != 0L }
     }
 
     suspend fun reopen(personId: Long) {
@@ -236,7 +220,7 @@ class PersonRepository(
      * `getPersonsWithBalancesNow` already filters out, since you cannot owe yourself.
      */
     suspend fun personsForImport(): List<PersonWithBalance> =
-        dao.getPersonsWithBalancesNow(dao.ensureSelf().id)
+        dao.getPersonsWithBalancesNow()
 
     /**
      * The entries the next link for this person would carry.

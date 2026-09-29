@@ -74,8 +74,6 @@ data class ShareFlowState(
     val netMinor: Long,
     /** Ignore the watermark and send everything (the way back from a link that never arrived). */
     val fullHistory: Boolean = false,
-    /** What groups add to their balance. Group expenses never travel in a link. */
-    val groupPartMinor: Long = 0L,
     /** Nothing to update with because every new entry came from their own links. */
     val onlyTheirsAreNew: Boolean = false,
     val busy: Boolean = false

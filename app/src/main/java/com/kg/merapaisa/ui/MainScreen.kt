@@ -414,13 +414,9 @@ fun MainScreen(viewModel: MainViewModel) {
         if (editingPerson != null) {
             val converting by viewModel.converting.collectAsState()
             val conversionError by viewModel.conversionError.collectAsState()
-            val groupCount by remember(editingPerson.person.id) {
-                viewModel.getGroupCount(editingPerson.person.id)
-            }.collectAsState(initial = null)
             EditPersonDialog(
                 person = editingPerson.person,
                 otherNames = persons.filter { it.id != editingPerson.id }.map { it.name },
-                groupCount = groupCount,
                 converting = converting,
                 conversionError = conversionError,
                 onDismiss = {
@@ -604,50 +600,27 @@ fun MainScreen(viewModel: MainViewModel) {
     }
     confirmSettle?.let { target ->
         val live = persons.find { it.id == target.id } ?: target
-        // Whether settling would record anything, worked out again whenever the balance moves
-        // (an import can land while this is open). Null while it is being worked out. An even
-        // balance usually writes nothing, but even overall can be owed one way directly and the
-        // other way in a group, and settling that records a closing entry and a group payment.
-        var writes by remember(live.id, live.balanceMinor) {
-            mutableStateOf(if (live.balanceMinor != 0L) true else null)
-        }
-        LaunchedEffect(live.id, live.balanceMinor) {
-            if (writes == null) writes = viewModel.settleWouldWrite(live.id)
-        }
-        // Opened on someone already square with nothing to record: file them away, no question.
-        val openedEven = remember(live.id) { live.balanceMinor == 0L }
-        when {
-            writes == null -> Unit
-            writes == false && openedEven -> LaunchedEffect(live.id) {
-                viewModel.settlePerson(live)
-                confirmSettle = null
+        if (live.balanceMinor == 0L) {
+            // Nothing to record, so nothing to ask: they are filed away as they are.
+            LaunchedEffect(live.id) { viewModel.settlePerson(live); confirmSettle = null }
+        } else {
+            val figure = amountString(kotlin.math.abs(live.balanceMinor), live.currency)
+            val what = if (live.balanceMinor > 0) {
+                "Records ${live.name} paying you $figure, which squares you, and moves them to Settled."
+            } else {
+                "Records you paying ${live.name} $figure, which squares you, and moves them to Settled."
             }
-            else -> {
-                val figure = amountString(kotlin.math.abs(live.balanceMinor), live.currency)
-                val what = when {
-                    live.balanceMinor > 0 ->
-                        "Records ${live.name} paying you $figure, which squares you, and moves them to Settled."
-                    live.balanceMinor < 0 ->
-                        "Records you paying ${live.name} $figure, which squares you, and moves them to Settled."
-                    writes == true ->
-                        "You two are even overall but not in each place. This records a closing " +
-                            "entry here and a payment in your groups so each reads zero, and moves " +
-                            "them to Settled."
-                    else -> "You're even now, so nothing is recorded. This only moves them to Settled."
-                }
-                val typed = if (ui.selectedId == live.id && ui.input.isNotEmpty()) {
-                    " The amount you typed isn't added."
-                } else ""
-                val undo = if (writes == true) " Reopening them later doesn't undo the payment." else ""
-                DecisionDialog(
-                    title = "Settle up with ${live.name}?",
-                    body = "$what$typed$undo",
-                    confirmLabel = "Settle up",
-                    dismissLabel = "Not yet",
-                    onConfirm = { viewModel.settlePerson(live); confirmSettle = null },
-                    onDismiss = { confirmSettle = null }
-                )
-            }
+            val typed = if (ui.selectedId == live.id && ui.input.isNotEmpty()) {
+                " The amount you typed isn't added."
+            } else ""
+            DecisionDialog(
+                title = "Settle up with ${live.name}?",
+                body = "$what$typed Reopening them later doesn't undo the payment.",
+                confirmLabel = "Settle up",
+                dismissLabel = "Not yet",
+                onConfirm = { viewModel.settlePerson(live); confirmSettle = null },
+                onDismiss = { confirmSettle = null }
+            )
         }
     }
 
