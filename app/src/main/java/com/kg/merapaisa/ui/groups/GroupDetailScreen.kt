@@ -1,5 +1,7 @@
 package com.kg.merapaisa.ui.groups
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -180,9 +182,12 @@ fun GroupDetailScreen(
                 }
 
                 item {
+                    // The whole row toggles, as the same setting does on the New group sheet. Only
+                    // the switch at the end used to respond here.
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .toggleable(value = simplifyDebts, onValueChange = onSimplifyChange, role = Role.Switch)
                             .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.md)
@@ -198,7 +203,7 @@ fun GroupDetailScreen(
                                 color = theme.textSecondary
                             )
                         }
-                        Switch(checked = simplifyDebts, onCheckedChange = onSimplifyChange)
+                        Switch(checked = simplifyDebts, onCheckedChange = null)
                     }
                 }
             }
