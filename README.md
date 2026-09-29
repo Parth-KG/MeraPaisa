@@ -19,9 +19,9 @@
 
 <table>
 <tr>
-<td align="center" width="33%"><img src="docs/screenshots/balances.jpeg" width="235" alt="Balances screen. An overall position of minus ₹104.60 and plus $1.05 on separate lines under a double rule, above four people with their own amounts"><br><sub><b>Balances</b><br>one figure per currency, never summed</sub></td>
-<td align="center" width="33%"><img src="docs/screenshots/split.jpeg" width="235" alt="Adjust the shares screen dividing ₹500 across three people, two shares marked Locked and the third absorbing the remainder"><br><sub><b>Split</b><br>edit one share, the rest redistribute</sub></td>
-<td align="center" width="33%"><img src="docs/screenshots/groups.jpeg" width="235" alt="Group screen for a trip with five members, showing who pays whom above where everyone stands, in the Amoled theme"><br><sub><b>Groups</b><br>a trip, in one of six themes</sub></td>
+<td align="center" width="33%"><img src="docs/screenshots/balances.jpeg" width="235" alt="Balances screen in the Paper theme. Overall, plus ₹13,505.50 and plus $1,050.25 on separate lines above a double rule, then four people: Asha owes you ₹1,200, you owe Bilal ₹40, Chaitanya owes you ₹12,345.50, Diego owes you $1,050.25"><br><sub><b>Balances</b><br>one figure per currency, never summed</sub></td>
+<td align="center" width="33%"><img src="docs/screenshots/split.jpeg" width="235" alt="Adjust the shares screen in the Midnight theme, splitting ₹2,400 for dinner four ways. Asha is locked at ₹800 and Bilal at ₹533.33; you and Chaitanya take up the rest, and the shares add up to ₹2,400"><br><sub><b>Split</b><br>edit one share, the rest redistribute</sub></td>
+<td align="center" width="33%"><img src="docs/screenshots/groups.jpeg" width="235" alt="Group screen for Goa, October in the Amoled theme: four members and three expenses. Who pays whom lists three payments to you, above where everyone stands"><br><sub><b>Groups</b><br>a trip, in one of six themes</sub></td>
 </tr>
 </table>
 
@@ -155,7 +155,7 @@ Kotlin and Jetpack Compose with Material 3. Room for storage, with exported sche
 
 Type is Anek Latin by Ek Type for amounts and titles and Figtree for everything else, shipped as static subset instances because API 24 and 25 ignore variable font axes.
 
-375 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec and theme contrast, and 135 instrumentation tests covering every migration, the full migration chain, and the settle, reopen, rollback, edit, delete, reconcile and move-debt paths against a real database.
+387 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec and theme contrast, and 143 instrumentation tests covering every migration, the full migration chain, and the settle, reopen, rollback, edit, delete, reconcile and move-debt paths against a real database.
 
 ## Build from source
 
