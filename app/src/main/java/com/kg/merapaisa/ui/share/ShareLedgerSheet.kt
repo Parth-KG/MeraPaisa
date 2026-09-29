@@ -147,6 +147,18 @@ fun ShareLedgerSheet(
                     )
                 }
             }
+            // The balance on the main screen counts groups, and a link does not carry them, so the
+            // figure above could look wrong next to it without this.
+            if (state.groupPartMinor != 0L) {
+                Text(
+                    "What your groups add (" +
+                        amountString(kotlin.math.abs(state.groupPartMinor), state.currency) +
+                        ") isn't in the link. Group expenses stay on this phone.",
+                    style = MeraPaisaType.label,
+                    color = theme.textSecondary,
+                    modifier = Modifier.padding(horizontal = Spacing.lg).padding(top = Spacing.sm)
+                )
+            }
 
             Row(
                 modifier = Modifier

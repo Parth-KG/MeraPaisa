@@ -1,5 +1,8 @@
 package com.kg.merapaisa.ui
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -32,6 +35,7 @@ import com.kg.merapaisa.ui.dialogs.CreateGroupDialog
 import com.kg.merapaisa.ui.dialogs.SettingsScreen
 import com.kg.merapaisa.ui.groups.AddExpenseDialog
 import com.kg.merapaisa.ui.groups.GroupDetailScreen
+import com.kg.merapaisa.ui.groups.EditGroupSheet
 import com.kg.merapaisa.ui.groups.GroupRow
 import com.kg.merapaisa.ui.groups.SettleUpSheet
 import com.kg.merapaisa.ui.groups.GroupsEmptyState
@@ -82,6 +86,10 @@ fun MainScreen(viewModel: MainViewModel) {
     val persons by viewModel.persons.collectAsState()
     val groups by viewModel.groups.collectAsState()
     val ui by viewModel.uiState.collectAsState()
+    val ledgerReady by viewModel.ledgerReady.collectAsState()
+    // Landscape on a phone. The keypad alone is taller than the screen there, so while someone is
+    // picked it gets the whole screen and scrolls; it used to be cut off with its keys unreachable.
+    val shortScreen = LocalConfiguration.current.screenHeightDp < SHORT_SCREEN_DP
     // Asked before Settle up writes anything. It records a closing entry, and a payment in every
     // group the two of you share, and Reopen does not take any of that back.
     var confirmSettle by remember { mutableStateOf<com.kg.merapaisa.data.PersonWithBalance?>(null) }
@@ -192,7 +200,8 @@ fun MainScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(Spacing.lg))
 
-            if (ui.tab == Tab.Active) {
+            val keypadTakesScreen = shortScreen && ui.selectedId != null && ui.tab != Tab.Groups
+            if (ui.tab == Tab.Active && ledgerReady && !keypadTakesScreen) {
                 NetPosition(
                     totals = netTotalsByCurrency(list),
                     modifier = Modifier.windowInsetsPadding(
@@ -203,8 +212,11 @@ fun MainScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(Spacing.md))
 
-            // Groups get their own list; Active and Settled share the people list.
-            if (ui.tab == Tab.Groups) {
+            // Groups get their own list; Active and Settled share the people list. Nothing at all
+            // until the ledger has been read, rather than an empty state that is not true.
+            if (!ledgerReady || keypadTakesScreen) {
+                if (!keypadTakesScreen) Spacer(Modifier.weight(1f))
+            } else if (ui.tab == Tab.Groups) {
                 if (groups.isEmpty()) {
                     GroupsEmptyState(
                         modifier = Modifier
@@ -288,6 +300,9 @@ fun MainScreen(viewModel: MainViewModel) {
                     showNote = ui.showNote,
                     onToggleNote = viewModel::toggleNoteField,
                     onKey = viewModel::onKeyPress,
+                    modifier = if (keypadTakesScreen) {
+                        Modifier.weight(1f).verticalScroll(rememberScrollState())
+                    } else Modifier,
                     onAdd = {
                         val amount = parseAmountToMinor(ui.input) ?: return@NumPad
                         viewModel.recordAmount(selectedPerson.id, amount, ui.note)
@@ -314,6 +329,9 @@ fun MainScreen(viewModel: MainViewModel) {
             Row(
                 modifier = Modifier.height(IntrinsicSize.Min)
                     .fillMaxWidth()
+                    // Hidden from TalkBack with the ledger they belong to. They sit outside it in
+                    // the layout, so "New group" was still offered from behind a group's screen.
+                    .then(if (covered) Modifier.clearAndSetSemantics { } else Modifier)
                     .windowInsetsPadding(WindowInsets.safeDrawing)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -414,6 +432,10 @@ fun MainScreen(viewModel: MainViewModel) {
         }
         if (ui.showSettingsDialog) {
             val appLockEnabled by SecurityStore.isAppLockEnabled(context).collectAsState(initial = false)
+            // Settings stays open under Backup, Update and Import, which are opened from it, and
+            // TalkBack could still reach its controls from behind them, as it once could the ledger.
+            val settingsCovered = ui.backup != null || ui.import != null || ui.update != null
+            Box(Modifier.fillMaxSize().then(if (settingsCovered) Modifier.clearAndSetSemantics { } else Modifier)) {
             SettingsScreen(
                 currentThemeName = theme.name,
                 appLockEnabled = appLockEnabled,
@@ -447,6 +469,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     viewModel.showSettingsDialog(false)
                 }
             )
+            }
         }
     }
     val openGroupId = ui.openGroupId
@@ -454,6 +477,7 @@ fun MainScreen(viewModel: MainViewModel) {
         val detail by viewModel.openGroup.collectAsState()
         val selfId by viewModel.selfId.collectAsState()
         val summary = groups.firstOrNull { it.group.id == openGroupId }
+        var editingGroup by remember(openGroupId) { mutableStateOf(false) }
 
         BackHandler(enabled = true) { viewModel.openGroup(null) }
 
@@ -470,8 +494,22 @@ fun MainScreen(viewModel: MainViewModel) {
                 onAddExpense = { viewModel.showAddExpenseDialog(true) },
                 onSettleUp = { viewModel.showSettleUp(true) },
                 onDeleteExpense = viewModel::deleteExpense,
-                onSimplifyChange = viewModel::setSimplifyDebts
+                onSimplifyChange = viewModel::setSimplifyDebts,
+                onEdit = { editingGroup = true }
             )
+
+            if (editingGroup) {
+                EditGroupSheet(
+                    group = summary.group,
+                    members = loaded.members,
+                    people = persons,
+                    onDismiss = { editingGroup = false },
+                    onSave = { name, added ->
+                        editingGroup = false
+                        viewModel.editGroup(summary.group.id, name, added)
+                    }
+                )
+            }
 
             if (ui.showAddExpenseDialog) {
                 AddExpenseDialog(
@@ -617,10 +655,10 @@ fun MainScreen(viewModel: MainViewModel) {
         // removing an expense outright.
         val sharedNote = when (groupSharedCount) {
             0 -> ""
-            1 -> " Their share of 1 group expense someone else paid for passes to whoever " +
-                "paid it."
-            else -> " Their share of $groupSharedCount group expenses other people paid " +
-                "for passes to whoever paid them."
+            // "Someone else" read wrong when the one who paid was you.
+            1 -> " Their share of 1 group expense passes to whoever paid for it."
+            else -> " Their share of $groupSharedCount group expenses passes to whoever paid " +
+                "for each."
         }
         // An even balance is nothing to lose, so it is not named as a loss: "Removes their ₹0
         // balance and 0 entries" read as though something were at stake. A balance with no
@@ -792,3 +830,6 @@ fun MainScreen(viewModel: MainViewModel) {
  * list that stopped short of this put its last row's amount and history button behind them.
  */
 private val ListClearance = 56.dp + Spacing.md * 2 + Spacing.sm
+
+/** Below this height the screen is a phone on its side. */
+private const val SHORT_SCREEN_DP = 480

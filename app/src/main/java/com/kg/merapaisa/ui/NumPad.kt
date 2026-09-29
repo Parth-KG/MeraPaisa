@@ -64,13 +64,14 @@ fun NumPad(
     note: String,
     onNoteChange: (String) -> Unit,
     showNote: Boolean,
-    onToggleNote: () -> Unit
+    onToggleNote: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val theme = LocalAppTheme.current
     val amountIsUsable = isUsableAmount(input)
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .background(theme.card)
             .windowInsetsPadding(

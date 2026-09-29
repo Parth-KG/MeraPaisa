@@ -258,11 +258,22 @@ fun EntryHistoryContent(
     }
 
     pendingReversal?.let { target ->
+        // The same entries PersonDao.rollbackTo sums: this one and everything at or after it.
+        // Naming the figure is what makes "reverse" something you can check before tapping.
+        val undone = entries.filter { it.timestamp >= target.timestamp }
+        val reversal = -undone.sumOf { it.amountMinor }
+        val newer = undone.size - 1
+        val which = when (newer) {
+            0 -> "this entry"
+            1 -> "this entry and the 1 newer one"
+            else -> "this entry and the $newer newer ones"
+        }
+        val side = if (reversal >= 0) "your" else "their"
         DecisionDialog(
-            title = "Reverse this entry and the newer ones?",
-            body = "Adds one entry that cancels this one and every entry newer than it, so " +
-                "${person.name}'s balance goes back to what it was before. Nothing is deleted: " +
-                "the old entries stay in the history.",
+            title = if (newer == 0) "Reverse this entry?" else "Reverse this entry and the newer ones?",
+            body = "Adds one entry of ${amountString(reversal, person.currency, SignStyle.None)} in " +
+                "$side favour that cancels $which, so ${person.name}'s balance goes back to what " +
+                "it was before. Nothing is deleted: the old entries stay in the history.",
             confirmLabel = "Reverse entries",
             dismissLabel = "Don't reverse",
             // Not destructive: it writes a line rather than removing any, so it takes the accent

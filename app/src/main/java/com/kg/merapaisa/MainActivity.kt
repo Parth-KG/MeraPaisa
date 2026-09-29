@@ -69,15 +69,17 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val context = this
-            val themeName by ThemeStore.getTheme(context).collectAsState(initial = "Midnight")
-            val currentTheme = getThemeByName(themeName)
+            // null until DataStore answers. Starting from a default drew one theme for a moment
+            // and then switched to the chosen one, a flash on every launch.
+            val themeName by ThemeStore.getTheme(context).collectAsState(initial = null)
+            val currentTheme = getThemeByName(themeName ?: "Midnight")
             // null while DataStore is still answering. Neither enabled nor disabled yet.
             val lockEnabled by SecurityStore.isAppLockEnabled(context).collectAsState(initial = null)
             val known = lockEnabled != null
             val showLock = lockEnabled == true && lock.locked
 
             // Hold the splash rather than show a ledger that may be meant to be behind a lock.
-            splash.setKeepOnScreenCondition { !known }
+            splash.setKeepOnScreenCondition { !known || themeName == null }
 
             LaunchedEffect(lockEnabled) {
                 // Both ways: turning the lock on mid-session has to hide the ledger from screenshots
@@ -116,7 +118,7 @@ class MainActivity : FragmentActivity() {
             MeraPaisaTheme(theme = currentTheme) {
                 CompositionLocalProvider(LocalAppTheme provides currentTheme) {
                     when {
-                        !known -> Unit
+                        !known || themeName == null -> Unit
                         showLock -> LockedScreen(
                             onUnlock = { promptToUnlock(this@MainActivity) { lock.onUnlocked() } }
                         )

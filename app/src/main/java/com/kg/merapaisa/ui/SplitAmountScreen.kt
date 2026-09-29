@@ -1,5 +1,8 @@
 package com.kg.merapaisa.ui
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import com.kg.merapaisa.data.currencyDecimals
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -66,8 +69,14 @@ fun SplitAmountScreen(
 ) {
     val theme = LocalAppTheme.current
     val typedMinor = parseAmountToMinor(amount)
+    // On its side the keypad does not fit under the heading, so the screen scrolls instead of
+    // spacing things out. It was cut off with half its keys unreachable.
+    val short = LocalConfiguration.current.screenHeightDp < 480
 
-    Column(modifier = Modifier.fillMaxSize().background(theme.background).coversLedger()) {
+    Column(
+        modifier = Modifier.fillMaxSize().background(theme.background).coversLedger()
+            .then(if (short) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+    ) {
 
         SplitStepBar(onCancel = onCancel)
 
@@ -76,7 +85,7 @@ fun SplitAmountScreen(
             supporting = "Every share is worked out from this amount, in this currency."
         )
 
-        Spacer(Modifier.weight(1f))
+        Spacer(if (short) Modifier.height(Spacing.lg) else Modifier.weight(1f))
 
         TypedSplitAmount(entry = amount, currency = currency)
 
@@ -108,7 +117,7 @@ fun SplitAmountScreen(
             }
         }
 
-        Spacer(Modifier.weight(1f))
+        Spacer(if (short) Modifier.height(Spacing.lg) else Modifier.weight(1f))
 
         SplitKeypad(entry = amount, currency = currency, onEntryChange = onAmountChange)
 

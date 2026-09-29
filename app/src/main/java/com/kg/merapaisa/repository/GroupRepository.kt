@@ -56,6 +56,19 @@ class GroupRepository(
     /** Group expenses this person only shared. Deleting them passes those shares to the payer. */
     fun expensesSharedBy(personId: Long): Flow<Int> = groupDao.expenseCountSharedBy(personId)
 
+    /**
+     * Renames a group and adds people to it. Adding someone moves no balance: they owe nothing for
+     * expenses recorded before they joined, because their share of those does not exist.
+     */
+    suspend fun editGroup(groupId: Long, name: String, newMemberIds: List<Long>) {
+        val group = groupDao.getGroup(groupId).first() ?: return
+        if (name.isNotBlank() && name != group.name) groupDao.updateGroup(group.copy(name = name))
+        if (newMemberIds.isNotEmpty()) {
+            groupDao.addMembers(newMemberIds.distinct().map { GroupMember(groupId = groupId, personId = it) })
+        }
+        notifier.onLedgerChanged()
+    }
+
     /** Creates a group with you and the chosen people in it. */
     suspend fun createGroup(
         name: String,

@@ -63,6 +63,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import com.kg.merapaisa.ui.DecisionDialog
 import com.kg.merapaisa.ui.format.amountString
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.TextButton
 
 /**
  * One group: where everybody stands, what has been spent, and a way to square it up.
@@ -86,7 +88,9 @@ fun GroupDetailScreen(
     onAddExpense: () -> Unit,
     onSettleUp: () -> Unit,
     onDeleteExpense: (Long) -> Unit,
-    onSimplifyChange: (Boolean) -> Unit
+    onSimplifyChange: (Boolean) -> Unit,
+    /** Rename the group or add people to it. Null hides the button. */
+    onEdit: (() -> Unit)? = null
 ) {
     val theme = LocalAppTheme.current
     val names = remember(members) { MemberNames(members) }
@@ -119,6 +123,14 @@ fun GroupDetailScreen(
                     contentDescription = "Back",
                     tint = theme.textPrimary
                 )
+            }
+            if (onEdit != null) {
+                Spacer(Modifier.weight(1f))
+                // Top right, as Clear history is on a person's history: a thing you do to the
+                // group itself, rare enough not to take the foot of the screen.
+                TextButton(onClick = onEdit, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text("Edit group", style = MeraPaisaType.action, color = theme.textPrimary)
+                }
             }
         }
 

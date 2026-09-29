@@ -1,5 +1,7 @@
 package com.kg.merapaisa.ui.share
 
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import com.kg.merapaisa.data.ShareScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -139,6 +141,8 @@ private fun PastingScreen(
             OutlinedTextField(
                 value = state.text,
                 onValueChange = onTextChange,
+                // A link, not prose: autocorrect split "MeraPaisa" in one into two words.
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false),
                 label = { Text("Link or message", style = MeraPaisaType.label) },
                 textStyle = MeraPaisaType.body,
                 shape = Shapes.medium,
@@ -301,7 +305,10 @@ private fun ConfirmingScreen(
             // afterwards is the one phrasing that cannot be misread, and it is the number the user
             // can check against the list on the way back.
             val target = persons.firstOrNull { it.id == state.targetPersonId }
-            val after = if (state.showsDifferences && target != null) target.balanceMinor + netHere else null
+            // For anyone already in the ledger, not only when a comparison is shown: an update link
+            // from someone who owes you ₹483 read "You will owe ₹150", which was the link's change
+            // and not where they stood.
+            val after = target?.let { it.balanceMinor + netHere }
 
             Column(modifier = Modifier.padding(top = Spacing.xl)) {
                 Outcome(

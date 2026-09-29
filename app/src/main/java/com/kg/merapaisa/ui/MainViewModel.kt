@@ -56,6 +56,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Dispatchers
@@ -86,17 +87,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val exchangeRates = ExchangeRateApi()
     private val updates = UpdateCheck()
 
-    val groups = groupRepository.groupSummaries().stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    // null until the first read comes back, so the screen can tell "nobody here" from "not
+    // loaded yet". Treating the two alike showed "No one here yet" for a moment on every launch.
+    private val groupsOrNull = groupRepository.groupSummaries()
+        .map<List<com.kg.merapaisa.data.GroupSummary>, List<com.kg.merapaisa.data.GroupSummary>?> { it }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val persons = repository.personsWithBalances().stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    val groups = groupsOrNull.map { it.orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val personsOrNull = repository.personsWithBalances()
+        .map<List<PersonWithBalance>, List<PersonWithBalance>?> { it }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val persons = personsOrNull.map { it.orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Both lists have been read at least once. */
+    val ledgerReady = combine(personsOrNull, groupsOrNull) { p, g -> p != null && g != null }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState = _uiState.asStateFlow()
@@ -200,6 +209,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteGroup(groupId: Long) {
         viewModelScope.launch { groupRepository.deleteGroup(groupId) }
+    }
+
+    fun editGroup(groupId: Long, name: String, newMemberIds: List<Long>) {
+        viewModelScope.launch { groupRepository.editGroup(groupId, name, newMemberIds) }
     }
 
     fun showSettingsDialog(show: Boolean) = _uiState.update { it.copy(showSettingsDialog = show) }
@@ -446,6 +459,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val person = persons.value.firstOrNull { it.id == personId }
             val entries = repository.entriesToShare(personId, fullHistory = false)
             val onlyTheirs = entries.isEmpty() && repository.onlyTheirEntriesAreNew(personId)
+            val groupPart = (person?.balanceMinor ?: 0L) - repository.transactionsNow(personId).sumOf { it.amountMinor }
             // Blank rather than "You": the sheet asks for a real name the first time, because
             // "You" means nothing on the recipient's phone.
             //
@@ -463,7 +477,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         senderName = myName,
                         entryCount = entries.size,
                         netMinor = entries.sumOf { e -> e.amountMinor },
-                        onlyTheirsAreNew = onlyTheirs
+                        onlyTheirsAreNew = onlyTheirs,
+                        groupPartMinor = groupPart
                     )
                 )
             }
