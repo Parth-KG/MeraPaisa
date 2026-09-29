@@ -156,7 +156,7 @@ fun MoveDebtDialog(
 
             // The same keypad the rest of the app enters money with, so the rules about decimal
             // points and leading zeros are the ones people already know.
-            AmountKeypad(onKey = onKey)
+            AmountKeypad(currency = state.currency, onKey = onKey)
 
             SheetHeading("Move it to")
 
@@ -322,15 +322,20 @@ private fun TypedAmount(input: String, currency: String) {
 
 /** The keypad, built the same way the one on the balances screen is, down to the backspace key. */
 @Composable
-private fun AmountKeypad(onKey: (String) -> Unit) {
-    val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", BACKSPACE)
+private fun AmountKeypad(currency: String, onKey: (String) -> Unit) {
+    // As on the other keypads: no point for a currency with no fractions.
+    val point = if (com.kg.merapaisa.data.currencyDecimals(currency) == 0) "" else "."
+    val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", point, "0", BACKSPACE)
     Column(
         modifier = Modifier.padding(horizontal = Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         keys.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                row.forEach { key -> Key(key, onKey, Modifier.weight(1f)) }
+                row.forEach { key ->
+                    if (key.isEmpty()) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                    else Key(key, onKey, Modifier.weight(1f))
+                }
             }
         }
     }

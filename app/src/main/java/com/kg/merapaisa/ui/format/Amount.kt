@@ -186,6 +186,27 @@ fun amountSpoken(amountMinor: Long, currencyCode: String, name: String? = null):
     }
 }
 
+/**
+ * A figure read aloud with no direction: "1,250.50 rupees", and "0 rupees" rather than "even".
+ * For a figure being typed or a line in a plan, where "even" or "you owe" would be wrong.
+ */
+fun amountSpokenFigure(amountMinor: Long, currencyCode: String): String {
+    val parts = amountParts(amountMinor, currencyCode, SignStyle.None)
+    val code = normaliseCurrency(currencyCode)
+    return "${parts.digits} ${SPOKEN_UNITS[code] ?: code}"
+}
+
+/**
+ * One entry read aloud. An entry moves a balance rather than being one, so "you owe Asha 1,000
+ * rupees" was wrong for the entry that settled her up. Which side it counts for is what is true
+ * of every entry, a payment or a debt alike.
+ */
+fun entrySpoken(amountMinor: Long, currencyCode: String): String = when {
+    amountMinor > 0 -> "in your favour, " + amountSpokenFigure(amountMinor, currencyCode)
+    amountMinor < 0 -> "in their favour, " + amountSpokenFigure(amountMinor, currencyCode)
+    else -> "nothing either way"
+}
+
 /** Spoken names, because "₹" is read as "rupee sign" or skipped entirely. */
 private val SPOKEN_UNITS = mapOf(
     "INR" to "rupees",

@@ -1,5 +1,7 @@
 package com.kg.merapaisa.ui.dialogs
 
+import com.kg.merapaisa.ui.LabelAndAmount
+import com.kg.merapaisa.ui.format.entrySpoken
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -166,6 +168,38 @@ fun EntryHistoryContent(
             if (entries.isNotEmpty()) {
                 Text(count, style = MeraPaisaType.label, color = theme.textSecondary)
             }
+        }
+
+        // The balance counts group expenses too, and they are not entries here. Without this line
+        // the entries added up to less than the figure on the main screen and nothing said why.
+        val fromGroups = person.balanceMinor - entries.sumOf { it.amountMinor }
+        if (fromGroups != 0L) {
+            LabelAndAmount(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
+                    .clearAndSetSemantics {
+                        contentDescription = "From groups you share, " + entrySpoken(fromGroups, person.currency)
+                    },
+                label = {
+                    Column {
+                        Text("From groups you share", style = MeraPaisaType.bodyStrong, color = theme.textPrimary)
+                        Text(
+                            "Not entries here. Open the group to see them.",
+                            style = MeraPaisaType.label,
+                            color = theme.textSecondary
+                        )
+                    }
+                },
+                amount = {
+                    AmountText(
+                        amountMinor = fromGroups,
+                        currencyCode = person.currency,
+                        style = MeraPaisaType.amount
+                    )
+                }
+            )
         }
 
         if (entries.isEmpty()) {
@@ -387,7 +421,7 @@ private fun EntryRow(
                 // button beside it stays a stop of its own.
                 .semantics(mergeDescendants = true) {
                     contentDescription =
-                        "$title, $time, ${amountSpoken(entry.amountMinor, person.currency, person.name)}"
+                        "$title, $time, ${entrySpoken(entry.amountMinor, person.currency)}"
                 },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md)

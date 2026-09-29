@@ -1,5 +1,8 @@
 package com.kg.merapaisa.ui
 
+import kotlinx.coroutines.delay
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -104,6 +107,24 @@ fun MainScreen(viewModel: MainViewModel) {
     val activePersons = persons.filter { !it.isSettled }
     val settledPersons = persons.filter { it.isSettled }
     val list = if (ui.tab == Tab.Active) activePersons else settledPersons
+    val peopleListState = rememberLazyListState()
+    // The keypad takes the bottom of the screen when someone is picked, and the list shrinks to
+    // make room. A row low in the list then sat half under the keypad, the name cut off at the
+    // very moment you are typing an amount for it. Once the keypad is in, bring the row into view.
+    LaunchedEffect(ui.selectedId) {
+        val id = ui.selectedId ?: return@LaunchedEffect
+        val index = list.indexOfFirst { it.id == id }
+        if (index < 0) return@LaunchedEffect
+        delay(Motion.quick.toLong() + 50)
+        val info = peopleListState.layoutInfo
+        val row = info.visibleItemsInfo.firstOrNull { it.index == index }
+        if (row == null) {
+            peopleListState.animateScrollToItem(index)
+        } else {
+            val hidden = row.offset + row.size - (info.viewportEndOffset - info.afterContentPadding)
+            if (hidden > 0) peopleListState.animateScrollBy(hidden.toFloat())
+        }
+    }
     val selectedPerson = persons.find { it.id == ui.selectedId }
     val editingPerson = persons.find { it.id == ui.editingPersonId }
     val historyPerson = persons.find { it.id == ui.historyPersonId }
@@ -223,10 +244,12 @@ fun MainScreen(viewModel: MainViewModel) {
                     onAddPerson = { viewModel.showAddDialog(true) }
                 )
             } else LazyColumn(
+                state = peopleListState,
                 modifier = Modifier
                     .weight(1f)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
-                contentPadding = PaddingValues(bottom = ListClearance)
+                // No room kept for the corner buttons while the keypad is up: they are hidden then.
+                contentPadding = PaddingValues(bottom = if (ui.selectedId == null) ListClearance else 0.dp)
             ) {
                 itemsIndexed(list, key = { _, it -> it.id }) { index, person ->
                     if (index > 0) RowDivider()

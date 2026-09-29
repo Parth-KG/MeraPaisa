@@ -1,5 +1,6 @@
 package com.kg.merapaisa.ui.groups
 
+import com.kg.merapaisa.ui.format.amountSpokenFigure
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -218,7 +219,8 @@ internal fun TransferRow(
  * spoken name, and a group has one currency, so naming it once per line is enough.
  */
 internal fun spokenFigure(amountMinor: Long, currency: String): String =
-    "${amountParts(amountMinor, currency, SignStyle.None).digits} ${normaliseCurrency(currency)}"
+    // "333.33 rupees", as everywhere else, not "333.33 INR".
+    amountSpokenFigure(amountMinor, currency)
 
 /**
  * How a sentence in a group names a member.

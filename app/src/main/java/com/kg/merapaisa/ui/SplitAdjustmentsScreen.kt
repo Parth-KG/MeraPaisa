@@ -1,5 +1,7 @@
 package com.kg.merapaisa.ui
 
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import com.kg.merapaisa.data.isTypableAmount
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -451,13 +453,16 @@ private fun SplitShareRow(
     // snapped "600" back to "60.00" on the first backspace, so a share could not be cleared, and
     // the next digit landed after the ".00".
     var editing by remember { mutableStateOf(false) }
-    var typed by remember { mutableStateOf("") }
+    var typed by remember { mutableStateOf(TextFieldValue("")) }
+    // Set on the tap that focuses the field, so that tap's own cursor placement does not undo the
+    // select-all below.
+    var justFocused by remember { mutableStateOf(false) }
     // At rest the share is grouped like every other figure (12,345.50); while it is being typed
     // it is plain digits, because grouping commas would not parse back. Either way a whole share
     // shows no ".00", and paise keep both digits: 600, but 2469.10, never 2469.1.
     val plain = formatMinorPlain(shownMinor, sourceCurrency, trimZeros = false).removeSuffix(".00")
     val grouped = amountParts(shownMinor, sourceCurrency, SignStyle.None).digits
-    val text = if (editing) typed else grouped
+    val text = if (editing) typed else TextFieldValue(grouped, TextRange(grouped.length))
 
     val supporting = when {
         convertedAmountMinor != null && participant.currency != sourceCurrency && locked ->
@@ -519,12 +524,22 @@ private fun SplitShareRow(
             )
             BasicTextField(
                 value = text,
-                onValueChange = { newText ->
+                onValueChange = { value ->
+                    val newText = value.text
+                    // The tap that focused the field places a cursor where the finger landed,
+                    // which on a right-aligned figure is usually before it. Typing then went in
+                    // front: 300 became 400300. The share arrives selected instead, so typing
+                    // replaces it; that first cursor move is ignored.
+                    if (justFocused && newText == typed.text) {
+                        justFocused = false
+                        return@BasicTextField
+                    }
+                    justFocused = false
                     // The same filter as every other amount field: no sign, no point in yen, and
                     // no more digits than the keypad allows. An emptied field is a zero share,
                     // not the old share hidden behind a blank box.
                     if (isTypableAmount(newText, sourceCurrency)) {
-                        typed = newText
+                        typed = value
                         if (newText.isEmpty()) onAmountChange(0L)
                         else parseAmountToMinor(newText)?.let { onAmountChange(it) }
                     }
@@ -541,7 +556,10 @@ private fun SplitShareRow(
                 modifier = Modifier
                     .widthIn(min = 56.dp, max = 140.dp)
                     .onFocusChanged { state ->
-                        if (state.isFocused && !editing) typed = plain
+                        if (state.isFocused && !editing) {
+                            typed = TextFieldValue(plain, TextRange(0, plain.length))
+                            justFocused = true
+                        }
                         editing = state.isFocused
                     }
             )

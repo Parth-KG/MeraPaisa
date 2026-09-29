@@ -398,8 +398,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** Nullable so a screen can start at "not known yet" rather than at zero. */
     fun getGroupCount(personId: Long): kotlinx.coroutines.flow.Flow<Int?> = groupRepository.groupCountFor(personId).map { it }
 
-    suspend fun convertCurrency(amountMinor: Long, from: String, to: String): Long? =
-        exchangeRates.convert(amountMinor, from, to)
+    /**
+     * Converts at today's rate, asked for once per pair and reused for ten minutes.
+     *
+     * A split converts every foreign share again whenever a share changes, and asking the service
+     * each time meant one refused or slow request turned a working split into "Couldn't get
+     * today's rate" moments after it had one. The rate does not change within a split.
+     */
+    suspend fun convertCurrency(amountMinor: Long, from: String, to: String): Long? {
+        if (from == to || amountMinor == 0L) return amountMinor
+        val key = from to to
+        val now = System.currentTimeMillis()
+        val rate = rateCache[key]?.takeIf { now - it.first < RATE_REUSE_MS }?.second
+            ?: exchangeRates.rate(from, to)?.also { rateCache[key] = now to it }
+            ?: return null
+        return com.kg.merapaisa.network.convertedMinor(
+            amountMinor, com.kg.merapaisa.network.requestAmountMajor(amountMinor) * rate
+        )
+    }
+
+    private val rateCache = java.util.concurrent.ConcurrentHashMap<Pair<String, String>, Pair<Long, Double>>()
 
     fun deletePerson(person: Person) {
         viewModelScope.launch {
@@ -1253,3 +1271,5 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 }
+
+private const val RATE_REUSE_MS = 10 * 60 * 1000L

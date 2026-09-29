@@ -174,7 +174,8 @@ fun TypedAmountText(
         maxLines = 1,
         autoSize = shrinkToFit(style),
         modifier = modifier.clearAndSetSemantics {
-            contentDescription = amountSpoken(
+            // A figure being typed has no direction yet: "0 rupees", never "even".
+            contentDescription = amountSpokenFigure(
                 com.kg.merapaisa.data.parseAmountToMinor(entry) ?: 0L,
                 currencyCode
             )

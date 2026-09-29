@@ -117,12 +117,13 @@ fun EditEntrySheet(
                 label = { Text("Amount in ${currencySymbol(currency)}") },
                 supportingText = {
                     // Says which way the entry runs while it is valid, and what to type when it
-                    // is not. The minus is the plain keyboard one, because that is the key the
+                    // is not. Worded as a change, not a debt: "You owe them this" was wrong for
+                    // the entry that settled someone up, which is a payment to you. The minus is the plain keyboard one, because that is the key the
                     // field can actually read.
                     Text(
                         when {
-                            amountMinor != null && amountMinor > 0L -> "They owe you this"
-                            amountMinor != null && amountMinor < 0L -> "You owe them this"
+                            amountMinor != null && amountMinor > 0L -> "In your favour: they owe you this much more"
+                            amountMinor != null && amountMinor < 0L -> "In their favour: they owe you this much less"
                             amountMinor == 0L ->
                                 "An entry of zero moves nothing. Type another amount, or delete " +
                                     "this entry."
