@@ -434,7 +434,7 @@ fun MainScreen(viewModel: MainViewModel) {
             }
             if (ui.showSettleUp) {
                 SettleUpSheet(
-                    balances = loaded.balances,
+                    transfers = loaded.transfers,
                     members = loaded.members,
                     currency = summary.group.currency,
                     onRecord = { t -> viewModel.recordTransfer(t.fromPersonId, t.toPersonId, t.amountMinor) },

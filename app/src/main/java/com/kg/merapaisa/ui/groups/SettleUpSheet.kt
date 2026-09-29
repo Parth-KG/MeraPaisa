@@ -26,11 +26,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
-import com.kg.merapaisa.data.MemberBalance
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.Transfer
 import com.kg.merapaisa.data.normaliseCurrency
-import com.kg.merapaisa.data.settleUp
 import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.format.AmountText
 import com.kg.merapaisa.ui.format.SignStyle
@@ -41,8 +39,12 @@ import com.kg.merapaisa.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
 /**
- * The fewest payments that square the group up. Balances that pass through a member (A owes B, B
- * owes C) collapse, so nobody hands money over just to hand it straight on.
+ * The payments that make everyone in the group even, worked out the way the group is set to: the
+ * fewest payments, or each debt kept with the expense that created it.
+ *
+ * It used to work out its own plan, always the fewest payments, whatever the group was set to. With
+ * that setting off, the group screen listed one set of payments and this sheet offered to record a
+ * different set. The plan now comes in from the same place the group screen gets it.
  *
  * It was called a sheet and built as an AlertDialog, which put a scrolling list of payments inside
  * a box sized for a question. A dialog is for a decision; a list you work down one line at a time
@@ -51,14 +53,13 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettleUpSheet(
-    balances: List<MemberBalance>,
+    transfers: List<Transfer>,
     members: List<Person>,
     currency: String,
     onRecord: (Transfer) -> Unit,
     onDismiss: () -> Unit
 ) {
     val theme = LocalAppTheme.current
-    val transfers = settleUp(balances)
     val nameOf = { id: Long -> members.firstOrNull { it.id == id }?.name ?: "Someone" }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
