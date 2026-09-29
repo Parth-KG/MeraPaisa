@@ -467,7 +467,7 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
         val person = Fixtures.chaitanya
         DecisionDialog(
             title = "Delete ${person.name}?",
-            body = "Removes their ${amountString(person.balanceMinor, person.currency)} balance and " +
+            body = "Removes the ${amountString(person.balanceMinor, person.currency)} they owe you and their " +
                 "23 entries. It also removes 2 group expenses they paid for, changing what the " +
                 "other members of those groups owe. This can't be undone.",
             confirmLabel = "Delete",

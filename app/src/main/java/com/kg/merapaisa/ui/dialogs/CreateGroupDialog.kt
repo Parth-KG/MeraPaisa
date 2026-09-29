@@ -39,6 +39,7 @@ import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.SUPPORTED_CURRENCIES
 import com.kg.merapaisa.data.currencySymbol
+import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
@@ -68,6 +69,13 @@ fun CreateGroupDialog(
     var selected by remember { mutableStateOf(setOf<Long>()) }
     // Defaults to on, which is what every group has done since groups shipped.
     var simplifyDebts by remember { mutableStateOf(true) }
+
+    // Only people kept in the group's currency can join it. A member's group share is added to
+    // their own balance, so a dollar person in a rupee group had rupees added to dollars: a
+    // figure nobody owes. Changing the currency drops anyone picked who no longer fits.
+    val eligible = people.filter { normaliseCurrency(it.currency) == normaliseCurrency(currency) }
+    val leftOut = people.size - eligible.size
+    val chosen = selected.filterTo(mutableSetOf()) { id -> eligible.any { it.id == id } }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -149,9 +157,20 @@ fun CreateGroupDialog(
             }
 
             FormHeading(
-                if (selected.isEmpty()) "Who else is in it?"
-                else "${selected.size} selected, plus you"
+                if (chosen.isEmpty()) "Who else is in it?"
+                else "${chosen.size} selected, plus you"
             )
+
+            if (leftOut > 0 && eligible.isNotEmpty()) {
+                Text(
+                    "Only people kept in ${currencySymbol(currency)} can join a group in " +
+                        "${currencySymbol(currency)}. ${if (leftOut == 1) "1 person uses" else "$leftOut people use"} " +
+                        "another currency.",
+                    style = MeraPaisaType.label,
+                    color = theme.textSecondary,
+                    modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.sm)
+                )
+            }
 
             if (people.isEmpty()) {
                 Text(
@@ -160,10 +179,18 @@ fun CreateGroupDialog(
                     color = theme.textSecondary,
                     modifier = Modifier.padding(horizontal = Spacing.lg)
                 )
+            } else if (eligible.isEmpty()) {
+                Text(
+                    "Nobody is kept in ${currencySymbol(currency)}. Pick another currency, or add " +
+                        "a person in ${currencySymbol(currency)} first.",
+                    style = MeraPaisaType.body,
+                    color = theme.textSecondary,
+                    modifier = Modifier.padding(horizontal = Spacing.lg)
+                )
             } else {
-                people.forEachIndexed { index, person ->
+                eligible.forEachIndexed { index, person ->
                     if (index > 0) RowDivider()
-                    val isIn = person.id in selected
+                    val isIn = person.id in chosen
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -212,13 +239,13 @@ fun CreateGroupDialog(
             }
             Button(
                 onClick = {
-                    val members = selected.toList()
+                    val members = chosen.toList()
                     val groupName = name.trim()
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
                         onCreate(groupName, currency, members, simplifyDebts)
                     }
                 },
-                enabled = name.isNotBlank() && selected.isNotEmpty(),
+                enabled = name.isNotBlank() && chosen.isNotEmpty(),
                 shape = Shapes.small,
                 modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(

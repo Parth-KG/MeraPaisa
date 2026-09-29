@@ -542,11 +542,18 @@ fun MainScreen(viewModel: MainViewModel) {
         // An even balance is nothing to lose, so it is not named as a loss: "Removes their ₹0
         // balance and 0 entries" read as though something were at stake. A balance with no
         // entries behind it is possible too, when all of it comes from group expenses.
-        val balance = amountString(target.balanceMinor, target.currency)
+        //
+        // The figure goes in unsigned, with the direction in words: "Removes their − ₹40 balance"
+        // read as arithmetic, where "the ₹40 you owe them" says what is at stake.
+        val figure = amountString(kotlin.math.abs(target.balanceMinor), target.currency)
+        val owed = when {
+            target.balanceMinor > 0 -> "the $figure they owe you"
+            target.balanceMinor < 0 -> "the $figure you owe them"
+            else -> null
+        }
         val lead = when {
-            target.balanceMinor != 0L && transactionCount > 0 ->
-                "Removes their $balance balance and $entries."
-            target.balanceMinor != 0L -> "Removes their $balance balance."
+            owed != null && transactionCount > 0 -> "Removes $owed and their $entries."
+            owed != null -> "Removes $owed."
             transactionCount > 0 -> "They're even. Removes their $entries."
             else -> "They're even and have no entries."
         }

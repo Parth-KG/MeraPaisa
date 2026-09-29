@@ -70,7 +70,13 @@ class MainActivity : FragmentActivity() {
             splash.setKeepOnScreenCondition { !known }
 
             LaunchedEffect(lockEnabled) {
-                if (lockEnabled == false) window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                // Both ways: turning the lock on mid-session has to hide the ledger from screenshots
+                // and the recents preview straight away, not from the next launch.
+                when (lockEnabled) {
+                    false -> window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    true -> window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    null -> Unit
+                }
             }
 
             // Re-applied on every theme change, not once at startup. The theme is not known in
