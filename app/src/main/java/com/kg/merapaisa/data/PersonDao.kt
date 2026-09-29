@@ -136,6 +136,14 @@ interface PersonDao {
      * for existing installs, but a fresh install builds the schema directly and never runs it.
      */
     @androidx.room.Transaction
+    /**
+     * Your own row's id, as it changes. A Replace restore deletes it and writes the backup's, or a
+     * new one, so anything that works balances out against "you" has to follow this rather than
+     * read it once.
+     */
+    @Query("SELECT id FROM persons WHERE isSelf = 1 LIMIT 1")
+    fun selfIdFlow(): Flow<Long?>
+
     suspend fun ensureSelf(): Person {
         getSelf()?.let { return it }
         insertPerson(Person(name = "You", pfpValue = "You", sortOrder = -1, isSelf = true))
@@ -392,10 +400,29 @@ interface PersonDao {
     @androidx.room.Transaction
     suspend fun clearTransactionsForPerson(personId: Long) {
         val outstanding = getBalanceNow(personId)
+        val sharedUpTo = getPersonNow(personId)?.lastSharedAt ?: 0L
+        // What the other phone has already been sent, and what it has not. A single opening entry
+        // stamped now would ride out on the next update link as new, and their phone would add
+        // the whole balance on top of the entries it already holds.
+        val notYetShared = if (sharedUpTo > 0L) sumTransactionsSince(personId, sharedUpTo + 1) else outstanding
+        val alreadyShared = outstanding - notYetShared
         deleteTransactionsForPerson(personId)
-        if (outstanding != 0L) {
+        val now = System.currentTimeMillis()
+        if (alreadyShared != 0L) {
             insertTransaction(
-                Transaction(personId = personId, amountMinor = outstanding, note = "Opening balance")
+                Transaction(personId = personId, amountMinor = alreadyShared, timestamp = now, note = "Opening balance")
+            )
+        }
+        if (sharedUpTo > 0L) setLastSharedAt(personId, now)
+        if (notYetShared != 0L) {
+            // One millisecond later, so it is past the watermark and still goes in the next link.
+            insertTransaction(
+                Transaction(
+                    personId = personId,
+                    amountMinor = notYetShared,
+                    timestamp = now + 1,
+                    note = if (alreadyShared == 0L) "Opening balance" else "Not yet shared"
+                )
             )
         }
     }

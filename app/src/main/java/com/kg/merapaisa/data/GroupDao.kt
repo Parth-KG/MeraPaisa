@@ -112,6 +112,10 @@ interface GroupDao {
      * How many group expenses this person fronted. Deleting them cascades those expenses away,
      * which moves every other member's position, so the confirmation has to say so.
      */
+    /** How many groups this person is in. Their currency is fixed while it is above zero. */
+    @Query("SELECT COUNT(*) FROM group_members WHERE personId = :personId")
+    fun groupCountFor(personId: Long): Flow<Int>
+
     @Query("SELECT COUNT(*) FROM expenses WHERE paidByPersonId = :personId")
     fun expenseCountPaidBy(personId: Long): Flow<Int>
 
@@ -170,13 +174,85 @@ interface GroupDao {
         // of the net position and the widget. Only you paying, or you sharing, moves a balance
         // with you; an expense between two other members does not.
         val selfId = selfIdNow() ?: return
-        val moved = when {
-            expense.paidByPersonId == selfId -> sharesByPerson.filter { it.value != 0L }.keys - selfId
-            (sharesByPerson[selfId] ?: 0L) != 0L -> setOf(expense.paidByPersonId)
-            else -> emptySet()
-        }
+        val moved = movedWithYou(expense.paidByPersonId, sharesByPerson, selfId)
         if (moved.isNotEmpty()) reopenPersons(moved.toList())
     }
+
+    /**
+     * Deletes one expense or payment and reopens whoever it had squared.
+     *
+     * The same rule as [recordExpense], run backwards: deleting the Settlement that Settle up wrote
+     * leaves the person owing again, and they have to come back out of the Settled tab to be
+     * counted in the net position and the widget.
+     */
+    @androidx.room.Transaction
+    suspend fun deleteExpenseAndReopen(expenseId: Long) {
+        val expense = getExpenseNow(expenseId) ?: return
+        val shares = getSharesForExpenseNow(expenseId).associate { it.personId to it.shareMinor }
+        deleteExpense(expenseId)
+        val selfId = selfIdNow() ?: return
+        reopenIfOwing(movedWithYou(expense.paidByPersonId, shares, selfId), selfId)
+    }
+
+    /** Deletes a group, reopening everyone whose balance with you it was part of. */
+    @androidx.room.Transaction
+    suspend fun deleteGroupAndReopen(groupId: Long) {
+        val selfId = selfIdNow()
+        val moved = if (selfId == null) emptySet() else {
+            val sharesByExpense = getSharesForGroupNow(groupId).groupBy { it.expenseId }
+            getExpensesForGroupNow(groupId).flatMap { expense ->
+                val shares = sharesByExpense[expense.id].orEmpty().associate { it.personId to it.shareMinor }
+                movedWithYou(expense.paidByPersonId, shares, selfId)
+            }.toSet()
+        }
+        deleteGroup(groupId)
+        if (selfId != null) reopenIfOwing(moved, selfId)
+    }
+
+    /**
+     * Reopens only those left owing. Deleting a whole group usually takes a Settle up payment
+     * with it, and someone that squares is still square.
+     */
+    private suspend fun reopenIfOwing(personIds: Set<Long>, selfId: Long) {
+        val owing = personIds.filter { fullBalanceNow(it, selfId) != 0L }
+        if (owing.isNotEmpty()) reopenPersons(owing)
+    }
+
+    /** The same figure as [PersonDao.getFullBalanceNow]: direct entries plus the group part. */
+    @Query(
+        """
+        SELECT COALESCE((SELECT SUM(amountMinor) FROM transactions WHERE personId = :personId), 0)
+            + COALESCE((SELECT SUM(s.shareMinor) FROM expense_shares s
+                        JOIN expenses e ON e.id = s.expenseId
+                        WHERE s.personId = :personId AND e.paidByPersonId = :selfId), 0)
+            - COALESCE((SELECT SUM(s2.shareMinor) FROM expense_shares s2
+                        JOIN expenses e2 ON e2.id = s2.expenseId
+                        WHERE s2.personId = :selfId AND e2.paidByPersonId = :personId), 0)
+        """
+    )
+    suspend fun fullBalanceNow(personId: Long, selfId: Long): Long
+
+    /** Only you paying, or you sharing, moves a balance with you. */
+    private fun movedWithYou(paidBy: Long, sharesByPerson: Map<Long, Long>, selfId: Long): Set<Long> = when {
+        paidBy == selfId -> sharesByPerson.filter { it.value != 0L }.keys - selfId
+        (sharesByPerson[selfId] ?: 0L) != 0L -> setOf(paidBy)
+        else -> emptySet()
+    }
+
+    @Query("SELECT * FROM expenses WHERE id = :expenseId LIMIT 1")
+    suspend fun getExpenseNow(expenseId: Long): Expense?
+
+    @Query("SELECT * FROM expense_shares WHERE expenseId = :expenseId")
+    suspend fun getSharesForExpenseNow(expenseId: Long): List<ExpenseShare>
+
+    @Query("SELECT * FROM expenses WHERE groupId = :groupId")
+    suspend fun getExpensesForGroupNow(groupId: Long): List<Expense>
+
+    @Query(
+        "SELECT expense_shares.* FROM expense_shares " +
+            "JOIN expenses ON expenses.id = expense_shares.expenseId WHERE expenses.groupId = :groupId"
+    )
+    suspend fun getSharesForGroupNow(groupId: Long): List<ExpenseShare>
 
     @Query("SELECT id FROM persons WHERE isSelf = 1 LIMIT 1")
     suspend fun selfIdNow(): Long?

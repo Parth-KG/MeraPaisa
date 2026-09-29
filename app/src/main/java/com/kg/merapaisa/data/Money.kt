@@ -174,6 +174,21 @@ fun appendAmountKey(current: String, key: String): String = when {
     else -> current
 }
 
+/**
+ * Whether [text] may stand in a typed amount field for [currencyCode]: digits, at most
+ * [MAX_WHOLE_DIGITS] of them before the point, and only as many after it as the currency has.
+ * The keypads enforce the same through [appendAmountKey]; a text field needs it said. Without it,
+ * "12.5" yen was accepted, stored as 1250 hundredths and shown as ¥13.
+ */
+fun isTypableAmount(text: String, currencyCode: String, allowNegative: Boolean = false): Boolean {
+    val body = if (allowNegative) text.removePrefix("-").removePrefix("\u2212") else text
+    val whole = body.substringBefore('.')
+    if (whole.length > MAX_WHOLE_DIGITS || !whole.all { it.isDigit() }) return false
+    if ('.' !in body) return true
+    val fraction = body.substringAfter('.')
+    return currencyDecimals(currencyCode) > 0 && fraction.length <= 2 && fraction.all { it.isDigit() }
+}
+
 /** True when the entry is a usable, non-zero amount the +/- buttons can act on. */
 fun isUsableAmount(text: String): Boolean {
     val minor = parseAmountToMinor(text)

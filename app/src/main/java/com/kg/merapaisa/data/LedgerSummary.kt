@@ -4,6 +4,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import com.kg.merapaisa.ui.format.SignStyle
+import com.kg.merapaisa.ui.format.amountString
 import kotlin.math.absoluteValue
 
 /** How many entries a shared summary shows before it starts saying "earlier entries". */
@@ -20,7 +22,7 @@ fun buildPersonSummary(
     locale: Locale = Locale.getDefault(),
     timeZone: TimeZone = TimeZone.getDefault()
 ): String {
-    val amount = formatMinor(person.balanceMinor.absoluteValue, person.currency)
+    val amount = amountString(person.balanceMinor.absoluteValue, person.currency, SignStyle.None)
     val headline = when {
         person.balanceMinor > 0 -> "${person.name}: you owe me $amount"
         person.balanceMinor < 0 -> "${person.name}: I owe you $amount"
@@ -29,11 +31,25 @@ fun buildPersonSummary(
 
     if (transactions.isEmpty()) return headline
 
+    // The headline counts group expenses too; the log below is direct entries only. Without this
+    // line the last running total disagreed with the headline and neither said why.
     return buildString {
         append(headline)
         append("\n\nRecent activity:\n")
         append(buildActivityLog(transactions, person.currency, limit, locale, timeZone))
+        groupPartLine(person, transactions)?.let { append("\n").append(it) }
     }
+}
+
+/**
+ * What group expenses add to [person]'s balance, as a closing line for a log of their direct
+ * entries, or null when there is none. The log's last running total is direct entries only, so
+ * without this it disagreed with the balance and nothing said why.
+ */
+fun groupPartLine(person: PersonWithBalance, transactions: List<Transaction>): String? {
+    val fromGroups = person.balanceMinor - transactions.sumOf { it.amountMinor }
+    return if (fromGroups == 0L) null
+    else "Plus ${amountString(fromGroups, person.currency)} from groups we share"
 }
 
 /**
@@ -57,9 +73,9 @@ fun buildActivityLog(
     val lines = transactions.sortedBy { it.timestamp }.map { transaction ->
         running += transaction.amountMinor
         val date = dateFormat.format(Date(transaction.timestamp))
-        val amount = formatSignedAmount(transaction.amountMinor, currency)
+        val amount = amountString(transaction.amountMinor, currency)
         val note = if (transaction.note.isNotBlank()) " (${transaction.note})" else ""
-        "$date: $amount$note  →  ${formatMinor(running, currency)}"
+        "$date: $amount$note  →  ${amountString(running, currency)}"
     }
 
     val hidden = (lines.size - limit).coerceAtLeast(0)

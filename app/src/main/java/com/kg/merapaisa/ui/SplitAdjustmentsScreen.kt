@@ -362,7 +362,7 @@ fun SplitAdjustmentsContent(
 
         SplitPrimaryButton(
             label = "Save split",
-            enabled = conversionError == null && convertedAmounts != null,
+            enabled = totalsMatch && conversionError == null && convertedAmounts != null,
             onClick = {
                 // Build final map, excluding "You". Guarded rather than trusted: `enabled`
                 // already blocks this, and a null here would mean confirming amounts that

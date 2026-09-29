@@ -65,6 +65,41 @@ class GroupReopensAndMoveLimitTest {
     }
 
     @Test
+    fun deletingTheSettleUpPaymentReopensThem() = runBlocking {
+        val self = dao.ensureSelf().id
+        val asha = dao.insertPerson(Person(name = "Asha"))
+        val group = groupOf(asha)
+        groups.recordExpense(
+            Expense(groupId = group, description = "Hotel", amountMinor = 2_000_00, paidByPersonId = self),
+            mapOf(self to 1_000_00, asha to 1_000_00)
+        )
+        dao.settle(asha, selfId = self)
+        assertTrue(dao.getPersonNow(asha)!!.isSettled)
+
+        val payment = groups.getAllExpensesForBackup().single { it.isSettlement }
+        groups.deleteExpenseAndReopen(payment.id)
+
+        assertFalse("she owes her share again, so she is live again", dao.getPersonNow(asha)!!.isSettled)
+    }
+
+    @Test
+    fun deletingAGroupThatNetsToNothingLeavesThemSettled() = runBlocking {
+        val self = dao.ensureSelf().id
+        val asha = dao.insertPerson(Person(name = "Asha"))
+        val group = groupOf(asha)
+        groups.recordExpense(
+            Expense(groupId = group, description = "Hotel", amountMinor = 2_000_00, paidByPersonId = self),
+            mapOf(self to 1_000_00, asha to 1_000_00)
+        )
+        dao.settle(asha, selfId = self)
+
+        groups.deleteGroupAndReopen(group)
+
+        assertEquals(0L, dao.getFullBalanceNow(asha, self))
+        assertTrue("the expense and its payment went together", dao.getPersonNow(asha)!!.isSettled)
+    }
+
+    @Test
     fun anExpenseBetweenTwoOthersLeavesThemAsTheyWere() = runBlocking {
         val asha = dao.insertPerson(Person(name = "Asha"))
         val bilal = dao.insertPerson(Person(name = "Bilal"))

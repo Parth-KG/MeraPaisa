@@ -77,7 +77,8 @@ fun PersonRow(
         modifier = Modifier
             .fillMaxWidth()
             .background(if (isSelected) theme.fillStrong else Color.Transparent)
-            .combinedClickable(onClick = onClick, onLongClick = { showMenu = true })
+            // Named, so TalkBack says what a long press does.
+            .combinedClickable(onClick = onClick, onLongClickLabel = "More options", onLongClick = { showMenu = true })
             .padding(horizontal = Spacing.lg, vertical = Spacing.md)
             // One description for the row, so TalkBack reads "Asha owes you 1,200 rupees" rather
             // than spelling out a name, a label and a figure as three separate stops. Merged, not

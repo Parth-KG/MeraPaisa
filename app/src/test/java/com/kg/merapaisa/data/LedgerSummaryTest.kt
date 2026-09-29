@@ -75,7 +75,21 @@ class LedgerSummaryTest {
     @Test
     fun negativeEntriesKeepTheirSign() {
         val text = summary(person(balanceMinor = 50_00), listOf(entry(100_00, 1), entry(-50_00, 2, "refund")))
-        assertTrue(text.contains("-₹50 (refund)  →  ₹50"))
+        assertTrue(text.contains("\u2212\u2009₹50 (refund)  →  ₹50"))
+    }
+
+    @Test
+    fun theGroupPartIsNamedSoTheLogAgreesWithTheHeadline() {
+        val text = summary(person(balanceMinor = 700_00), listOf(entry(200_00, 1, "cab")))
+        assertTrue(text.startsWith("Asha: you owe me ₹700"))
+        assertTrue(text.contains("(cab)  →  ₹200"))
+        assertTrue(text.endsWith("Plus ₹500 from groups we share"))
+    }
+
+    @Test
+    fun noGroupLineWhenTheEntriesAreTheWholeBalance() {
+        val text = summary(person(balanceMinor = 20_00), listOf(entry(10_00, 1), entry(10_00, 2)))
+        assertFalse(text.contains("groups"))
     }
 
     @Test

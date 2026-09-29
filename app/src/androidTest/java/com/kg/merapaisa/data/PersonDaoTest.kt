@@ -152,6 +152,36 @@ class PersonDaoTest {
     }
 
     @Test
+    fun clearingTheLogKeepsWhatWasAlreadySharedOutOfTheNextLink() = runBlocking {
+        val id = newPerson()
+        dao.recordEntry(Transaction(personId = id, amountMinor = 300_00, timestamp = 1_000, note = "shared"))
+        dao.recordEntry(Transaction(personId = id, amountMinor = 40_00, timestamp = 2_000, note = "not yet"))
+        dao.setLastSharedAt(id, 1_000)
+
+        dao.clearTransactionsForPerson(id)
+
+        assertEquals(340_00L, dao.getBalanceNow(id))
+        val watermark = dao.getPersonNow(id)!!.lastSharedAt
+        val nextLink = dao.getTransactionsSinceNow(id, watermark)
+        assertEquals(
+            "only the part the other phone has not seen may go out again",
+            listOf(40_00L),
+            nextLink.map { it.amountMinor }
+        )
+    }
+
+    @Test
+    fun clearingANeverSharedLogLeavesTheWholeBalanceToShare() = runBlocking {
+        val id = newPerson()
+        dao.recordEntry(Transaction(personId = id, amountMinor = 75_00, note = "one"))
+
+        dao.clearTransactionsForPerson(id)
+
+        assertEquals(0L, dao.getPersonNow(id)!!.lastSharedAt)
+        assertEquals(listOf(75_00L), dao.getTransactionsSinceNow(id, 0).map { it.amountMinor })
+    }
+
+    @Test
     fun editingAnEntryCorrectsTheBalanceAndKeepsItsTimestamp() = runBlocking {
         val id = newPerson()
         dao.recordEntry(Transaction(personId = id, amountMinor = 1_000_00, timestamp = 42, note = "typo"))

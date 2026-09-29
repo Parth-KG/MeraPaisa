@@ -38,6 +38,7 @@ import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
 import com.kg.merapaisa.data.buildActivityLog
+import com.kg.merapaisa.data.groupPartLine
 import com.kg.merapaisa.ui.MainViewModel
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.shareText
@@ -174,7 +175,8 @@ fun ReminderSheet(
                 onClick = {
                     val finalText = if (includeLog && entries.isNotEmpty()) {
                         message + "\n\nEvery entry so far:\n" +
-                            buildActivityLog(entries, person.currency)
+                            buildActivityLog(entries, person.currency) +
+                            (groupPartLine(person, entries)?.let { "\n$it" } ?: "")
                     } else {
                         message
                     }

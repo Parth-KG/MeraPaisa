@@ -1,5 +1,9 @@
 package com.kg.merapaisa.widget
 
+import kotlinx.coroutines.flow.map
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import android.content.Context
 import android.os.Build
 import androidx.compose.runtime.Composable
@@ -130,28 +134,39 @@ class DebtWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(setOf(NetOnly, WithRows))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val palette = paletteFor(ThemeStore.getTheme(context).first())
-
+        // First values read up front, so the widget never draws an empty frame. After that the
+        // content follows the flows: a session stays alive for a while after provideGlance, and an
+        // update that arrives during it only recomposes what is already there. Figures read once,
+        // outside provideContent, stayed as they were for a second change made soon after a first.
+        val themes = ThemeStore.getTheme(context)
+        val locks = SecurityStore.isAppLockEnabled(context)
+        val firstTheme = themes.first()
+        val firstLocked = locks.first()
+        val repository = PersonRepository(AppDatabase.getDatabase(context).personDao())
         // The app puts the ledger behind the device's own authentication when the lock is on.
         // A widget still listing names and amounts on the home screen would hand over exactly
         // what that lock exists to withhold, so it shows nothing and the ledger is not read.
-        if (SecurityStore.isAppLockEnabled(context).first()) {
-            provideContent { LockedWidgetContent(palette) }
-            return
-        }
-
-        val repository = PersonRepository(AppDatabase.getDatabase(context).personDao())
-        val persons = repository.personsWithBalances().first()
-            .filter { !it.isSettled && it.balanceMinor != 0L }
+        val firstPersons = if (firstLocked) emptyList() else openBalances(repository).first()
 
         provideContent {
-            WidgetContent(
-                persons = persons,
-                totals = netTotalsByCurrency(persons),
-                palette = palette
-            )
+            val theme by themes.collectAsState(initial = firstTheme)
+            val locked by locks.collectAsState(initial = firstLocked)
+            val palette = paletteFor(theme)
+            if (locked) {
+                LockedWidgetContent(palette)
+            } else {
+                val persons by remember { openBalances(repository) }.collectAsState(initial = firstPersons)
+                WidgetContent(
+                    persons = persons,
+                    totals = netTotalsByCurrency(persons),
+                    palette = palette
+                )
+            }
         }
     }
+
+    private fun openBalances(repository: PersonRepository) = repository.personsWithBalances()
+        .map { all -> all.filter { !it.isSettled && it.balanceMinor != 0L } }
 }
 
 /** Says the app is locked and nothing more: no name, no figure, not even a count. */

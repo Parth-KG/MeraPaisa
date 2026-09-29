@@ -42,6 +42,7 @@ import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.data.evenShares
+import com.kg.merapaisa.data.isTypableAmount
 import com.kg.merapaisa.data.parseAmountToMinor
 import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.format.PlainAmountText
@@ -79,6 +80,7 @@ fun AddExpenseDialog(
     }
     var sharedWith by remember(members) { mutableStateOf(members.map { it.id }.toSet()) }
 
+    var adding by remember { mutableStateOf(false) }
     val amountMinor = parseAmountToMinor(amount)
     val valid = description.isNotBlank() && amountMinor != null && amountMinor > 0 &&
         sharedWith.isNotEmpty() && members.any { it.id == paidBy }
@@ -120,7 +122,7 @@ fun AddExpenseDialog(
             Spacer(Modifier.height(Spacing.md))
             OutlinedTextField(
                 value = amount,
-                onValueChange = { amount = it },
+                onValueChange = { if (isTypableAmount(it, currency)) amount = it },
                 label = { Text("Amount in ${currencySymbol(currency)}") },
                 singleLine = true,
                 isError = amount.isNotEmpty() && amountMinor == null,
@@ -223,12 +225,16 @@ fun AddExpenseDialog(
             Button(
                 onClick = {
                     val minor = amountMinor ?: return@Button
+                    // Once only: the button stays live while the sheet slides away, and a second
+                    // tap in that time added the expense twice.
+                    if (adding) return@Button
+                    adding = true
                     val shares = sharedWith.toList().sorted()
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
                         onAdd(description.trim(), minor, paidBy, shares)
                     }
                 },
-                enabled = valid,
+                enabled = valid && !adding,
                 shape = Shapes.small,
                 modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(

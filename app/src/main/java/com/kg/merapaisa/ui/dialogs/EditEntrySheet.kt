@@ -1,5 +1,6 @@
 package com.kg.merapaisa.ui.dialogs
 
+import com.kg.merapaisa.data.isTypableAmount
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,9 @@ import com.kg.merapaisa.ui.theme.Spacing
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import com.kg.merapaisa.ui.DecisionDialog
+import com.kg.merapaisa.ui.format.amountString
+import com.kg.merapaisa.ui.format.SignStyle
 
 /**
  * Corrects or removes a single entry. Before this, a mistyped amount could only be papered over
@@ -73,6 +77,7 @@ fun EditEntrySheet(
 
     val amountMinor = parseAmountToMinor(amount)
     val isValid = amountMinor != null && amountMinor != 0L
+    var confirmingDelete by remember(entry.id) { mutableStateOf(false) }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -101,7 +106,7 @@ fun EditEntrySheet(
 
             OutlinedTextField(
                 value = amount,
-                onValueChange = { amount = it },
+                onValueChange = { if (isTypableAmount(it, currency, allowNegative = true)) amount = it },
                 label = { Text("Amount in ${currencySymbol(currency)}") },
                 supportingText = {
                     // Says which way the entry runs while it is valid, and what to type when it
@@ -147,9 +152,8 @@ fun EditEntrySheet(
             // Removing the line outright, kept apart from the two buttons that close the form so
             // it cannot be hit while reaching for Save.
             TextButton(
-                onClick = {
-                    scope.launch { sheetState.hide() }.invokeOnCompletion { onDelete(entry) }
-                },
+                // Asked first. It deleted on the tap, and an entry is part of the balance.
+                onClick = { confirmingDelete = true },
                 modifier = Modifier.heightIn(min = 48.dp).padding(horizontal = Spacing.sm)
             ) {
                 Text("Delete this entry", style = MeraPaisaType.action, color = theme.textPrimary)
@@ -192,5 +196,21 @@ fun EditEntrySheet(
                 Text("Save entry", style = MeraPaisaType.action)
             }
         }
+    }
+
+    if (confirmingDelete) {
+        val figure = amountString(entry.amountMinor, currency, SignStyle.None)
+        DecisionDialog(
+            title = "Delete this entry?",
+            body = "The $figure goes from the history, and the balance moves back by that much. " +
+                "This can't be undone.",
+            confirmLabel = "Delete",
+            dismissLabel = "Keep it",
+            onConfirm = {
+                confirmingDelete = false
+                scope.launch { sheetState.hide() }.invokeOnCompletion { onDelete(entry) }
+            },
+            onDismiss = { confirmingDelete = false }
+        )
     }
 }

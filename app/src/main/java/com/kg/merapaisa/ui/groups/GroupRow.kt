@@ -54,7 +54,8 @@ fun GroupRow(summary: GroupSummary, onClick: () -> Unit, onDelete: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = { showMenu = true })
+            // Named, so TalkBack says what a long press does.
+            .combinedClickable(onClick = onClick, onLongClickLabel = "More options", onLongClick = { showMenu = true })
             .padding(horizontal = Spacing.lg, vertical = Spacing.md)
             // One description for the whole row, so TalkBack reads "Goa trip, 6 members, owed to
             // you, 1,200 rupees" instead of stopping three times on one line. Merged rather than

@@ -18,7 +18,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,6 +102,10 @@ fun SettleUpSheet(
 
         // fill = false so a group with two payments makes a short sheet rather than a tall one
         // with an empty half.
+        // A recorded payment stays on screen until the plan comes back without it, and a second
+        // tap in that gap wrote the payment twice, flipping the debt the other way. Reset whenever
+        // the plan changes.
+        var recorded by remember(transfers) { mutableStateOf(emptySet<String>()) }
         LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
             itemsIndexed(
                 transfers,
@@ -115,7 +122,11 @@ fun SettleUpSheet(
                     // No padding on the trailing side, so the label ends where the figure above
                     // it ends rather than a button's inset short of it.
                     TextButton(
-                        onClick = { onRecord(t) },
+                        onClick = {
+                            val key = "${t.fromPersonId}-${t.toPersonId}"
+                            if (key !in recorded) { recorded = recorded + key; onRecord(t) }
+                        },
+                        enabled = "${t.fromPersonId}-${t.toPersonId}" !in recorded,
                         modifier = Modifier.heightIn(min = 48.dp),
                         contentPadding = PaddingValues(start = Spacing.md, end = 0.dp)
                     ) {

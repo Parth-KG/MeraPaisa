@@ -30,6 +30,9 @@ sealed interface MoveDebtResult {
     /** They owe you nothing, or you owe them — there is no debt of theirs to hand on. */
     data class NothingToMove(val balanceMinor: Long) : MoveDebtResult
 
+    /** One of the two people was deleted while the sheet was open. */
+    data object PersonGone : MoveDebtResult
+
     /** More than they actually owe. [availableMinor] is the most that could move. */
     data class MoreThanOwed(val availableMinor: Long) : MoveDebtResult
 }

@@ -149,7 +149,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val selfId = _selfId.asStateFlow()
 
     init {
-        viewModelScope.launch { _selfId.value = groupRepository.self().id }
+        // Followed rather than read once: a Replace restore gives "you" a new id.
+        viewModelScope.launch { groupRepository.selfIds().collect { _selfId.value = it } }
     }
 
     fun openGroup(groupId: Long?) = _uiState.update {
@@ -386,6 +387,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun getGroupExpenseCount(personId: Long) = groupRepository.expensesPaidBy(personId)
 
     fun getGroupSharedCount(personId: Long) = groupRepository.expensesSharedBy(personId)
+
+    fun getGroupCount(personId: Long) = groupRepository.groupCountFor(personId)
 
     suspend fun convertCurrency(amountMinor: Long, from: String, to: String): Long? =
         exchangeRates.convert(amountMinor, from, to)
@@ -1228,6 +1231,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                     MoveDebtResult.NotAnAmount -> state.copy(
                         moveDebt = m.copy(busy = false, problem = "Enter an amount above zero.")
+                    )
+                    MoveDebtResult.PersonGone -> state.copy(
+                        moveDebt = m.copy(busy = false, problem =
+                            "One of them has been deleted, so there is no one to move it to. Pick someone else.")
                     )
                 }
             }

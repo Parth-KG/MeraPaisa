@@ -408,6 +408,7 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "sheet-edit-person" to {
         EditPersonDialog(
             person = Fixtures.chaitanya.person,
+            groupCount = 0,
             converting = false,
             conversionError = null,
             onDismiss = {},

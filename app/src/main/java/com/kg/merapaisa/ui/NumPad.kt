@@ -1,5 +1,7 @@
 package com.kg.merapaisa.ui
 
+import androidx.compose.foundation.layout.Spacer
+import com.kg.merapaisa.data.currencyDecimals
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -120,11 +122,17 @@ fun NumPad(
             )
         }
 
-        val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", BACKSPACE)
+        // No point for a currency with no fractions: yen typed as 12.5 was stored as ¥12.50 and shown
+        // as ¥13. The slot stays, empty, so the 0 keeps its place under the 8.
+        val point = if (currencyDecimals(person.currency) == 0) "" else "."
+        val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", point, "0", BACKSPACE)
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             keys.chunked(3).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    row.forEach { key -> Key(key, onKey, Modifier.weight(1f)) }
+                    row.forEach { key ->
+                        if (key.isEmpty()) Spacer(Modifier.weight(1f))
+                        else Key(key, onKey, Modifier.weight(1f))
+                    }
                 }
             }
         }

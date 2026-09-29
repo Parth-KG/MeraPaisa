@@ -20,6 +20,9 @@ import com.kg.merapaisa.data.writesFor
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
 import com.kg.merapaisa.data.formatMinor
 
@@ -34,7 +37,11 @@ class PersonRepository(
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     fun personsWithBalances(): Flow<List<PersonWithBalance>> =
-        flow { emit(dao.ensureSelf().id) }.flatMapLatest { dao.getPersonsWithBalances(it) }
+        selfIds().flatMapLatest { dao.getPersonsWithBalances(it) }
+
+    /** Your own row's id, created if missing, and followed across a restore. */
+    fun selfIds(): Flow<Long> =
+        flow { dao.ensureSelf(); emitAll(dao.selfIdFlow().filterNotNull().distinctUntilChanged()) }
 
     fun transactions(personId: Long): Flow<List<Transaction>> = dao.getTransactionsForPerson(personId)
 
@@ -107,8 +114,8 @@ class PersonRepository(
         if (fromPersonId == toPersonId) return MoveDebtResult.SamePerson
         if (amountMinor <= 0L) return MoveDebtResult.NotAnAmount
 
-        val from = dao.getPersonNow(fromPersonId) ?: return MoveDebtResult.NotAnAmount
-        val to = dao.getPersonNow(toPersonId) ?: return MoveDebtResult.NotAnAmount
+        val from = dao.getPersonNow(fromPersonId) ?: return MoveDebtResult.PersonGone
+        val to = dao.getPersonNow(toPersonId) ?: return MoveDebtResult.PersonGone
 
         // Same reasoning as an incoming share link in another currency: the two amounts are minor
         // units with no rate attached, so moving ₹100 onto a dollar balance would silently claim
@@ -145,8 +152,8 @@ class PersonRepository(
         if (fromPersonId == toPersonId) return MoveDebtResult.SamePerson
         if (amountMinor <= 0L || convertedMinor <= 0L) return MoveDebtResult.NotAnAmount
 
-        val from = dao.getPersonNow(fromPersonId) ?: return MoveDebtResult.NotAnAmount
-        val to = dao.getPersonNow(toPersonId) ?: return MoveDebtResult.NotAnAmount
+        val from = dao.getPersonNow(fromPersonId) ?: return MoveDebtResult.PersonGone
+        val to = dao.getPersonNow(toPersonId) ?: return MoveDebtResult.PersonGone
 
         val available = dao.getFullBalanceNow(fromPersonId, dao.ensureSelf().id)
         if (available <= 0L) return MoveDebtResult.NothingToMove(available)

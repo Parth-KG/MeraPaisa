@@ -247,20 +247,23 @@ fun EntryHistoryContent(
         // carries the outstanding amount across as one opening entry. Saying so is the difference
         // between a warning somebody reads and one they guess at. The figure is written into the
         // sentence with no sign, because the words either side of it already say which way it runs.
+        // Only these entries are carried over. Whatever group expenses add stays in the groups, so
+        // quoting the whole balance here named a figure the opening entry would not hold.
+        val direct = entries.sumOf { it.amountMinor }
+        val figure = amountString(direct, person.currency, SignStyle.None)
+        val groupsNote = if (direct != person.balanceMinor) " What your groups add is not touched." else ""
         val body = when {
-            person.balanceMinor == 0L ->
-                "Deletes $count. You two are even, so the balance stays at zero. " +
+            direct == 0L ->
+                "Deletes $count. These entries come to zero, so nothing is carried over.$groupsNote " +
                     "This can't be undone."
 
-            person.balanceMinor > 0 ->
-                "Deletes $count. ${person.name} still owes you " +
-                    amountString(person.balanceMinor, person.currency, SignStyle.None) +
-                    ", carried over as a single opening entry. This can't be undone."
+            direct > 0 ->
+                "Deletes $count. The $figure ${person.name} owes you from them is carried over " +
+                    "as an opening entry.$groupsNote This can't be undone."
 
             else ->
-                "Deletes $count. You still owe ${person.name} " +
-                    amountString(person.balanceMinor, person.currency, SignStyle.None) +
-                    ", carried over as a single opening entry. This can't be undone."
+                "Deletes $count. The $figure you owe ${person.name} from them is carried over " +
+                    "as an opening entry.$groupsNote This can't be undone."
         }
         DecisionDialog(
             title = "Clear ${person.name}'s history?",

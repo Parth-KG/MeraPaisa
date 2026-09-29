@@ -1,5 +1,6 @@
 package com.kg.merapaisa.ui
 
+import com.kg.merapaisa.data.currencyDecimals
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -91,7 +92,11 @@ fun SplitAmountScreen(
             SUPPORTED_CURRENCIES.forEach { code ->
                 FilterChip(
                     selected = currency == code,
-                    onClick = { onCurrencyChange(code) },
+                    onClick = {
+                        onCurrencyChange(code)
+                        // A fraction typed for rupees has no meaning in yen.
+                        if (currencyDecimals(code) == 0 && '.' in amount) onAmountChange(amount.substringBefore('.'))
+                    },
                     shape = Shapes.small,
                     label = { Text(code, style = MeraPaisaType.action) },
                     colors = FilterChipDefaults.filterChipColors(
@@ -105,7 +110,7 @@ fun SplitAmountScreen(
 
         Spacer(Modifier.weight(1f))
 
-        SplitKeypad(entry = amount, onEntryChange = onAmountChange)
+        SplitKeypad(entry = amount, currency = currency, onEntryChange = onAmountChange)
 
         SplitPrimaryButton(
             label = "Choose people",
@@ -139,8 +144,10 @@ private const val SPLIT_BACKSPACE = "backspace"
  * right, since they really are identical controls doing the same job at the same weight.
  */
 @Composable
-private fun SplitKeypad(entry: String, onEntryChange: (String) -> Unit) {
-    val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", SPLIT_BACKSPACE)
+private fun SplitKeypad(entry: String, currency: String, onEntryChange: (String) -> Unit) {
+    // As on the main keypad: no point for a currency with no fractions.
+    val point = if (currencyDecimals(currency) == 0) "" else "."
+    val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", point, "0", SPLIT_BACKSPACE)
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm)
@@ -148,11 +155,15 @@ private fun SplitKeypad(entry: String, onEntryChange: (String) -> Unit) {
         keys.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 row.forEach { key ->
-                    SplitKey(
-                        key = key,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onEntryChange(applyKey(entry, key)) }
-                    )
+                    if (key.isEmpty()) {
+                        Spacer(Modifier.weight(1f))
+                    } else {
+                        SplitKey(
+                            key = key,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onEntryChange(applyKey(entry, key)) }
+                        )
+                    }
                 }
             }
         }

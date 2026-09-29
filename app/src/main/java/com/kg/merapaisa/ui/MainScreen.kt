@@ -83,6 +83,9 @@ fun MainScreen(viewModel: MainViewModel) {
     val persons by viewModel.persons.collectAsState()
     val groups by viewModel.groups.collectAsState()
     val ui by viewModel.uiState.collectAsState()
+    // Asked before Settle up writes anything. It records a closing entry, and a payment in every
+    // group the two of you share, and Reopen does not take any of that back.
+    var confirmSettle by remember { mutableStateOf<com.kg.merapaisa.data.PersonWithBalance?>(null) }
 
     // The split flow is part of this tree rather than a Dialog, so back has to be handled
     // here. Otherwise it would fall through and close the app mid-split.
@@ -236,7 +239,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         onEditClick = { viewModel.editPerson(person.id) },
                         onHistoryClick = { viewModel.showHistory(person.id) },
                         onSettleToggle = {
-                            if (person.isSettled) viewModel.reopenPerson(person) else viewModel.settlePerson(person)
+                            if (person.isSettled) viewModel.reopenPerson(person) else confirmSettle = person
                         },
                         onShareSummary = {
                             viewModel.personSummary(person) { text ->
@@ -258,7 +261,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         if (selectedPerson.isSettled) {
                             viewModel.reopenPerson(selectedPerson)
                         } else {
-                            viewModel.settlePerson(selectedPerson)
+                            confirmSettle = selectedPerson
                         }
                     },
                     note = ui.note,
@@ -361,8 +364,12 @@ fun MainScreen(viewModel: MainViewModel) {
         if (editingPerson != null) {
             val converting by viewModel.converting.collectAsState()
             val conversionError by viewModel.conversionError.collectAsState()
+            val groupCount by remember(editingPerson.person.id) {
+                viewModel.getGroupCount(editingPerson.person.id)
+            }.collectAsState(initial = 0)
             EditPersonDialog(
                 person = editingPerson.person,
+                groupCount = groupCount,
                 converting = converting,
                 conversionError = conversionError,
                 onDismiss = {
@@ -524,6 +531,29 @@ fun MainScreen(viewModel: MainViewModel) {
             onDismiss = { viewModel.composeReminder(null) }
         )
     }
+    confirmSettle?.let { target ->
+        val live = persons.find { it.id == target.id } ?: target
+        if (live.balanceMinor == 0L) {
+            // Nothing to record, so nothing to ask.
+            LaunchedEffect(live.id) { viewModel.settlePerson(live); confirmSettle = null }
+        } else {
+            val figure = amountString(kotlin.math.abs(live.balanceMinor), live.currency)
+            val what = if (live.balanceMinor > 0) "${live.name} paying you $figure" else "you paying ${live.name} $figure"
+            val typed = if (ui.selectedId == live.id && ui.input.isNotEmpty()) {
+                " The amount you typed isn't added."
+            } else ""
+            DecisionDialog(
+                title = "Settle up with ${live.name}?",
+                body = "Records $what, which squares you, and moves them to Settled.$typed " +
+                    "Reopening them later doesn't undo the payment.",
+                confirmLabel = "Settle up",
+                dismissLabel = "Not yet",
+                onConfirm = { viewModel.settlePerson(live); confirmSettle = null },
+                onDismiss = { confirmSettle = null }
+            )
+        }
+    }
+
     pendingDelete?.let { target ->
         val transactionCount by viewModel.getTransactionCount(target.id).collectAsState(initial = 0)
         val groupExpenseCount by viewModel.getGroupExpenseCount(target.id).collectAsState(initial = 0)

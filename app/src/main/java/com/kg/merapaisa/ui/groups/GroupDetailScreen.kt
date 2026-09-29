@@ -61,6 +61,8 @@ import com.kg.merapaisa.ui.coversLedger
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import com.kg.merapaisa.ui.DecisionDialog
+import com.kg.merapaisa.ui.format.amountString
 
 /**
  * One group: where everybody stands, what has been spent, and a way to square it up.
@@ -371,6 +373,7 @@ private fun EntryRow(
 ) {
     val theme = LocalAppTheme.current
     var showMenu by remember { mutableStateOf(false) }
+    var confirming by remember { mutableStateOf(false) }
     val ink = if (quiet) theme.textSecondary else theme.textPrimary
 
     Box {
@@ -378,7 +381,14 @@ private fun EntryRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(if (showMenu) theme.fillStrong else Color.Transparent)
-                .combinedClickable(onClick = {}, onLongClick = { showMenu = true })
+                // A tap opens the menu too. It did nothing, so TalkBack offered a tap that went
+                // nowhere, and deleting an expense could only be reached by a long press.
+                .combinedClickable(
+                    onClickLabel = "Options",
+                    onClick = { showMenu = true },
+                    onLongClickLabel = "Options",
+                    onLongClick = { showMenu = true }
+                )
                 .padding(horizontal = Spacing.lg, vertical = Spacing.md)
                 .semantics(mergeDescendants = true) {
                     contentDescription = listOfNotNull(title, subtitle)
@@ -417,8 +427,25 @@ private fun EntryRow(
         ) {
             DropdownMenuItem(
                 text = { Text(deleteLabel, style = MeraPaisaType.body, color = theme.textPrimary) },
-                onClick = { showMenu = false; onDelete() }
+                onClick = { showMenu = false; confirming = true }
             )
         }
+    }
+
+    // Asked, like deleting a person or a group. It went straight through from the menu, and an
+    // expense or a payment is part of what every member owes: one mis-tap moved several balances
+    // with no way back.
+    if (confirming) {
+        val figure = amountString(amountMinor, currency, SignStyle.None)
+        DecisionDialog(
+            title = if (quiet) "Delete this payment?" else "Delete $title?",
+            body = (if (quiet) "Removes this $figure payment" else "Removes this $figure expense") +
+                " from the group, and what its members owe each other changes to match. " +
+                "This can't be undone.",
+            confirmLabel = "Delete",
+            dismissLabel = "Keep it",
+            onConfirm = { confirming = false; onDelete() },
+            onDismiss = { confirming = false }
+        )
     }
 }

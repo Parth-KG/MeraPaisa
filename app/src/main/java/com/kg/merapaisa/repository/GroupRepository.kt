@@ -17,6 +17,9 @@ import com.kg.merapaisa.data.settleUp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
 
 /**
@@ -33,12 +36,19 @@ class GroupRepository(
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     fun groupSummaries(): Flow<List<GroupSummary>> =
-        flow { emit(self().id) }.flatMapLatest { groupDao.getGroupSummaries(it) }
+        selfIds().flatMapLatest { groupDao.getGroupSummaries(it) }
+
+    /** Your own row's id, created if missing, and followed across a restore. */
+    fun selfIds(): Flow<Long> =
+        flow { personDao.ensureSelf(); emitAll(personDao.selfIdFlow().filterNotNull().distinctUntilChanged()) }
 
     fun members(groupId: Long): Flow<List<Person>> = groupDao.getMembers(groupId)
 
     /** Group expenses this person fronted, which deleting them would take with it. */
     fun expensesPaidBy(personId: Long): Flow<Int> = groupDao.expenseCountPaidBy(personId)
+
+    /** How many groups this person is in. */
+    fun groupCountFor(personId: Long): Flow<Int> = groupDao.groupCountFor(personId)
 
     /** Group expenses this person only shared. Deleting them passes those shares to the payer. */
     fun expensesSharedBy(personId: Long): Flow<Int> = groupDao.expenseCountSharedBy(personId)
@@ -138,12 +148,12 @@ class GroupRepository(
     }
 
     suspend fun deleteExpense(expenseId: Long) {
-        groupDao.deleteExpense(expenseId)
+        groupDao.deleteExpenseAndReopen(expenseId)
         notifier.onLedgerChanged()
     }
 
     suspend fun deleteGroup(groupId: Long) {
-        groupDao.deleteGroup(groupId)
+        groupDao.deleteGroupAndReopen(groupId)
         notifier.onLedgerChanged()
     }
 }
