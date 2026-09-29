@@ -1,5 +1,8 @@
 package com.kg.merapaisa.ui
 
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import com.kg.merapaisa.data.isTypableAmount
@@ -243,7 +246,13 @@ fun SplitAdjustmentsContent(
     val total = amountsInSource.values.sum()
     val totalsMatch = total == amountMinor
 
-    Column(modifier = Modifier.fillMaxSize().background(theme.background).coversLedger()) {
+    // A tap on empty space lets go of the share being typed, as it does in any form. The field
+    // kept its cursor and its plain digits until another field was tapped.
+    val focusManager = LocalFocusManager.current
+    Column(
+        modifier = Modifier.fillMaxSize().background(theme.background).coversLedger()
+            .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } }
+    ) {
 
         SplitStepBar(onCancel = onCancel, onBack = onBack)
 
