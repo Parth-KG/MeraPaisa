@@ -400,6 +400,7 @@ fun MainScreen(viewModel: MainViewModel) {
         }
         if (ui.showAddDialog) {
             AddPersonDialog(
+                existingNames = persons.map { it.name },
                 onDismiss = { viewModel.showAddDialog(false) },
                 onAdd = { name, pfpType, pfpValue, pfpColor, currency ->
                     viewModel.addPerson(name, pfpType, pfpValue, pfpColor, currency) { newId ->
@@ -418,6 +419,7 @@ fun MainScreen(viewModel: MainViewModel) {
             }.collectAsState(initial = null)
             EditPersonDialog(
                 person = editingPerson.person,
+                otherNames = persons.filter { it.id != editingPerson.id }.map { it.name },
                 groupCount = groupCount,
                 converting = converting,
                 conversionError = conversionError,

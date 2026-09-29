@@ -25,10 +25,12 @@ interface PersonDao {
             COALESCE(SUM(transactions.amountMinor), 0)
             + COALESCE((SELECT SUM(s.shareMinor) FROM expense_shares s
                         JOIN expenses e ON e.id = s.expenseId
-                        WHERE s.personId = persons.id AND e.paidByPersonId = :selfId), 0)
+                        WHERE s.personId = persons.id AND e.paidByPersonId = :selfId
+                          AND e.groupId NOT IN ($EVEN_GROUPS)), 0)
             - COALESCE((SELECT SUM(s2.shareMinor) FROM expense_shares s2
                         JOIN expenses e2 ON e2.id = s2.expenseId
-                        WHERE s2.personId = :selfId AND e2.paidByPersonId = persons.id), 0)
+                        WHERE s2.personId = :selfId AND e2.paidByPersonId = persons.id
+                          AND e2.groupId NOT IN ($EVEN_GROUPS)), 0)
             AS balanceMinor
         FROM persons
         LEFT JOIN transactions ON transactions.personId = persons.id
@@ -46,10 +48,12 @@ interface PersonDao {
             COALESCE(SUM(transactions.amountMinor), 0)
             + COALESCE((SELECT SUM(s.shareMinor) FROM expense_shares s
                         JOIN expenses e ON e.id = s.expenseId
-                        WHERE s.personId = persons.id AND e.paidByPersonId = :selfId), 0)
+                        WHERE s.personId = persons.id AND e.paidByPersonId = :selfId
+                          AND e.groupId NOT IN ($EVEN_GROUPS)), 0)
             - COALESCE((SELECT SUM(s2.shareMinor) FROM expense_shares s2
                         JOIN expenses e2 ON e2.id = s2.expenseId
-                        WHERE s2.personId = :selfId AND e2.paidByPersonId = persons.id), 0)
+                        WHERE s2.personId = :selfId AND e2.paidByPersonId = persons.id
+                          AND e2.groupId NOT IN ($EVEN_GROUPS)), 0)
             AS balanceMinor
         FROM persons
         LEFT JOIN transactions ON transactions.personId = persons.id
@@ -80,10 +84,12 @@ interface PersonDao {
         SELECT COALESCE((SELECT SUM(amountMinor) FROM transactions WHERE personId = :personId), 0)
             + COALESCE((SELECT SUM(s.shareMinor) FROM expense_shares s
                         JOIN expenses e ON e.id = s.expenseId
-                        WHERE s.personId = :personId AND e.paidByPersonId = :selfId), 0)
+                        WHERE s.personId = :personId AND e.paidByPersonId = :selfId
+                        AND e.groupId NOT IN ($EVEN_GROUPS)), 0)
             - COALESCE((SELECT SUM(s2.shareMinor) FROM expense_shares s2
                         JOIN expenses e2 ON e2.id = s2.expenseId
-                        WHERE s2.personId = :selfId AND e2.paidByPersonId = :personId), 0)
+                        WHERE s2.personId = :selfId AND e2.paidByPersonId = :personId
+                        AND e2.groupId NOT IN ($EVEN_GROUPS)), 0)
         """
     )
     suspend fun getFullBalanceNow(personId: Long, selfId: Long): Long
@@ -223,8 +229,9 @@ interface PersonDao {
             AS amountMinor
         FROM expenses e
         JOIN expense_shares s ON s.expenseId = e.id
-        WHERE (e.paidByPersonId = :selfId AND s.personId = :personId)
-           OR (e.paidByPersonId = :personId AND s.personId = :selfId)
+        WHERE ((e.paidByPersonId = :selfId AND s.personId = :personId)
+           OR (e.paidByPersonId = :personId AND s.personId = :selfId))
+          AND e.groupId NOT IN ($EVEN_GROUPS)
         GROUP BY e.groupId
         """
     )
@@ -716,3 +723,20 @@ interface PersonDao {
 
 /** What a person and you owe each other inside one group. Positive: they owe you. */
 data class GroupPosition(val groupId: Long, val amountMinor: Long)
+
+/**
+ * Groups where every member stands at zero. They add nothing to anyone's balance with you,
+ * however the payments that squared them were routed: a group settled by fewest payments can
+ * leave one member having paid you what another owed, which reads as a debt between you and each
+ * of them that nobody has.
+ */
+internal const val EVEN_GROUPS = """
+    SELECT g.id FROM expense_groups g WHERE NOT EXISTS (
+        SELECT 1 FROM group_members m WHERE m.groupId = g.id
+          AND COALESCE((SELECT SUM(x.amountMinor) FROM expenses x
+                        WHERE x.groupId = g.id AND x.paidByPersonId = m.personId), 0)
+           != COALESCE((SELECT SUM(y.shareMinor) FROM expense_shares y
+                        JOIN expenses z ON z.id = y.expenseId
+                        WHERE z.groupId = g.id AND y.personId = m.personId), 0)
+    )
+"""

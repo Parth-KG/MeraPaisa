@@ -14,6 +14,7 @@ import com.kg.merapaisa.data.Transfer
 import com.kg.merapaisa.data.directTransfers
 import com.kg.merapaisa.data.groupBalances
 import com.kg.merapaisa.data.settleUp
+import com.kg.merapaisa.data.settleUpAroundSelf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -94,8 +95,9 @@ class GroupRepository(
         groupDao.getMembers(groupId),
         groupDao.getExpenses(groupId),
         groupDao.getSharesForGroup(groupId),
-        groupDao.getGroup(groupId)
-    ) { members, expenses, shares, group ->
+        groupDao.getGroup(groupId),
+        selfIds()
+    ) { members, expenses, shares, group, selfId ->
         val balances = groupBalances(
             memberIds = members.map { it.id },
             paidByPerson = expenses.groupBy { it.paidByPersonId }
@@ -110,7 +112,10 @@ class GroupRepository(
             // Computed here rather than in the screen, so the plan and the balances it squares are
             // always derived from the same read of the same rows.
             transfers = if (group?.simplifyDebts != false) {
-                settleUp(balances)
+                settleUpAroundSelf(selfId, balances, expenses, shares)
+            } else if (balances.all { it.amountMinor == 0L }) {
+                // Even is even, however the payments that got there were routed.
+                emptyList()
             } else {
                 directTransfers(expenses, shares)
             },

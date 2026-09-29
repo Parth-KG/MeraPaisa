@@ -415,8 +415,10 @@ private fun EntryRow(
     onReverse: () -> Unit
 ) {
     val theme = LocalAppTheme.current
+    // An entry with no note is named for the keypad button that made it. "You owe them" under a
+    // "They paid you" entry described a debt the entry had not created.
     val title = entry.note.ifBlank {
-        if (entry.amountMinor > 0) "They owe you" else "You owe them"
+        if (entry.amountMinor > 0) "You paid them" else "They paid you"
     }
 
     Row(

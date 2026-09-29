@@ -224,10 +224,12 @@ interface GroupDao {
         SELECT COALESCE((SELECT SUM(amountMinor) FROM transactions WHERE personId = :personId), 0)
             + COALESCE((SELECT SUM(s.shareMinor) FROM expense_shares s
                         JOIN expenses e ON e.id = s.expenseId
-                        WHERE s.personId = :personId AND e.paidByPersonId = :selfId), 0)
+                        WHERE s.personId = :personId AND e.paidByPersonId = :selfId
+                        AND e.groupId NOT IN ($EVEN_GROUPS)), 0)
             - COALESCE((SELECT SUM(s2.shareMinor) FROM expense_shares s2
                         JOIN expenses e2 ON e2.id = s2.expenseId
-                        WHERE s2.personId = :selfId AND e2.paidByPersonId = :personId), 0)
+                        WHERE s2.personId = :selfId AND e2.paidByPersonId = :personId
+                        AND e2.groupId NOT IN ($EVEN_GROUPS)), 0)
         """
     )
     suspend fun fullBalanceNow(personId: Long, selfId: Long): Long

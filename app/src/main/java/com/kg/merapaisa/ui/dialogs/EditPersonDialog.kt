@@ -61,6 +61,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 @Composable
 fun EditPersonDialog(
     person: Person,
+    /** Everyone else in the ledger, to say so when a name is taken. */
+    otherNames: List<String> = emptyList(),
     /** Null until known; the currency can't be changed until it is. */
     groupCount: Int?,
     converting: Boolean,
@@ -136,6 +138,11 @@ fun EditPersonDialog(
                 value = name,
                 onValueChange = { name = it },
                 label = { Text("Name") },
+                // Allowed, but said: two people with one name read the same on every list, and a
+                // link is filed against whoever has the sender's name.
+                supportingText = if (otherNames.any { it.trim().equals(name.trim(), ignoreCase = true) } && name.isNotBlank()) {
+                    { Text("You already have someone called ${name.trim()}. Add a surname or an initial to tell them apart.") }
+                } else null,
                 textStyle = MeraPaisaType.body,
                 singleLine = true,
                 shape = Shapes.medium,

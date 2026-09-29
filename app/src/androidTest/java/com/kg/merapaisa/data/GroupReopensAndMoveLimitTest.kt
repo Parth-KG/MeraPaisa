@@ -100,6 +100,36 @@ class GroupReopensAndMoveLimitTest {
     }
 
     @Test
+    fun aGroupSquaredThroughYouLeavesNobodyOwingYou() = runBlocking {
+        val self = dao.ensureSelf().id
+        val asha = dao.insertPerson(Person(name = "Asha"))
+        val xyz = dao.insertPerson(Person(name = "xyz"))
+        val group = groupOf(asha, xyz)
+        groups.recordExpense(
+            Expense(groupId = group, description = "Hotel", amountMinor = 1_000_00, paidByPersonId = self),
+            mapOf(self to 333_34, asha to 333_33, xyz to 333_33)
+        )
+        groups.recordExpense(
+            Expense(groupId = group, description = "Cab", amountMinor = 300_00, paidByPersonId = asha),
+            mapOf(asha to 150_00, xyz to 150_00)
+        )
+        // The routed plan: xyz pays you Asha's 150 too, and Asha pays you 150 less.
+        groups.recordExpense(
+            Expense(groupId = group, description = "Settlement", amountMinor = 483_33, paidByPersonId = xyz, isSettlement = true),
+            mapOf(self to 483_33)
+        )
+        groups.recordExpense(
+            Expense(groupId = group, description = "Settlement", amountMinor = 183_33, paidByPersonId = asha, isSettlement = true),
+            mapOf(self to 183_33)
+        )
+
+        val balances = dao.getPersonsWithBalancesNow(self).associate { it.id to it.balanceMinor }
+        assertEquals("the group is even, so it adds nothing", 0L, balances[asha])
+        assertEquals(0L, balances[xyz])
+        assertEquals(0L, dao.getFullBalanceNow(xyz, self))
+    }
+
+    @Test
     fun anExpenseBetweenTwoOthersLeavesThemAsTheyWere() = runBlocking {
         val asha = dao.insertPerson(Person(name = "Asha"))
         val bilal = dao.insertPerson(Person(name = "Bilal"))

@@ -74,7 +74,12 @@ import androidx.compose.foundation.layout.fillMaxHeight
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, String, String) -> Unit) {
+fun AddPersonDialog(
+    onDismiss: () -> Unit,
+    onAdd: (String, String, String, String, String) -> Unit,
+    /** Everyone already in the ledger, to say so when a name is taken. */
+    existingNames: List<String> = emptyList()
+) {
     val theme = LocalAppTheme.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -141,6 +146,11 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                 onValueChange = { name = it },
                 label = { Text("Name") },
                 placeholder = { Text("John Doe") },
+                // Allowed, but said: two people with one name read the same on every list, and a
+                // link is filed against whoever has the sender's name.
+                supportingText = if (existingNames.any { it.trim().equals(name.trim(), ignoreCase = true) } && name.isNotBlank()) {
+                    { Text("You already have someone called ${name.trim()}. Add a surname or an initial to tell them apart.") }
+                } else null,
                 textStyle = MeraPaisaType.body,
                 singleLine = true,
                 shape = Shapes.medium,
