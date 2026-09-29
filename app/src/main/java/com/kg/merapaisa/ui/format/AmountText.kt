@@ -27,8 +27,9 @@ import androidx.compose.ui.unit.sp
  *
  * Four things happen here that a plain string cannot do:
  *
- *  - The direction is written, not only coloured. "+" when they owe you, a real U+2212 when you
- *    owe them, nothing at zero. Colour alone fails anyone who cannot separate the two inks.
+ *  - The direction is written, not only coloured: a real U+2212 and a thin space when you owe
+ *    them, no sign when they owe you, and words beside the figure on every row. Colour alone
+ *    fails anyone who cannot separate the two inks.
  *  - The symbol is set smaller and quieter than the digits, on the same baseline, so reading a
  *    column means reading figures rather than a row of rupee signs.
  *  - Figures are tabular, so a column lines up, and [columnAligned] keeps the decimal slot open

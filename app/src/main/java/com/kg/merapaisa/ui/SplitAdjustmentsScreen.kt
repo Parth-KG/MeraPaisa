@@ -55,8 +55,6 @@ import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.format.amountParts
 import com.kg.merapaisa.ui.format.SignStyle
-import com.kg.merapaisa.data.currencyDecimals
-import com.kg.merapaisa.data.normaliseCurrency
 
 data class SplitParticipant(
     val id: Long,
@@ -444,8 +442,8 @@ private fun SplitShareRow(
     // Plain digits rather than a grouped amount: the grouping commas would not parse back, and
     // this is the one amount on screen the user types into rather than reads.
     //
-    // Trailing zeros are kept. Trimming them turned a share of 2,469.10 into "2469.1", which reads
-    // as a different and slightly wrong number, and parseAmountToMinor accepts either.
+    // Paise keep both digits: trimming every zero turned a share of 2,469.10 into "2469.1", which
+    // reads as a different and slightly wrong number. Only a ".00" with nothing in it is dropped.
     //
     // While the field has focus it shows exactly what was typed, and only takes the formatted
     // figure back once focus leaves. Rebuilding the text from the amount on every keystroke
@@ -454,16 +452,10 @@ private fun SplitShareRow(
     var editing by remember { mutableStateOf(false) }
     var typed by remember { mutableStateOf("") }
     // At rest the share is grouped like every other figure (12,345.50); while it is being typed
-    // it is plain digits, because grouping commas would not parse back.
-    val plain = formatMinorPlain(shownMinor, sourceCurrency, trimZeros = false)
-    val grouped = amountParts(shownMinor, sourceCurrency, SignStyle.None).let { parts ->
-        val decimals = currencyDecimals(normaliseCurrency(sourceCurrency))
-        parts.integer + when {
-            parts.fraction.isNotEmpty() -> ".${parts.fraction}"
-            decimals > 0 -> "." + "0".repeat(decimals)
-            else -> ""
-        }
-    }
+    // it is plain digits, because grouping commas would not parse back. Either way a whole share
+    // shows no ".00", and paise keep both digits: 600, but 2469.10, never 2469.1.
+    val plain = formatMinorPlain(shownMinor, sourceCurrency, trimZeros = false).removeSuffix(".00")
+    val grouped = amountParts(shownMinor, sourceCurrency, SignStyle.None).digits
     val text = if (editing) typed else grouped
 
     val supporting = when {

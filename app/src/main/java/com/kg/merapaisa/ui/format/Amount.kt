@@ -17,7 +17,7 @@ import com.kg.merapaisa.data.normaliseCurrency
  * than as a direction.
  */
 data class AmountParts(
-    /** "+", "−" (U+2212), or empty for zero. */
+    /** The minus and a thin space on what you owe; empty otherwise. */
     val sign: String,
     /** "₹", "$", or the code itself when there is no symbol for it. */
     val symbol: String,
@@ -35,10 +35,16 @@ data class AmountParts(
 
 /** How much of the sign to show. */
 enum class SignStyle {
-    /** "+" when they owe you, "−" when you owe them, nothing at zero. The default on screen. */
+    /**
+     * The minus on what you owe, and nothing on what you are owed or at zero. The default.
+     *
+     * There used to be a "+" on what you are owed, which read as arithmetic rather than as money,
+     * and which nobody writes in an account book. The ink and the words beside a figure ("owes
+     * you") carry the direction, and a figure with no minus is money owed to you.
+     */
     Always,
 
-    /** Only the minus. For places where a leading "+" would read as an operator. */
+    /** The same as [Always], kept so call sites that asked for it explicitly keep compiling. */
     NegativeOnly,
 
     /** No sign at all. Only where a word beside it already carries the direction. */
@@ -65,10 +71,11 @@ fun amountParts(
     val code = normaliseCurrency(currencyCode)
     val decimals = currencyDecimals(code)
 
+    // A real minus (U+2212) and a thin space (U+2009) after it. Set tight against the rupee sign
+    // the two read as one glyph; a full space pushed the minus away from its figure.
     val sign = when {
         signStyle == SignStyle.None -> ""
-        amountMinor > 0 && signStyle == SignStyle.Always -> "+"
-        amountMinor < 0 -> "−"
+        amountMinor < 0 -> MINUS
         else -> ""
     }
 
@@ -187,3 +194,6 @@ private val SPOKEN_UNITS = mapOf(
     "GBP" to "pounds",
     "JPY" to "yen"
 )
+
+/** The minus that leads what you owe: U+2212 and a thin space. */
+const val MINUS = "\u2212\u2009"

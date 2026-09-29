@@ -141,7 +141,7 @@ Long-press a name and choose **Send a reminder**. An editable message appears wi
 
 ### Themes
 
-Six, each its own world rather than one palette recoloured: **Midnight**, **Amoled**, **Ocean**, **Sunset**, **Purple** and **Paper**. Text, secondary text and both amount colours clear the WCAG AA contrast ratio of 4.5:1 against the background, the surface and the card in every one, enforced by tests rather than by eye. Direction is written as well as coloured, with a plus or a real minus sign and the words beside it, so telling green from red is never the only way to read a balance.
+Six, each its own world rather than one palette recoloured: **Midnight**, **Amoled**, **Ocean**, **Sunset**, **Purple** and **Paper**. Text, secondary text and both amount colours clear the WCAG AA contrast ratio of 4.5:1 against the background, the surface and the card in every one, enforced by tests rather than by eye. Direction is written as well as coloured: what you owe carries a real minus sign, what you are owed carries none, and the words beside each figure say which way it runs, so telling green from red is never the only way to read a balance.
 
 ### Backup and restore
 
