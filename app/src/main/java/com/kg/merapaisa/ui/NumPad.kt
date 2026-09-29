@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
@@ -248,7 +249,9 @@ private fun DirectionButton(
             disabledContentColor = ink.copy(alpha = 0.4f)
         )
     ) {
-        Text(label, style = MeraPaisaType.action, maxLines = 1)
+        // Two lines at most rather than one: cut to a single line at large type, the buttons read
+        // "You paid" and "They", which is the one place a missing word changes where money goes.
+        Text(label, style = MeraPaisaType.action, maxLines = 2, textAlign = TextAlign.Center)
     }
 }
 

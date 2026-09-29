@@ -88,24 +88,31 @@ fun PersonRow(
     ) {
         PfpView(person = person.person, size = 40)
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                person.name,
-                style = MeraPaisaType.bodyStrong,
-                color = theme.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(direction, style = MeraPaisaType.label, color = theme.textSecondary)
-        }
-
-        // The amount never shrinks to make room for a long name: it is the thing being read.
-        AmountText(
-            amountMinor = person.balanceMinor,
-            currencyCode = person.currency,
-            style = MeraPaisaType.amount,
-            columnAligned = true,
-            spokenOwner = person.name
+        // The amount never shrinks to make room for a long name: it is the thing being read. When
+        // the two cannot share a line, at large type, the amount drops under the name.
+        LabelAndAmount(
+            modifier = Modifier.weight(1f),
+            label = {
+                Column {
+                    Text(
+                        person.name,
+                        style = MeraPaisaType.bodyStrong,
+                        color = theme.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(direction, style = MeraPaisaType.label, color = theme.textSecondary)
+                }
+            },
+            amount = {
+                AmountText(
+                    amountMinor = person.balanceMinor,
+                    currencyCode = person.currency,
+                    style = MeraPaisaType.amount,
+                    columnAligned = true,
+                    spokenOwner = person.name
+                )
+            }
         )
 
         // The menu anchors to the history button rather than to an empty, zero-size Box.

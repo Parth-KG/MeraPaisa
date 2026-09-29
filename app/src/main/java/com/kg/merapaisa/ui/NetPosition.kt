@@ -70,29 +70,30 @@ fun NetPosition(totals: List<CurrencyTotal>, modifier: Modifier = Modifier) {
                 Text("Overall", style = MeraPaisaType.label, color = theme.textSecondary)
                 Spacer(Modifier.height(Spacing.sm))
                 totals.forEach { total ->
-                    Row(
+                    LabelAndAmount(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = Spacing.xs)
                             .clearAndSetSemantics {
                                 contentDescription = amountSpoken(total.amountMinor, total.currency)
                             },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            if (total.amountMinor > 0) "owed to you" else "you owe",
-                            style = MeraPaisaType.body,
-                            color = theme.textSecondary
-                        )
+                        label = {
+                            Text(
+                                if (total.amountMinor > 0) "owed to you" else "you owe",
+                                style = MeraPaisaType.body,
+                                color = theme.textSecondary
+                            )
+                        },
                         // Aligned as a column, so several currencies line their decimal points up.
-                        AmountText(
-                            amountMinor = total.amountMinor,
-                            currencyCode = total.currency,
-                            style = MeraPaisaType.amount,
-                            columnAligned = true
-                        )
-                    }
+                        amount = {
+                            AmountText(
+                                amountMinor = total.amountMinor,
+                                currencyCode = total.currency,
+                                style = MeraPaisaType.amount,
+                                columnAligned = true
+                            )
+                        }
+                    )
                 }
             }
         }

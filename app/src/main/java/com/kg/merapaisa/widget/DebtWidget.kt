@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
@@ -88,6 +89,22 @@ private fun paletteFor(themeName: String): WidgetPalette {
 /** Three cells by one: room for where you stand overall and nothing else. */
 /** Four rows is what the taller widget holds, including the line that says what is left out. */
 private const val MAX_WIDGET_ROWS = 4
+
+/**
+ * Rows at large type, including the "and N more" line's slot. At double type four rows ran off the
+ * bottom of the widget, cutting the last figure in half.
+ */
+private const val LARGE_TYPE_ROWS = 3
+
+/**
+ * The phone's font size is large enough that the ordinary layout stops fitting.
+ *
+ * Text on a widget scales with the system font size like any other text, but the widget's cells do
+ * not grow with it. Above this, the net position keeps one figure (plus the count of the rest), the
+ * list keeps fewer rows, and the avatars give their width to the names.
+ */
+@Composable
+private fun largeType(): Boolean = LocalContext.current.resources.configuration.fontScale >= 1.3f
 
 private val NetOnly = DpSize(180.dp, 40.dp)
 
@@ -220,8 +237,11 @@ private fun NetPositionRow(
     modifier: GlanceModifier
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        // At large type the label only ever fit as "Over...", which says nothing. The figures are
+        // signed, so they carry the direction on their own; the label gives way and the space
+        // stays, so the figures still sit on the right.
         Text(
-            overallLabel(persons, totals),
+            if (largeType()) "" else overallLabel(persons, totals),
             style = labelStyle(palette),
             maxLines = 1,
             modifier = GlanceModifier.defaultWeight()
@@ -230,7 +250,7 @@ private fun NetPositionRow(
         // that cannot be allowed to pass without a word: the line says "Overall", and somebody
         // reading two currencies has no way to know a third exists. Rows can be cut because the
         // list is plainly a list; a total that is quietly incomplete just reads as wrong.
-        val shown = totals.take(2)
+        val shown = totals.take(if (largeType()) 1 else 2)
         shown.forEach { total ->
             Text(
                 amountString(total.amountMinor, total.currency, SignStyle.Always),
@@ -261,8 +281,8 @@ private fun PersonList(persons: List<PersonWithBalance>, palette: WidgetPalette)
     Column(modifier = GlanceModifier.fillMaxWidth()) {
         // Three rows when there are more to come, so the line saying so is on screen rather than
         // just off the bottom edge. A disclosure the widget crops away is no disclosure.
-        val shown = if (persons.size > MAX_WIDGET_ROWS) persons.take(MAX_WIDGET_ROWS - 1)
-        else persons.take(MAX_WIDGET_ROWS)
+        val limit = if (largeType()) LARGE_TYPE_ROWS else MAX_WIDGET_ROWS
+        val shown = if (persons.size > limit) persons.take(limit - 1) else persons.take(limit)
         shown.forEachIndexed { index, person ->
             if (index > 0) RowHairline(palette)
             PersonWidgetRow(person, palette)
@@ -274,7 +294,8 @@ private fun PersonList(persons: List<PersonWithBalance>, palette: WidgetPalette)
                 "and ${persons.size - shown.size} more",
                 style = labelStyle(palette),
                 maxLines = 1,
-                modifier = GlanceModifier.fillMaxWidth().padding(top = Spacing.sm)
+                modifier = GlanceModifier.fillMaxWidth()
+                    .padding(top = if (largeType()) Spacing.xs else Spacing.sm)
             )
         }
     }
@@ -295,16 +316,20 @@ private fun PersonWidgetRow(person: PersonWithBalance, palette: WidgetPalette) {
             },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = GlanceModifier
-                .size(AvatarSize)
-                .background(avatarTint(person, palette))
-                .circle(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(person.name.take(2).uppercase(), style = initialsStyle(palette), maxLines = 1)
+        // At large type the avatar goes, and the name keeps its room. With it, a lakh figure left
+        // the name no width at all and the row read as three dots and a number.
+        if (!largeType()) {
+            Box(
+                modifier = GlanceModifier
+                    .size(AvatarSize)
+                    .background(avatarTint(person, palette))
+                    .circle(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(person.name.take(2).uppercase(), style = initialsStyle(palette), maxLines = 1)
+            }
+            Spacer(GlanceModifier.width(Spacing.md))
         }
-        Spacer(GlanceModifier.width(Spacing.md))
         Text(
             person.name,
             style = nameStyle(palette),

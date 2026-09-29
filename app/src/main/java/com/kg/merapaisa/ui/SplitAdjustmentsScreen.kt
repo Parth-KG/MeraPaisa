@@ -303,21 +303,22 @@ fun SplitAdjustmentsContent(
         }
 
         Column(modifier = Modifier.padding(horizontal = Spacing.lg)) {
-            Row(
+            LabelAndAmount(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Shares add up to", style = MeraPaisaType.body, color = theme.textSecondary)
+                label = {
+                    Text("Shares add up to", style = MeraPaisaType.body, color = theme.textSecondary)
+                },
                 // No sign and no direction ink: this is a sum being checked against a target, not
                 // a debt running one way or the other. Red is reserved for it being wrong.
-                PlainAmountText(
-                    amountMinor = total,
-                    currencyCode = sourceCurrency,
-                    style = MeraPaisaType.amount,
-                    colour = if (totalsMatch) theme.textPrimary else theme.negative
-                )
-            }
+                amount = {
+                    PlainAmountText(
+                        amountMinor = total,
+                        currencyCode = sourceCurrency,
+                        style = MeraPaisaType.amount,
+                        colour = if (totalsMatch) theme.textPrimary else theme.negative
+                    )
+                }
+            )
             if (!totalsMatch) {
                 Text(
                     mismatchMessage(

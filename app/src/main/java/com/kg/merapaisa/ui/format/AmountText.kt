@@ -15,6 +15,8 @@ import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.amountBlankFractionSpan
 import com.kg.merapaisa.ui.theme.amountSymbolSpan
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.ui.unit.sp
 
 /**
  * Every amount the user sees.
@@ -77,6 +79,7 @@ fun AmountText(
         color = colour,
         textAlign = textAlign,
         maxLines = 1,
+        autoSize = shrinkToFit(style),
         modifier = modifier.clearAndSetSemantics {
             contentDescription = amountSpoken(amountMinor, currencyCode, spokenOwner)
         }
@@ -108,6 +111,7 @@ fun PlainAmountText(
         color = colour,
         textAlign = textAlign,
         maxLines = 1,
+        autoSize = shrinkToFit(style),
         modifier = modifier
     )
 }
@@ -131,3 +135,14 @@ fun AmountPlaceholder(modifier: Modifier = Modifier, style: TextStyle = MeraPais
 
 private fun hasMinorUnit(currencyCode: String): Boolean =
     com.kg.merapaisa.data.currencyDecimals(com.kg.merapaisa.data.normaliseCurrency(currencyCode)) > 0
+
+/**
+ * The last line of defence against a clipped figure.
+ *
+ * Rows already give the figure its full width before the words beside it (see LabelAndAmount), so
+ * this only acts when a figure is wider than the whole row: a lakh amount in the hero style at the
+ * largest font size. Clipped, that read as a lone "+". Shrunk, it stays a number, and nothing
+ * smaller than about half its size is ever drawn.
+ */
+private fun shrinkToFit(style: TextStyle) =
+    TextAutoSize.StepBased(minFontSize = style.fontSize * 0.5f, maxFontSize = style.fontSize, stepSize = 1.sp)
