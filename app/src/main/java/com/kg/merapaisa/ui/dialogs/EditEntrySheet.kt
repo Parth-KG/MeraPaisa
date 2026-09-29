@@ -41,6 +41,8 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 
 /**
  * Corrects or removes a single entry. Before this, a mistyped amount could only be papered over
@@ -150,12 +152,12 @@ fun EditEntrySheet(
                 },
                 modifier = Modifier.heightIn(min = 48.dp).padding(horizontal = Spacing.sm)
             ) {
-                Text("Delete this entry", style = MeraPaisaType.action, color = theme.negative)
+                Text("Delete this entry", style = MeraPaisaType.action, color = theme.textPrimary)
             }
         }
 
         Row(
-            modifier = Modifier
+            modifier = Modifier.height(IntrinsicSize.Min)
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -164,11 +166,11 @@ fun EditEntrySheet(
             OutlinedButton(
                 onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 border = BorderStroke(1.dp, theme.outline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
             ) {
-                Text("Cancel", style = MeraPaisaType.action)
+                Text("Keep it as it was", style = MeraPaisaType.action)
             }
             Button(
                 onClick = {
@@ -181,7 +183,7 @@ fun EditEntrySheet(
                 },
                 enabled = isValid,
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.primary,
                     contentColor = theme.background

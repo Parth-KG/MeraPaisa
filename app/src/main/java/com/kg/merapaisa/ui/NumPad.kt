@@ -137,14 +137,14 @@ fun NumPad(
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             DirectionButton(
                 label = "You paid them",
-                ink = theme.positive,
+                ink = theme.textPrimary,
                 enabled = amountIsUsable,
                 onClick = onAdd,
                 modifier = Modifier.weight(1f)
             )
             DirectionButton(
                 label = "They paid you",
-                ink = theme.negative,
+                ink = theme.textPrimary,
                 enabled = amountIsUsable,
                 onClick = onSubtract,
                 modifier = Modifier.weight(1f)
@@ -207,8 +207,8 @@ private fun Key(key: String, onKey: (String) -> Unit, modifier: Modifier = Modif
         shape = Shapes.small,
         contentPadding = PaddingZero,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (isBackspace) lerp(theme.card, theme.negative, 0.18f) else theme.fillStrong,
-            contentColor = if (isBackspace) theme.negative else theme.textPrimary
+            containerColor = theme.fillStrong,
+            contentColor = if (isBackspace) theme.textSecondary else theme.textPrimary
         )
     ) {
         if (isBackspace) {
@@ -225,8 +225,8 @@ private fun Key(key: String, onKey: (String) -> Unit, modifier: Modifier = Modif
  * Which way the money went, named rather than signed.
  *
  * These were a "+" and a "−" key, which say what the app will do to a number rather than what
- * happened between two people. The words are also what stops the two buttons depending on colour
- * alone to tell them apart.
+ * happened between two people. The words tell them apart, not colour: green and red are the
+ * amount inks, kept for amounts, so both buttons wear the same neutral tile.
  */
 @Composable
 private fun DirectionButton(
@@ -243,9 +243,9 @@ private fun DirectionButton(
         modifier = modifier.heightIn(min = 52.dp),
         shape = Shapes.small,
         colors = ButtonDefaults.buttonColors(
-            containerColor = lerp(theme.card, ink, 0.18f),
+            containerColor = theme.fillStrong,
             contentColor = ink,
-            disabledContainerColor = lerp(theme.card, ink, 0.06f),
+            disabledContainerColor = theme.fillStrong.copy(alpha = 0.5f),
             disabledContentColor = ink.copy(alpha = 0.4f)
         )
     ) {

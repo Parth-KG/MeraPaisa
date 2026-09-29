@@ -97,6 +97,7 @@ fun PersonRow(
         // the two cannot share a line, at large type, the amount drops under the name.
         LabelAndAmount(
             modifier = Modifier.weight(1f).clearAndSetSemantics { },
+            stackFromFontScale = 1.5f,
             label = {
                 Column {
                     Text(
@@ -176,7 +177,7 @@ private fun PersonMenu(
             MenuRow("Move this debt", theme.textPrimary) { onDismiss(); onMoveDebt() }
         }
         MenuRow("Edit", theme.textPrimary) { onDismiss(); onEditClick() }
-        MenuRow("Delete", theme.negative) { onDismiss(); onDelete() }
+        MenuRow("Delete", theme.textPrimary) { onDismiss(); onDelete() }
     }
 }
 

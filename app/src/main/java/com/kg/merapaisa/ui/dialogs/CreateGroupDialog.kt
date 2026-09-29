@@ -44,6 +44,8 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 
 /**
  * A name, a currency, and who you are splitting with.
@@ -193,7 +195,7 @@ fun CreateGroupDialog(
         }
 
         Row(
-            modifier = Modifier
+            modifier = Modifier.height(IntrinsicSize.Min)
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -202,11 +204,11 @@ fun CreateGroupDialog(
             OutlinedButton(
                 onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 border = BorderStroke(1.dp, theme.outline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
             ) {
-                Text("Cancel", style = MeraPaisaType.action)
+                Text("Don't create", style = MeraPaisaType.action)
             }
             Button(
                 onClick = {
@@ -218,7 +220,7 @@ fun CreateGroupDialog(
                 },
                 enabled = name.isNotBlank() && selected.isNotEmpty(),
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.primary,
                     contentColor = theme.background

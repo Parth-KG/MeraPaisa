@@ -16,12 +16,19 @@ import com.kg.merapaisa.ui.theme.Spacing
  * the thing being read, so it is always measured at full width first. The words get what is left,
  * and if that is less than [minLabel], the pair stacks: words on top at full width, the figure
  * under them on the right, where the eye already looks for it.
+ *
+ * [keepLabelOnOneLine] stacks rather than wrap the words: a short label broken as "owed to / you"
+ * reads worse than the same label with the figure under it. [stackFromFontScale] stacks every row
+ * from that font scale up, for lists: deciding row by row made the amount column zig-zag, one
+ * figure inline and the next one under its name.
  */
 @Composable
 fun LabelAndAmount(
     modifier: Modifier = Modifier,
     minLabel: Dp = 112.dp,
     gap: Dp = Spacing.md,
+    keepLabelOnOneLine: Boolean = false,
+    stackFromFontScale: Float = Float.MAX_VALUE,
     label: @Composable () -> Unit,
     amount: @Composable () -> Unit
 ) {
@@ -30,8 +37,13 @@ fun LabelAndAmount(
         val loose = c.copy(minWidth = 0, minHeight = 0)
         val figure = amountParts.first().measure(loose)
         val room = width - figure.width - gap.roundToPx()
+        val needed = if (keepLabelOnOneLine) {
+            maxOf(minLabel.roundToPx(), labelParts.first().maxIntrinsicWidth(c.maxHeight))
+        } else {
+            minLabel.roundToPx()
+        }
 
-        if (room >= minLabel.roundToPx()) {
+        if (fontScale < stackFromFontScale && room >= needed) {
             val words = labelParts.first().measure(loose.copy(maxWidth = room))
             val height = maxOf(words.height, figure.height).coerceIn(c.minHeight, c.maxHeight)
             layout(width, height) {

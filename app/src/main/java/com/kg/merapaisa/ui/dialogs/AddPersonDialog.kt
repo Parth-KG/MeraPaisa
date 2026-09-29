@@ -59,6 +59,8 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 
 /**
  * A name, a face, and the currency this person's balance is kept in.
@@ -165,7 +167,7 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
         }
 
         Row(
-            modifier = Modifier
+            modifier = Modifier.height(IntrinsicSize.Min)
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -174,11 +176,11 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
             OutlinedButton(
                 onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { dismiss() } },
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 border = BorderStroke(1.dp, theme.outline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
             ) {
-                Text("Cancel", style = MeraPaisaType.action)
+                Text("Don't add", style = MeraPaisaType.action)
             }
             Button(
                 onClick = {
@@ -191,7 +193,7 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
                 },
                 enabled = name.isNotBlank(),
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.primary,
                     contentColor = theme.background

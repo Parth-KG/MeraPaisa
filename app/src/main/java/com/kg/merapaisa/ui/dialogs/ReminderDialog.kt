@@ -46,6 +46,8 @@ import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import kotlin.math.abs
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 
 /**
  * A message about one balance, written for you and yours to edit before it goes.
@@ -153,7 +155,7 @@ fun ReminderSheet(
         }
 
         Row(
-            modifier = Modifier
+            modifier = Modifier.height(IntrinsicSize.Min)
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -162,7 +164,7 @@ fun ReminderSheet(
             OutlinedButton(
                 onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 border = BorderStroke(1.dp, theme.outline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
             ) {
@@ -185,7 +187,7 @@ fun ReminderSheet(
                 },
                 enabled = message.isNotBlank(),
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.primary,
                     contentColor = theme.background

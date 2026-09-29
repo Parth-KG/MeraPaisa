@@ -94,7 +94,7 @@ fun GroupRow(summary: GroupSummary, onClick: () -> Unit, onDelete: () -> Unit) {
                 shape = Shapes.medium
             ) {
                 DropdownMenuItem(
-                    text = { Text("Delete group", style = MeraPaisaType.body, color = theme.negative) },
+                    text = { Text("Delete group", style = MeraPaisaType.body, color = theme.textPrimary) },
                     onClick = { showMenu = false; onDelete() }
                 )
             }

@@ -35,6 +35,8 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 
 /**
  * The outgoing half of the two-sided ledger: what this link will tell the other phone, shown before
@@ -136,11 +138,8 @@ fun ShareLedgerSheet(
                     Text(
                         netSentence(state.netMinor, state.currency, state.personName),
                         style = MeraPaisaType.body,
-                        color = when {
-                            state.netMinor > 0 -> theme.positive
-                            state.netMinor < 0 -> theme.negative
-                            else -> theme.textSecondary
-                        }
+                        // A sentence, not an amount, so it keeps the text ink.
+                        color = theme.textPrimary
                     )
                 }
             }
@@ -178,7 +177,7 @@ fun ShareLedgerSheet(
         }
 
         Row(
-            modifier = Modifier
+            modifier = Modifier.height(IntrinsicSize.Min)
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -187,7 +186,7 @@ fun ShareLedgerSheet(
             OutlinedButton(
                 onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 border = BorderStroke(1.dp, theme.outline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
             ) {
@@ -200,7 +199,7 @@ fun ShareLedgerSheet(
                 onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onShare() } },
                 enabled = !state.busy && !state.hasNothingToSend && state.senderName.isNotBlank(),
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.primary,
                     contentColor = theme.background

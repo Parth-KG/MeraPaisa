@@ -68,7 +68,9 @@ fun AmountText(
         when {
             parts.fraction.isNotEmpty() -> append(".${parts.fraction}")
             // Same width as a real fraction, drawn in nothing, so the column stays square.
-            columnAligned && hasMinorUnit(currencyCode) ->
+            // Every currency, the yen included: a yen figure has no decimals to show, but in a column
+            // beside rupees and dollars it still has to stop where their decimal points are.
+            columnAligned ->
                 withStyle(amountBlankFractionSpan()) { append(".00") }
         }
     }
@@ -132,9 +134,6 @@ fun AmountPlaceholder(modifier: Modifier = Modifier, style: TextStyle = MeraPais
         )
     }
 }
-
-private fun hasMinorUnit(currencyCode: String): Boolean =
-    com.kg.merapaisa.data.currencyDecimals(com.kg.merapaisa.data.normaliseCurrency(currencyCode)) > 0
 
 /**
  * The last line of defence against a clipped figure.

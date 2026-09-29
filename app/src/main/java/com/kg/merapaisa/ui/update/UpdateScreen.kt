@@ -112,7 +112,8 @@ fun UpdateScreen(
         ) {
             item {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.sm, bottom = Spacing.lg),
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     if (state.percent >= 0) {

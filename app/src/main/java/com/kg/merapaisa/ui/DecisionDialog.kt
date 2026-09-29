@@ -25,7 +25,14 @@ import com.kg.merapaisa.ui.theme.Spacing
  * time, and two of them had fallen back to Material's own dialog: a 28dp corner, a smaller title
  * and buttons in a different ink from every other question the app asks.
  *
+ * Both buttons name an outcome, the way out included: "Keep Asha" says what not deleting means
+ * where "Cancel" says only that something stops.
+ *
  * [warning] is the one line that must not be skimmed, set apart in the negative ink.
+ *
+ * The confirm button takes the accent, as every action does. It used to take the negative ink
+ * when the action destroyed something, but that ink is for amounts; the title and the button's
+ * own word ("Delete") say what it does.
  */
 @Composable
 internal fun DecisionDialog(
@@ -34,8 +41,8 @@ internal fun DecisionDialog(
     confirmLabel: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
-    dismissLabel: String = "Cancel",
-    confirmColour: Color = LocalAppTheme.current.negative,
+    dismissLabel: String,
+    confirmColour: Color = LocalAppTheme.current.primary,
     warning: String? = null
 ) {
     val theme = LocalAppTheme.current

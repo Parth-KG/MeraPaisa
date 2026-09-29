@@ -77,6 +77,7 @@ fun NetPosition(totals: List<CurrencyTotal>, modifier: Modifier = Modifier) {
                             .clearAndSetSemantics {
                                 contentDescription = amountSpoken(total.amountMinor, total.currency)
                             },
+                        keepLabelOnOneLine = true,
                         label = {
                             Text(
                                 if (total.amountMinor > 0) "owed to you" else "you owe",

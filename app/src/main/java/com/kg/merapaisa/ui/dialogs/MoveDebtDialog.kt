@@ -54,6 +54,8 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 
 /**
  * Moving part of what one person owes onto somebody else.
@@ -211,7 +213,7 @@ fun MoveDebtDialog(
         }
 
         Row(
-            modifier = Modifier
+            modifier = Modifier.height(IntrinsicSize.Min)
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -220,11 +222,11 @@ fun MoveDebtDialog(
             OutlinedButton(
                 onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 border = BorderStroke(1.dp, theme.outline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
             ) {
-                Text("Cancel", style = MeraPaisaType.action)
+                Text("Don't move", style = MeraPaisaType.action)
             }
             Button(
                 // No hide before the callback here, unlike every other button on a sheet in this
@@ -233,7 +235,7 @@ fun MoveDebtDialog(
                 onClick = onConfirm,
                 enabled = state.canMove,
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.primary,
                     contentColor = theme.background
@@ -360,8 +362,8 @@ private fun Key(key: String, onKey: (String) -> Unit, modifier: Modifier = Modif
         colors = ButtonDefaults.buttonColors(
             // fillStrong, not fill: fill is defined as card, which on a sheet sits too close to
             // the surface behind it, and the keys rendered as bare text with no visible shape.
-            containerColor = if (isBackspace) lerp(theme.surface, theme.negative, 0.18f) else theme.fillStrong,
-            contentColor = if (isBackspace) theme.negative else theme.textPrimary
+            containerColor = theme.fillStrong,
+            contentColor = if (isBackspace) theme.textSecondary else theme.textPrimary
         )
     ) {
         if (isBackspace) {

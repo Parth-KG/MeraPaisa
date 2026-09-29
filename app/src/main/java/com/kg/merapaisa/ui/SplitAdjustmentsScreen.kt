@@ -53,6 +53,10 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Motion
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
+import com.kg.merapaisa.ui.format.amountParts
+import com.kg.merapaisa.ui.format.SignStyle
+import com.kg.merapaisa.data.currencyDecimals
+import com.kg.merapaisa.data.normaliseCurrency
 
 data class SplitParticipant(
     val id: Long,
@@ -306,6 +310,7 @@ fun SplitAdjustmentsContent(
         Column(modifier = Modifier.padding(horizontal = Spacing.lg)) {
             LabelAndAmount(
                 modifier = Modifier.fillMaxWidth(),
+                keepLabelOnOneLine = true,
                 label = {
                     Text("Shares add up to", style = MeraPaisaType.body, color = theme.textSecondary)
                 },
@@ -448,8 +453,18 @@ private fun SplitShareRow(
     // the next digit landed after the ".00".
     var editing by remember { mutableStateOf(false) }
     var typed by remember { mutableStateOf("") }
-    val formatted = formatMinorPlain(shownMinor, sourceCurrency, trimZeros = false)
-    val text = if (editing) typed else formatted
+    // At rest the share is grouped like every other figure (12,345.50); while it is being typed
+    // it is plain digits, because grouping commas would not parse back.
+    val plain = formatMinorPlain(shownMinor, sourceCurrency, trimZeros = false)
+    val grouped = amountParts(shownMinor, sourceCurrency, SignStyle.None).let { parts ->
+        val decimals = currencyDecimals(normaliseCurrency(sourceCurrency))
+        parts.integer + when {
+            parts.fraction.isNotEmpty() -> ".${parts.fraction}"
+            decimals > 0 -> "." + "0".repeat(decimals)
+            else -> ""
+        }
+    }
+    val text = if (editing) typed else grouped
 
     val supporting = when {
         convertedAmountMinor != null && participant.currency != sourceCurrency && locked ->
@@ -527,7 +542,7 @@ private fun SplitShareRow(
                 modifier = Modifier
                     .widthIn(min = 56.dp, max = 140.dp)
                     .onFocusChanged { state ->
-                        if (state.isFocused && !editing) typed = formatted
+                        if (state.isFocused && !editing) typed = plain
                         editing = state.isFocused
                     }
             )

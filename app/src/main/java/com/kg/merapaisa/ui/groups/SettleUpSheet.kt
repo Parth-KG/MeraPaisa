@@ -39,6 +39,10 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.PaddingValues
 
 /**
  * The payments that make everyone in the group even, worked out the way the group is set to: the
@@ -108,23 +112,32 @@ fun SettleUpSheet(
                 ) {
                     // Recording leaves the sheet open on purpose: the plan shrinks as each payment
                     // is written down, and closing after the first one would hide the rest.
-                    TextButton(onClick = { onRecord(t) }, modifier = Modifier.heightIn(min = 48.dp)) {
+                    // No padding on the trailing side, so the label ends where the figure above
+                    // it ends rather than a button's inset short of it.
+                    TextButton(
+                        onClick = { onRecord(t) },
+                        modifier = Modifier.heightIn(min = 48.dp),
+                        contentPadding = PaddingValues(start = Spacing.md, end = 0.dp)
+                    ) {
                         Text("Record payment", style = MeraPaisaType.action)
                     }
                 }
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.lg),
-            horizontalArrangement = Arrangement.End
+        // The way out, outlined and full width like the foot of every other sheet. Recording
+        // happens on each line above, so there is no second button here to pair it with.
+        OutlinedButton(
+            onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
+            shape = Shapes.small,
+            border = BorderStroke(1.dp, theme.outline),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.lg)
+                .heightIn(min = 52.dp)
         ) {
-            TextButton(
-                onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
-                modifier = Modifier.heightIn(min = 48.dp)
-            ) {
-                Text("Back to the group", style = MeraPaisaType.action)
-            }
+            Text("Back to the group", style = MeraPaisaType.action)
         }
     }
 }

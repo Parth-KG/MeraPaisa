@@ -471,6 +471,7 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
                 "23 entries. It also removes 2 group expenses they paid for, changing what the " +
                 "other members of those groups owe. This can't be undone.",
             confirmLabel = "Delete",
+            dismissLabel = "Keep ${person.name}",
             onConfirm = {},
             onDismiss = {}
         )

@@ -40,6 +40,8 @@ import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 
 /**
  * A full screen switched in by UI state: a back arrow, a title in the gutter, a list, and the
@@ -117,7 +119,7 @@ internal fun ScreenFrame(
 @Composable
 internal fun FootActions(content: @Composable RowScope.() -> Unit) {
     Row(
-        modifier = Modifier
+        modifier = Modifier.height(IntrinsicSize.Min)
             .fillMaxWidth()
             .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
@@ -137,7 +139,7 @@ internal fun RowScope.PrimaryAction(label: String, enabled: Boolean, onClick: ()
         onClick = onClick,
         enabled = enabled,
         shape = Shapes.small,
-        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+        modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
         contentPadding = FootButtonPadding,
         colors = ButtonDefaults.buttonColors(
             containerColor = theme.primary,
@@ -156,7 +158,7 @@ internal fun RowScope.SecondaryAction(label: String, enabled: Boolean, onClick: 
         onClick = onClick,
         enabled = enabled,
         shape = Shapes.small,
-        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+        modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
         contentPadding = FootButtonPadding,
         border = BorderStroke(1.dp, theme.outline),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)

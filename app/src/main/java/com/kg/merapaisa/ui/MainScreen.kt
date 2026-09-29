@@ -64,6 +64,9 @@ import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.RowDivider
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
@@ -280,7 +283,7 @@ fun MainScreen(viewModel: MainViewModel) {
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             Row(
-                modifier = Modifier
+                modifier = Modifier.height(IntrinsicSize.Min)
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.safeDrawing)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.md),
@@ -293,7 +296,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         else viewModel.showAddDialog(true)
                     },
                     shape = Shapes.small,
-                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                    modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = theme.primary,
                         contentColor = theme.background
@@ -309,7 +312,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     OutlinedButton(
                         onClick = { viewModel.startSplit() },
                         shape = Shapes.small,
-                        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                         border = BorderStroke(1.dp, theme.outline),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
                     ) {
@@ -537,6 +540,7 @@ fun MainScreen(viewModel: MainViewModel) {
             title = "Delete ${target.name}?",
             body = "$lead$groupNote$sharedNote This can't be undone.",
             confirmLabel = "Delete",
+            dismissLabel = "Keep ${target.name}",
             onConfirm = {
                 viewModel.deletePerson(target.person)
                 viewModel.confirmDelete(null)
@@ -554,6 +558,7 @@ fun MainScreen(viewModel: MainViewModel) {
             body = "Removes every expense and payment in it, and whatever they added to its " +
                 "members' balances. This can't be undone.",
             confirmLabel = "Delete",
+            dismissLabel = "Keep the group",
             onConfirm = {
                 viewModel.deleteGroup(target.group.id)
                 viewModel.confirmDeleteGroup(null)

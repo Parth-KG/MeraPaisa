@@ -145,7 +145,7 @@ fun EntryHistoryContent(
                     onClick = { showClearConfirm = true },
                     modifier = Modifier.heightIn(min = 48.dp)
                 ) {
-                    Text("Clear history", style = MeraPaisaType.action, color = theme.negative)
+                    Text("Clear history", style = MeraPaisaType.action, color = theme.textPrimary)
                 }
             }
         }
@@ -170,7 +170,7 @@ fun EntryHistoryContent(
 
         if (entries.isEmpty()) {
             Text(
-                "Nothing recorded yet. Amounts you add for ${person.name} turn up here, newest first.",
+                "Nothing recorded with ${person.name} yet.",
                 style = MeraPaisaType.body,
                 color = theme.textSecondary,
                 modifier = Modifier
@@ -230,6 +230,7 @@ fun EntryHistoryContent(
                 "${person.name}'s balance goes back to what it was before. Nothing is deleted: " +
                 "the old entries stay in the history.",
             confirmLabel = "Reverse entries",
+            dismissLabel = "Don't reverse",
             // Not destructive: it writes a line rather than removing any, so it takes the accent
             // that every other action on the screen takes.
             confirmColour = theme.primary,
@@ -265,6 +266,7 @@ fun EntryHistoryContent(
             title = "Clear ${person.name}'s history?",
             body = body,
             confirmLabel = "Clear history",
+            dismissLabel = "Keep the history",
             onConfirm = {
                 onClear()
                 showClearConfirm = false

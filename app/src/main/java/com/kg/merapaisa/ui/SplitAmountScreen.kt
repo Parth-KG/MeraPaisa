@@ -204,8 +204,8 @@ private fun SplitKey(key: String, modifier: Modifier = Modifier, onClick: () -> 
         shape = Shapes.small,
         contentPadding = PaddingValues(0.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (isBackspace) lerp(theme.card, theme.negative, 0.18f) else theme.fillStrong,
-            contentColor = if (isBackspace) theme.negative else theme.textPrimary
+            containerColor = theme.fillStrong,
+            contentColor = if (isBackspace) theme.textSecondary else theme.textPrimary
         )
     ) {
         if (isBackspace) {

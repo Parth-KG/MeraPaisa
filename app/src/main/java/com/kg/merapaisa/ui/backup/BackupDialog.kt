@@ -129,7 +129,8 @@ private fun MenuScreen(
             item {
                 if (state.lastRun > 0) {
                     Column(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.sm),
                         verticalArrangement = Arrangement.spacedBy(Spacing.xs)
                     ) {
                         Text(
@@ -178,7 +179,7 @@ private fun MenuScreen(
                     subtitle = "Nothing saved is deleted, and you can still save a backup by hand.",
                     enabled = !state.busy,
                     onClick = onTurnOffAuto,
-                    ink = theme.negative
+                    ink = theme.textPrimary
                 )
             }
         } else {

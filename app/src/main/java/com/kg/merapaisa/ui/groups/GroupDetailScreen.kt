@@ -58,6 +58,9 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.coversLedger
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 
 /**
  * One group: where everybody stands, what has been spent, and a way to square it up.
@@ -204,7 +207,7 @@ fun GroupDetailScreen(
             if (purchases.isEmpty()) {
                 item {
                     Text(
-                        "Nothing spent yet. Put in what somebody paid for and it turns up here.",
+                        "Nothing spent yet.",
                         style = MeraPaisaType.body,
                         color = theme.textSecondary,
                         modifier = Modifier.padding(horizontal = Spacing.lg)
@@ -246,7 +249,7 @@ fun GroupDetailScreen(
         // Both actions named, side by side, the way the people list carries its own two. Settling
         // up is the second one because it is what you reach for once, at the end of a trip.
         Row(
-            modifier = Modifier
+            modifier = Modifier.height(IntrinsicSize.Min)
                 .fillMaxWidth()
                 .windowInsetsPadding(
                     WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
@@ -258,7 +261,7 @@ fun GroupDetailScreen(
             Button(
                 onClick = onAddExpense,
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.primary,
                     contentColor = theme.background
@@ -270,7 +273,7 @@ fun GroupDetailScreen(
                 onClick = onSettleUp,
                 enabled = !everyoneEven,
                 shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 border = BorderStroke(1.dp, theme.outline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
             ) {
@@ -413,7 +416,7 @@ private fun EntryRow(
             shape = Shapes.medium
         ) {
             DropdownMenuItem(
-                text = { Text(deleteLabel, style = MeraPaisaType.body, color = theme.negative) },
+                text = { Text(deleteLabel, style = MeraPaisaType.body, color = theme.textPrimary) },
                 onClick = { showMenu = false; onDelete() }
             )
         }
