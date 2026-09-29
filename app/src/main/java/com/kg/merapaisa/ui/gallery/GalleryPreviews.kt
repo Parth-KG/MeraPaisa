@@ -19,6 +19,9 @@ import com.kg.merapaisa.ui.NetPosition
 import com.kg.merapaisa.ui.NumPad
 import com.kg.merapaisa.ui.PersonRow
 import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.SplitAdjustmentsContent
+import com.kg.merapaisa.ui.SplitAmountScreen
+import com.kg.merapaisa.ui.SplitPickerScreen
 import com.kg.merapaisa.ui.Tab
 import com.kg.merapaisa.ui.groups.GroupDetailScreen
 import com.kg.merapaisa.ui.groups.GroupRow
@@ -171,6 +174,80 @@ fun GroupDetailEvenCase() {
     )
 }
 
+// -- the split flow -------------------------------------------------------------------------
+
+@Composable
+fun SplitAmountCase() {
+    SplitAmountScreen(
+        amount = "12345.50",
+        currency = "INR",
+        onCurrencyChange = {}, onAmountChange = {}, onCancel = {}, onNext = {}
+    )
+}
+
+/** Mixed currencies and a long name, so the picker has to show real signed balances. */
+@Composable
+fun SplitPickerCase() {
+    SplitPickerScreen(
+        allPersons = Fixtures.mixedPeople,
+        selectedIds = setOf(1L, 3L),
+        includeMe = true,
+        onToggleMe = {}, onTogglePerson = {}, onAddPerson = {},
+        onBack = {}, onCancel = {}, onNext = {}
+    )
+}
+
+/** One person selected, which is the state the primary action must refuse. */
+@Composable
+fun SplitPickerTooFewCase() {
+    SplitPickerScreen(
+        allPersons = Fixtures.mixedPeople,
+        selectedIds = setOf(1L),
+        includeMe = false,
+        onToggleMe = {}, onTogglePerson = {}, onAddPerson = {},
+        onBack = {}, onCancel = {}, onNext = {}
+    )
+}
+
+/**
+ * The screen the rework is really about: locked shares, and the rest redistributing.
+ *
+ * `convert` returns the amount unchanged, since a gallery run has no network and conversion is
+ * not what this case is for.
+ */
+@Composable
+fun SplitAdjustmentsCase() {
+    SplitAdjustmentsContent(
+        convert = { amount, _, _ -> amount },
+        amountMinor = 12_345_50,
+        sourceCurrency = "INR",
+        selectedPersons = Fixtures.mixedPeople.take(4),
+        includeMe = true,
+        note = Fixtures.LONG_NOTE,
+        onNoteChange = {}, onBack = {}, onCancel = {}, onConfirm = {}
+    )
+}
+
+/**
+ * Two shares locked and the rest absorbing the difference.
+ *
+ * The state the split rework is really about, and the one no screenshot showed until now: a locked
+ * share has to read as locked without relying on a tint.
+ */
+@Composable
+fun SplitAdjustmentsLockedCase() {
+    SplitAdjustmentsContent(
+        convert = { amount, _, _ -> amount },
+        amountMinor = 12_345_50,
+        sourceCurrency = "INR",
+        selectedPersons = Fixtures.mixedPeople.take(4),
+        includeMe = true,
+        note = "Dinner",
+        onNoteChange = {}, onBack = {}, onCancel = {}, onConfirm = {},
+        initiallyLockedIds = setOf(1L, 2L)
+    )
+}
+
 /**
  * The gallery's running order. The harness renders each of these in every theme, so this list is
  * the single place that decides what gets reviewed.
@@ -188,7 +265,12 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "empty-groups" to { EmptyGroupsCase() },
     "group-rows" to { GroupRowsCase() },
     "group-detail" to { GroupDetailCase() },
-    "group-detail-even" to { GroupDetailEvenCase() }
+    "group-detail-even" to { GroupDetailEvenCase() },
+    "split-amount" to { SplitAmountCase() },
+    "split-picker" to { SplitPickerCase() },
+    "split-picker-too-few" to { SplitPickerTooFewCase() },
+    "split-adjustments" to { SplitAdjustmentsCase() },
+    "split-adjustments-locked" to { SplitAdjustmentsLockedCase() }
 )
 
 // -- Android Studio previews ---------------------------------------------------------------

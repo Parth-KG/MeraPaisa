@@ -133,6 +133,47 @@ fun SplitAdjustmentsScreen(
     onBack: () -> Unit,
     onCancel: () -> Unit,
     onConfirm: (Map<Long, Long>) -> Unit
+) = SplitAdjustmentsContent(
+    // The only thing the view model was ever asked for here. Passing the one call it makes, rather
+    // than the whole view model, is what lets the screenshot gallery and a preview render this
+    // screen at all. The view model taking signature stays exactly as it was, because
+    // SplitConfirmTimingTest and MainScreen both call it.
+    convert = viewModel::convertCurrency,
+    amountMinor = amountMinor,
+    sourceCurrency = sourceCurrency,
+    selectedPersons = selectedPersons,
+    includeMe = includeMe,
+    note = note,
+    onNoteChange = onNoteChange,
+    onBack = onBack,
+    onCancel = onCancel,
+    onConfirm = onConfirm
+)
+
+/**
+ * The same screen with no view model: everything it needs, handed in.
+ *
+ * Kept separate so previews and the gallery can render it with fake data. A screen that can only
+ * be seen by running the app is a screen nobody looks at until it ships.
+ */
+@Composable
+fun SplitAdjustmentsContent(
+    convert: suspend (Long, String, String) -> Long?,
+    amountMinor: Long,
+    sourceCurrency: String,
+    selectedPersons: List<PersonWithBalance>,
+    includeMe: Boolean,
+    note: String,
+    onNoteChange: (String) -> Unit,
+    onBack: () -> Unit,
+    onCancel: () -> Unit,
+    onConfirm: (Map<Long, Long>) -> Unit,
+    /**
+     * Rows that start locked. Empty in the app, since a split opens with nothing locked and a row
+     * locks when it is edited. It exists so a preview and the gallery can show the locked state,
+     * which is otherwise only reachable by typing and therefore never appears in a screenshot.
+     */
+    initiallyLockedIds: Set<Long> = emptySet()
 ) {
     val theme = LocalAppTheme.current
 
@@ -153,7 +194,7 @@ fun SplitAdjustmentsScreen(
     var amountsInSource by remember(participants, amountMinor) {
         mutableStateOf(equalSplit(amountMinor, participants))
     }
-    var lockedIds by remember(participants) { mutableStateOf(setOf<Long>()) }
+    var lockedIds by remember(participants) { mutableStateOf(initiallyLockedIds) }
 
     // The row the user last typed in. It is the one row that must not animate: its digits are
     // already under a thumb, and a number that moves while you type it cannot be read.
@@ -175,7 +216,7 @@ fun SplitAdjustmentsScreen(
             if (p.currency == sourceCurrency) {
                 result[p.id] = srcAmt
             } else {
-                val convertedAmount = viewModel.convertCurrency(srcAmt, sourceCurrency, p.currency)
+                val convertedAmount = convert(srcAmt, sourceCurrency, p.currency)
                 if (convertedAmount == null) {
                     conversionError = "Couldn't get today's rate for ${p.currency}, so ${p.name}'s " +
                         "share can't be worked out. Try again once you're connected, or take " +
@@ -390,8 +431,11 @@ private fun SplitShareRow(
 
     // Plain digits rather than a grouped amount: the grouping commas would not parse back, and
     // this is the one amount on screen the user types into rather than reads.
+    //
+    // Trailing zeros are kept. Trimming them turned a share of 2,469.10 into "2469.1", which reads
+    // as a different and slightly wrong number, and parseAmountToMinor accepts either.
     var text by remember(shownMinor) {
-        mutableStateOf(formatMinorPlain(shownMinor, sourceCurrency, trimZeros = true))
+        mutableStateOf(formatMinorPlain(shownMinor, sourceCurrency, trimZeros = false))
     }
 
     val supporting = when {
