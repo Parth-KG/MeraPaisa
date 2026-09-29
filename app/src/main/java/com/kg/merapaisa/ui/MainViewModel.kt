@@ -678,6 +678,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 Person(
                     name = confirming.newPersonName!!.trim(),
                     pfpValue = confirming.newPersonName.trim().take(2).uppercase(),
+                    pfpColor = com.kg.merapaisa.ui.dialogs.hueForName(confirming.newPersonName),
                     sortOrder = repository.nextSortOrder(),
                     currency = confirming.payload.currency
                 )
@@ -785,13 +786,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val context = getApplication<Application>()
             val result = runCatching {
                 val json = backupRepository.exportJson(System.currentTimeMillis(), BuildConfig.VERSION_NAME)
+                val bytes = json.toByteArray(Charsets.UTF_8)
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openOutputStream(uriString.toUri())?.use { out ->
-                        out.write(json.toByteArray(Charsets.UTF_8))
+                        out.write(bytes)
                         out.flush()
                     } ?: error("could not open the file for writing")
                 }
-                json.length
+                bytes.size
             }
             _uiState.update {
                 it.copy(
@@ -800,7 +802,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             BackupFlowState.Done(
                                 "Backup saved",
                                 "Everything is in that file: people, entries, groups and expenses. " +
-                                    "Keep it somewhere that is not this phone. (${size / 1024} KB)"
+                                    "Keep it somewhere that is not this phone. (${maxOf(1, (size + 1023) / 1024)} KB)"
                             )
                         },
                         onFailure = { e ->

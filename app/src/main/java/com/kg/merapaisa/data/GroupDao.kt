@@ -165,7 +165,24 @@ interface GroupDao {
         insertShares(sharesByPerson.map { (personId, share) ->
             ExpenseShare(expenseId = id, personId = personId, shareMinor = share)
         })
+        // Anyone whose balance with you this moves is live again, as recording money by hand
+        // makes them. Otherwise a settled member's new group debt sat in the Settled tab, left out
+        // of the net position and the widget. Only you paying, or you sharing, moves a balance
+        // with you; an expense between two other members does not.
+        val selfId = selfIdNow() ?: return
+        val moved = when {
+            expense.paidByPersonId == selfId -> sharesByPerson.filter { it.value != 0L }.keys - selfId
+            (sharesByPerson[selfId] ?: 0L) != 0L -> setOf(expense.paidByPersonId)
+            else -> emptySet()
+        }
+        if (moved.isNotEmpty()) reopenPersons(moved.toList())
     }
+
+    @Query("SELECT id FROM persons WHERE isSelf = 1 LIMIT 1")
+    suspend fun selfIdNow(): Long?
+
+    @Query("UPDATE persons SET isSettled = 0 WHERE id IN (:personIds)")
+    suspend fun reopenPersons(personIds: List<Long>)
 
     // -----------------------------------------------------------------------------------------
     // Backup and restore

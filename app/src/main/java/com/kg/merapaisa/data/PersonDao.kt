@@ -69,6 +69,25 @@ interface PersonDao {
     @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM transactions WHERE personId = :personId")
     suspend fun getBalanceNow(personId: Long): Long
 
+    /**
+     * The balance the screen shows: direct entries plus what the two of you owe each other in
+     * groups. [getBalanceNow] is the direct part alone, which is right for closing entries but not
+     * for asking how much someone owes you: moving a debt checked it, so the sheet offered ₹2,450
+     * and then refused anything above the ₹1,450 of it that was direct.
+     */
+    @Query(
+        """
+        SELECT COALESCE((SELECT SUM(amountMinor) FROM transactions WHERE personId = :personId), 0)
+            + COALESCE((SELECT SUM(s.shareMinor) FROM expense_shares s
+                        JOIN expenses e ON e.id = s.expenseId
+                        WHERE s.personId = :personId AND e.paidByPersonId = :selfId), 0)
+            - COALESCE((SELECT SUM(s2.shareMinor) FROM expense_shares s2
+                        JOIN expenses e2 ON e2.id = s2.expenseId
+                        WHERE s2.personId = :selfId AND e2.paidByPersonId = :personId), 0)
+        """
+    )
+    suspend fun getFullBalanceNow(personId: Long, selfId: Long): Long
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPerson(person: Person): Long
 
@@ -358,7 +377,7 @@ interface PersonDao {
 
     /** Reverses everything at or after [since] in one entry, computed under the transaction. */
     @androidx.room.Transaction
-    suspend fun rollbackTo(personId: Long, since: Long, note: String = "Rollback") {
+    suspend fun rollbackTo(personId: Long, since: Long, note: String = "Reversed") {
         val toReverse = sumTransactionsSince(personId, since)
         if (toReverse == 0L) return
         insertTransaction(Transaction(personId = personId, amountMinor = -toReverse, note = note))

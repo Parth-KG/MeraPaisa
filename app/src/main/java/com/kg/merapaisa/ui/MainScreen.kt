@@ -180,7 +180,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
 
             // Groups get their own list; Active and Settled share the people list.
             if (ui.tab == Tab.Groups) {
@@ -198,7 +198,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         modifier = Modifier
                             .weight(1f)
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
-                        contentPadding = PaddingValues(bottom = Spacing.xxl)
+                        contentPadding = PaddingValues(bottom = ListClearance)
                     ) {
                         itemsIndexed(groups, key = { _, it -> it.group.id }) { index, summary ->
                             if (index > 0) RowDivider(TextRowInset)
@@ -222,7 +222,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 modifier = Modifier
                     .weight(1f)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
-                contentPadding = PaddingValues(bottom = Spacing.xxl)
+                contentPadding = PaddingValues(bottom = ListClearance)
             ) {
                 itemsIndexed(list, key = { _, it -> it.id }) { index, person ->
                     if (index > 0) RowDivider()
@@ -278,13 +278,12 @@ fun MainScreen(viewModel: MainViewModel) {
                 )
             }
         }
-        // One labelled action, plus Split where it applies.
+        // Add a person (a new group on the Groups tab), and Split beside it on the people tabs.
         //
-        // These were two identical 65dp icon-only squares in opposite bottom corners: a plus on
-        // the left and a fork on the right, the same size and the same shape, neither saying what
-        // it did. Which one added a person and which one started a split was something you had to
-        // learn. Both are named now, and they sit together, because a thumb reaching the bottom
-        // of the screen should find the actions in one place rather than two.
+        // These were once two identical icon squares in opposite corners, neither saying what it
+        // did. They became named full-width buttons, and then, at Parth's request, icons again:
+        // together at the bottom right, one filled and one outlined so they read as different
+        // actions, each with its name as the description TalkBack reads.
         AnimatedVisibility(
             visible = ui.selectedId == null,
             enter = fadeIn(tween(Motion.quick)),
@@ -697,3 +696,9 @@ fun MainScreen(viewModel: MainViewModel) {
         )
     }
 }
+
+/**
+ * Room under the last row for the bottom-right buttons: 56dp tall with padding either side. A
+ * list that stopped short of this put its last row's amount and history button behind them.
+ */
+private val ListClearance = 56.dp + Spacing.md * 2 + Spacing.sm

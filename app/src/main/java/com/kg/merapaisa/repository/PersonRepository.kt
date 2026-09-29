@@ -119,7 +119,7 @@ class PersonRepository(
             return MoveDebtResult.CurrencyMismatch(fromCurrency, toCurrency)
         }
 
-        val available = dao.getBalanceNow(fromPersonId)
+        val available = dao.getFullBalanceNow(fromPersonId, dao.ensureSelf().id)
         if (available <= 0L) return MoveDebtResult.NothingToMove(available)
         if (amountMinor > available) return MoveDebtResult.MoreThanOwed(available)
 
@@ -148,7 +148,7 @@ class PersonRepository(
         val from = dao.getPersonNow(fromPersonId) ?: return MoveDebtResult.NotAnAmount
         val to = dao.getPersonNow(toPersonId) ?: return MoveDebtResult.NotAnAmount
 
-        val available = dao.getBalanceNow(fromPersonId)
+        val available = dao.getFullBalanceNow(fromPersonId, dao.ensureSelf().id)
         if (available <= 0L) return MoveDebtResult.NothingToMove(available)
         if (amountMinor > available) return MoveDebtResult.MoreThanOwed(available)
 
