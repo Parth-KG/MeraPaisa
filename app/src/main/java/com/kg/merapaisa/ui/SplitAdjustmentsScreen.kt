@@ -250,7 +250,7 @@ fun SplitAdjustmentsContent(
             value = note,
             onValueChange = onNoteChange,
             placeholder = {
-                Text("dinner, cab fare", style = MeraPaisaType.body, color = theme.textSecondary)
+                Text("Dinner, cab fare", style = MeraPaisaType.body, color = theme.textSecondary)
             },
             textStyle = MeraPaisaType.body,
             singleLine = true,

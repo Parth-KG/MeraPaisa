@@ -299,7 +299,7 @@ private fun AppLockRow(enabled: Boolean, available: Boolean, onChange: (Boolean)
             )
             Text(
                 if (available) {
-                    "Ask for your fingerprint, face or device PIN before the ledger opens."
+                    "Ask for your fingerprint, face or screen lock before the ledger opens."
                 } else {
                     "Your phone has no screen lock, so there is nothing to ask for. Set one in " +
                         "Android settings and this can be turned on."

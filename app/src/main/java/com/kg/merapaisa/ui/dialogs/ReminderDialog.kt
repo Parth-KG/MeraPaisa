@@ -166,7 +166,7 @@ fun ReminderSheet(
                 border = BorderStroke(1.dp, theme.outline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
             ) {
-                Text("Cancel", style = MeraPaisaType.action)
+                Text("Don't send", style = MeraPaisaType.action)
             }
             Button(
                 onClick = {

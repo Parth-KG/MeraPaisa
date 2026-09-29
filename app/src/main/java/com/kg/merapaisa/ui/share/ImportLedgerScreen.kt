@@ -120,7 +120,7 @@ private fun PastingScreen(
         onBack = onDismiss,
         footer = {
             FootActions {
-                PrimaryAction("Read it", enabled = state.text.isNotBlank(), onClick = onSubmit)
+                PrimaryAction("Check the link", enabled = state.text.isNotBlank(), onClick = onSubmit)
             }
         }
     ) {
@@ -329,7 +329,7 @@ private fun ConfirmingScreen(
                 selected = newName != null,
                 onClick = { onNewPersonNameChange(claimedNameForDisplay(payload.senderName)) }
             ) {
-                Text("Add someone new", style = MeraPaisaType.bodyStrong, color = theme.textPrimary)
+                Text("Add a new person", style = MeraPaisaType.bodyStrong, color = theme.textPrimary)
             }
         }
 
