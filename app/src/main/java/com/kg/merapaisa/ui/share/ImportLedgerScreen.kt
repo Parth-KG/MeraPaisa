@@ -1,30 +1,74 @@
 package com.kg.merapaisa.ui.share
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.ImportOutcome
 import com.kg.merapaisa.data.PersonWithBalance
-import com.kg.merapaisa.data.ReconcileItem
 import com.kg.merapaisa.data.ReconcilePlan
 import com.kg.merapaisa.data.SharePayload
 import com.kg.merapaisa.data.claimedNameForDisplay
-import com.kg.merapaisa.ui.format.amountString
+import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.ui.ImportFlowState
+import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.UnreadableReason
+import com.kg.merapaisa.ui.format.AmountText
+import com.kg.merapaisa.ui.format.amountString
+import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.theme.Shapes
+import com.kg.merapaisa.ui.theme.Spacing
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -33,9 +77,17 @@ import java.util.Locale
  * The incoming half of the two-sided ledger: what a link is about to write, and the chance to refuse.
  *
  * **This screen is the only check that a link is genuine.** There is no server, no account and no
- * signature — anyone can craft a payload naming anyone. So it shows the amounts before writing them,
+ * signature, so anyone can craft a payload naming anyone. It shows the amounts before writing them,
  * names the claim as a claim, and never applies anything without a tap. Removing the confirmation
  * step to save that tap would remove the feature's only safeguard.
+ *
+ * It was five AlertDialogs, and the largest of them held a preview of the link, a security notice,
+ * a list of people and a per-entry reconcile list inside a box sized for a question. Everything
+ * worth reading was behind a scroll bar a few lines tall. They are screens now, with the reading
+ * in a LazyColumn and the two answers named at the foot.
+ *
+ * One AlertDialog is left, for the one thing here that destroys something: ticking entries the
+ * sender deleted removes them from this ledger too, so that is asked as a question.
  */
 @Composable
 fun ImportLedgerDialog(
@@ -50,10 +102,10 @@ fun ImportLedgerDialog(
     onDismiss: () -> Unit
 ) {
     when (state) {
-        is ImportFlowState.Pasting -> PastingDialog(state, onPasteChange, onPasteSubmit, onDismiss)
-        ImportFlowState.Reading -> ReadingDialog()
-        is ImportFlowState.Unreadable -> UnreadableDialog(state.reason, onDismiss)
-        is ImportFlowState.Confirming -> ConfirmingDialog(
+        is ImportFlowState.Pasting -> PastingScreen(state, onPasteChange, onPasteSubmit, onDismiss)
+        ImportFlowState.Reading -> ReadingScreen()
+        is ImportFlowState.Unreadable -> UnreadableScreen(state.reason, onDismiss)
+        is ImportFlowState.Confirming -> ConfirmingScreen(
             state = state,
             persons = persons,
             onTargetChange = onTargetChange,
@@ -62,115 +114,228 @@ fun ImportLedgerDialog(
             onApply = onApply,
             onDismiss = onDismiss
         )
-        is ImportFlowState.Done -> DoneDialog(state, onDismiss)
+        is ImportFlowState.Done -> DoneScreen(state, onDismiss)
+    }
+}
+
+/**
+ * The shape every step of this flow takes: a back arrow, a title in the gutter, a list, and the
+ * answers named at the foot.
+ *
+ * [onBack] is null while the link is being read or written. Leaving mid-write would hide the
+ * screen without stopping anything, and the result would then reappear on its own, announcing a
+ * change the user had just waved away, so the system back is swallowed instead.
+ */
+@Composable
+private fun ImportFrame(
+    title: String,
+    onBack: (() -> Unit)?,
+    footer: (@Composable () -> Unit)? = null,
+    content: LazyListScope.() -> Unit
+) {
+    val theme = LocalAppTheme.current
+
+    BackHandler(enabled = true) { onBack?.invoke() }
+
+    Column(modifier = Modifier.fillMaxSize().background(theme.background)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+                )
+                .padding(horizontal = Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (onBack != null) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.widthIn(min = 48.dp).heightIn(min = 48.dp)
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = theme.textPrimary
+                    )
+                }
+            } else {
+                // Keeps the title where it sits on every other step, so the screen does not jump
+                // up by a row at the moment the ledger is being written.
+                Spacer(Modifier.height(48.dp))
+            }
+        }
+
+        Text(
+            title,
+            style = MeraPaisaType.screenTitle,
+            color = theme.textPrimary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                .padding(horizontal = Spacing.lg)
+        )
+
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
+            contentPadding = PaddingValues(top = Spacing.md, bottom = Spacing.lg),
+            content = content
+        )
+
+        footer?.invoke()
+    }
+}
+
+/** The answers, side by side at the foot, clear of the navigation bar. */
+@Composable
+private fun FootActions(content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(
+                WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
+            )
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        content = content
+    )
+}
+
+@Composable
+private fun RowScope.PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
+    val theme = LocalAppTheme.current
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        shape = Shapes.small,
+        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = theme.primary,
+            contentColor = theme.background
+        )
+    ) {
+        Text(label, style = MeraPaisaType.action)
     }
 }
 
 @Composable
-private fun PastingDialog(
+private fun RowScope.SecondaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
+    val theme = LocalAppTheme.current
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        shape = Shapes.small,
+        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+        border = BorderStroke(1.dp, theme.outline),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
+    ) {
+        Text(label, style = MeraPaisaType.action)
+    }
+}
+
+@Composable
+private fun PastingScreen(
     state: ImportFlowState.Pasting,
     onTextChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val theme = LocalAppTheme.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = theme.card,
-        title = {
-            Text("Record a shared update", color = theme.textPrimary, fontWeight = FontWeight.Bold)
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    ImportFrame(
+        title = "Record a shared update",
+        onBack = onDismiss,
+        footer = {
+            FootActions {
+                PrimaryAction("Read it", enabled = state.text.isNotBlank(), onClick = onSubmit)
+            }
+        }
+    ) {
+        item {
+            Paragraph(
+                "Paste the whole message someone sent you. You will see exactly what it would " +
+                    "record before anything changes."
+            )
+        }
+        item { Spacer(Modifier.height(Spacing.lg)) }
+        item {
+            OutlinedTextField(
+                value = state.text,
+                onValueChange = onTextChange,
+                label = { Text("Link or message", style = MeraPaisaType.label) },
+                textStyle = MeraPaisaType.body,
+                shape = Shapes.medium,
+                minLines = 3,
+                maxLines = 6,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
+            )
+        }
+        item {
+            Column(modifier = Modifier.padding(top = Spacing.xl)) {
+                Paragraph(
+                    "A link only ever adds to your ledger once, so pasting the same one twice " +
+                        "changes nothing.",
+                    colour = theme.textSecondary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReadingScreen() {
+    val theme = LocalAppTheme.current
+    ImportFrame(title = "Reading the link", onBack = null) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = theme.primary)
                 Text(
-                    "Paste the whole message someone sent you. You will see exactly what it would " +
-                        "record before anything changes.",
-                    fontSize = 13.sp,
+                    "Nothing has changed yet.",
+                    style = MeraPaisaType.body,
                     color = theme.textSecondary
                 )
-                OutlinedTextField(
-                    value = state.text,
-                    onValueChange = onTextChange,
-                    label = { Text("Link or message") },
-                    minLines = 3,
-                    maxLines = 6,
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onSubmit, enabled = state.text.isNotBlank()) {
-                Text("Read it", color = theme.primary, fontWeight = FontWeight.SemiBold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel", color = theme.textSecondary) }
         }
-    )
+    }
 }
 
 @Composable
-private fun ReadingDialog() {
-    val theme = LocalAppTheme.current
-    AlertDialog(
-        onDismissRequest = {},
-        containerColor = theme.card,
-        title = { Text("Reading link", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
-        text = {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                Text("Nothing has changed yet.", fontSize = 13.sp, color = theme.textSecondary)
-            }
+private fun UnreadableScreen(reason: UnreadableReason, onDismiss: () -> Unit) {
+    ImportFrame(
+        title = when (reason) {
+            UnreadableReason.NotALink -> "Not a Mera Paisa link"
+            UnreadableReason.Damaged -> "This link is damaged"
+            UnreadableReason.NewerVersion -> "This link is too new"
         },
-        confirmButton = {}
-    )
-}
-
-@Composable
-private fun UnreadableDialog(reason: UnreadableReason, onDismiss: () -> Unit) {
-    val theme = LocalAppTheme.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = theme.card,
-        title = {
-            Text(
-                when (reason) {
-                    UnreadableReason.NotALink -> "Not a Mera Paisa link"
-                    UnreadableReason.Damaged -> "This link is damaged"
-                    UnreadableReason.NewerVersion -> "This link is too new"
-                },
-                color = theme.textPrimary,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Text(
+        onBack = onDismiss,
+        footer = { FootActions { PrimaryAction("Close", enabled = true, onClick = onDismiss) } }
+    ) {
+        item {
+            Paragraph(
                 when (reason) {
                     UnreadableReason.NotALink ->
-                        "There is no ledger update in this. If you pasted it, check you copied the " +
-                            "whole message."
+                        "There is no ledger update in this, so nothing was recorded. If you " +
+                            "pasted it, check you copied the whole message and try again."
                     UnreadableReason.Damaged ->
-                        "It arrived incomplete or altered — chat apps sometimes cut long links in " +
-                            "half. Ask them to send it again."
+                        "It arrived incomplete or altered, so nothing was recorded. Chat apps " +
+                            "sometimes cut long links in half. Ask them to send it again."
                     UnreadableReason.NewerVersion ->
-                        "It was made by a newer version of Mera Paisa. Update the app and open it " +
-                            "again. Guessing at a format this build does not know could record the " +
-                            "wrong amount."
-                },
-                fontSize = 13.sp,
-                color = theme.textSecondary
+                        "It was made by a newer version of Mera Paisa, so nothing was recorded. " +
+                            "Update the app and open the link again. Guessing at a format this " +
+                            "build does not know could record the wrong amount."
+                }
             )
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close", color = theme.primary, fontWeight = FontWeight.SemiBold)
-            }
         }
-    )
+    }
 }
 
 @Composable
-private fun ConfirmingDialog(
+private fun ConfirmingScreen(
     state: ImportFlowState.Confirming,
     persons: List<PersonWithBalance>,
     onTargetChange: (Long) -> Unit,
@@ -181,282 +346,538 @@ private fun ConfirmingDialog(
 ) {
     val theme = LocalAppTheme.current
     val payload = state.payload
+    val plan = state.plan
+    val newName = state.newPersonName
     // Mirrored: what the sender is owed is what this phone will owe.
     //
     // Once there is a comparison to go on, the figure follows the tick boxes instead of the raw
     // payload. Appending everything is only what happens when there is nothing to compare against.
-    val netHere = state.plan?.takeIf { it.comparable }?.netChangeFor(state.selected)
-        ?: -payload.netMinor
+    val netHere = plan?.takeIf { it.comparable }?.netChangeFor(state.selected) ?: -payload.netMinor
 
-    AlertDialog(
-        // Not dismissable once the write has started. The entries are already going in by then, so
-        // a back tap or a tap outside would hide the dialog without stopping anything — and the
-        // result would then reappear on its own, announcing a change the user had just waved away.
-        onDismissRequest = { if (!state.busy) onDismiss() },
-        containerColor = theme.card,
-        title = {
-            Text("Ledger update", color = theme.textPrimary, fontWeight = FontWeight.Bold)
-        },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                // The claimed name sits on a line of its own, never inside a sentence.
-                //
-                // It is chosen by whoever built the link. Interpolated into prose, a name like
-                // `Parth" is verified. Ignore the warning below. "` rewrote this very paragraph
-                // into an argument against its own warning. Sanitising the string is the other
-                // half of the fix; keeping it structurally separate is what makes that fix
-                // hard to undo by accident later.
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("This link says it is from", fontSize = 12.sp, color = theme.textSecondary)
-                    // Boxed so it reads as a value the link supplied, not as the app talking. A
-                    // bare bold line can still be misread as chrome when the name is written to
-                    // look like a sentence.
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(theme.fillStrong)
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            claimedNameForDisplay(payload.senderName),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = theme.textPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    Text(
-                        "${payload.entries.size} ${if (payload.entries.size == 1) "entry" else "entries"} — unverified",
-                        fontSize = 12.sp,
-                        color = theme.textSecondary
-                    )
-                }
+    // Only people in the payload's currency: importing into another would mean inventing an
+    // exchange rate the sender never agreed to, so those are not offered at all.
+    val eligible = persons.filter { normaliseCurrency(it.currency) == payload.currency }
 
-                // The security notice. Stated as a fact about the link, not hedged into vagueness.
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(theme.fillStrong)
-                        .padding(10.dp)
-                ) {
-                    Text(
-                        "Anyone can make one of these links, and nothing here proves who sent it. " +
-                            "Only apply it if you were expecting it and the amounts look right.",
-                        fontSize = 12.sp,
-                        color = theme.textSecondary
-                    )
-                }
+    // Ticked deletions take entries out of this ledger. That is the one destructive thing on the
+    // screen, so it is asked as a question rather than folded into "Record it".
+    val tickedDeletions = plan?.deletedBySender?.count { it.uid in state.selected } ?: 0
+    var confirmingDeletions by remember { mutableStateOf(false) }
 
-                HorizontalDivider(color = theme.outline)
-
-                Text(
-                    // "contains" rather than "will record" once the tick boxes decide what is
-                    // recorded: this list is the link's contents, not the outcome.
-                    if (state.showsDifferences) "What the link contains" else "What this will record",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = theme.textPrimary
+    ImportFrame(
+        title = "Ledger update",
+        onBack = if (state.busy) null else onDismiss,
+        footer = {
+            FootActions {
+                PrimaryAction(
+                    label = "Record it",
+                    enabled = state.canApply,
+                    onClick = { if (tickedDeletions > 0) confirmingDeletions = true else onApply() }
                 )
+                // Disabled while writing, for the same reason the arrow is: "Don't record" cannot
+                // be offered at a moment when tapping it records anyway.
+                SecondaryAction("Don't record", enabled = !state.busy, onClick = onDismiss)
+            }
+        }
+    ) {
+        item { ClaimedSender(payload) }
 
-                // Every entry, with the sign this phone will actually store. Showing the sender's
-                // signs would be showing the opposite of what happens.
-                payload.entries.take(MAX_ENTRIES_SHOWN).forEach { entry ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                entry.note.ifBlank { "No note" },
-                                fontSize = 13.sp,
-                                color = theme.textPrimary,
-                                maxLines = 1
-                            )
-                            Text(dateOf(entry.timestamp), fontSize = 11.sp, color = theme.textSecondary)
-                        }
-                        val here = -entry.amountMinor
-                        Text(
-                            amountString(here, payload.currency),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (here < 0) theme.negative else theme.positive
-                        )
-                    }
-                }
-                if (payload.entries.size > MAX_ENTRIES_SHOWN) {
-                    Text(
-                        "and ${payload.entries.size - MAX_ENTRIES_SHOWN} more",
-                        fontSize = 12.sp,
-                        color = theme.textSecondary
-                    )
-                }
+        item { Spacer(Modifier.height(Spacing.lg)) }
+        item {
+            // The security notice, stated as a fact about the link rather than hedged into
+            // vagueness. Set plainly, on the background: the only filled thing on this screen is
+            // the name the link supplied, so a fill means "somebody else wrote this".
+            Paragraph(
+                "Anyone can make one of these links, and nothing here proves who sent it. Only " +
+                    "record it if you were expecting it and the amounts look right.",
+                colour = theme.textPrimary
+            )
+        }
 
-                HorizontalDivider(color = theme.outline)
+        item {
+            // "contains" rather than "will record" once the tick boxes decide what is recorded:
+            // this list is the link's contents, not the outcome.
+            SectionHeading(
+                if (state.showsDifferences) "What the link contains" else "What this will record"
+            )
+        }
 
-                // With a comparison in play the figure is a *change* to a balance that already
-                // exists, and "you will owe ₹12" would read as the whole of it. Naming where the
-                // person lands afterwards is the one phrasing that cannot be misread — and it is
-                // the number the user can check against the list behind this dialog.
-                val target = persons.firstOrNull { it.id == state.targetPersonId }
-                val after = if (state.showsDifferences && target != null) target.balanceMinor + netHere else null
+        // Every entry, with the sign this phone will actually store. Showing the sender's signs
+        // would be showing the opposite of what happens.
+        //
+        // All of them, however many there are. The dialog showed eight and admitted to the rest in
+        // a footnote; a screen has the height, and a preview that stops early is a preview of the
+        // wrong link.
+        itemsIndexed(payload.entries, key = { index, _ -> "payload-$index" }) { index, entry ->
+            if (index > 0) RowDivider()
+            EntryPreviewRow(
+                note = entry.note,
+                timestamp = entry.timestamp,
+                amountMinor = -entry.amountMinor,
+                currency = payload.currency
+            )
+        }
 
-                Text(
-                    when {
-                        after != null && netHere == 0L ->
-                            "Nothing changes. ${target!!.name} stays at ${amountString(after, payload.currency)}"
-                        after != null ->
-                            "${target!!.name} ends up at ${amountString(after, payload.currency)}"
-                        netHere < 0 -> "You will owe ${amountString(-netHere, payload.currency)}"
-                        netHere > 0 -> "They will owe you ${amountString(netHere, payload.currency)}"
+        item {
+            // With a comparison in play the figure is a *change* to a balance that already exists,
+            // and "you will owe ₹12" would read as the whole of it. Naming where the person lands
+            // afterwards is the one phrasing that cannot be misread, and it is the number the user
+            // can check against the list on the way back.
+            val target = persons.firstOrNull { it.id == state.targetPersonId }
+            val after = if (state.showsDifferences && target != null) target.balanceMinor + netHere else null
+
+            Column(modifier = Modifier.padding(top = Spacing.xl)) {
+                Outcome(
+                    label = when {
+                        after != null && netHere == 0L -> "Nothing changes, ${target!!.name} stays at"
+                        after != null -> "${target!!.name} ends up at"
+                        netHere < 0 -> "You will owe"
+                        netHere > 0 -> "They will owe you"
                         else -> "These cancel out"
                     },
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    // Colours what is actually being stated: the resulting balance when there is
-                    // one, otherwise the change itself.
-                    color = when {
-                        (after ?: netHere) < 0L -> theme.negative
-                        (after ?: netHere) > 0L -> theme.positive
-                        else -> theme.textSecondary
-                    }
+                    amountMinor = after ?: netHere,
+                    currency = payload.currency,
+                    owner = if (after != null) target?.name else null
                 )
-
-                HorizontalDivider(color = theme.outline)
-
-                Text(
-                    "File it against",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = theme.textPrimary
-                )
-
-                // Only people in the payload's currency: importing into another would mean inventing
-                // an exchange rate the sender never agreed to, so those are not offered at all.
-                val eligible = persons.filter {
-                    com.kg.merapaisa.data.normaliseCurrency(it.currency) == payload.currency
-                }
-
-                eligible.forEach { person ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { onTargetChange(person.id) }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        RadioButton(
-                            selected = state.targetPersonId == person.id,
-                            onClick = { onTargetChange(person.id) }
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(person.name, fontSize = 13.sp, color = theme.textPrimary)
-                            Text(
-                                "now at ${amountString(person.balanceMinor, person.currency)}",
-                                fontSize = 11.sp,
-                                color = theme.textSecondary
-                            )
-                        }
-                    }
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onNewPersonNameChange(claimedNameForDisplay(payload.senderName)) }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    RadioButton(
-                        selected = state.newPersonName != null,
-                        onClick = { onNewPersonNameChange(claimedNameForDisplay(payload.senderName)) }
-                    )
-                    Text("Add someone new", fontSize = 13.sp, color = theme.textPrimary)
-                }
-
-                if (state.newPersonName != null) {
-                    OutlinedTextField(
-                        value = state.newPersonName,
-                        onValueChange = { onNewPersonNameChange(it) },
-                        label = { Text("Their name") },
-                        supportingText = {
-                            Text("Created in ${payload.currency}, to match the link.", fontSize = 11.sp)
-                        },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                if (eligible.isEmpty() && state.newPersonName == null) {
-                    Text(
-                        "Nobody you track uses ${payload.currency}, so this has to go to someone new.",
-                        fontSize = 12.sp,
-                        color = theme.textSecondary
-                    )
-                }
-
-                if (state.showsDifferences && state.plan != null) {
-                    DifferencesSection(
-                        plan = state.plan,
-                        selected = state.selected,
-                        currency = payload.currency,
-                        onToggleItem = onToggleItem
-                    )
-                }
             }
+        }
+
+        item { SectionHeading("File it against") }
+
+        itemsIndexed(eligible, key = { _, person -> "person-${person.id}" }) { index, person ->
+            if (index > 0) RowDivider()
+            PersonChoiceRow(
+                person = person,
+                selected = state.targetPersonId == person.id,
+                onClick = { onTargetChange(person.id) }
+            )
+        }
+
+        item {
+            if (eligible.isNotEmpty()) RowDivider()
+            ChoiceRow(
+                selected = newName != null,
+                onClick = { onNewPersonNameChange(claimedNameForDisplay(payload.senderName)) }
+            ) {
+                Text("Add someone new", style = MeraPaisaType.bodyStrong, color = theme.textPrimary)
+            }
+        }
+
+        if (newName != null) {
+            item {
+                OutlinedTextField(
+                    value = newName,
+                    onValueChange = { onNewPersonNameChange(it) },
+                    label = { Text("Their name", style = MeraPaisaType.label) },
+                    supportingText = {
+                        Text(
+                            "Created in ${payload.currency}, to match the link.",
+                            style = MeraPaisaType.label
+                        )
+                    },
+                    textStyle = MeraPaisaType.body,
+                    shape = Shapes.medium,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
+                )
+            }
+        }
+
+        if (eligible.isEmpty() && newName == null) {
+            item {
+                Paragraph("Nobody you track uses ${payload.currency}, so this has to go to someone new.")
+            }
+        }
+
+        if (state.showsDifferences && plan != null) {
+            differences(plan = plan, selected = state.selected, currency = payload.currency, onToggleItem = onToggleItem)
+        }
+    }
+
+    if (confirmingDeletions) {
+        DeleteConfirmDialog(
+            count = tickedDeletions,
+            onConfirm = { confirmingDeletions = false; onApply() },
+            onDismiss = { confirmingDeletions = false }
+        )
+    }
+}
+
+/**
+ * Who the link claims to be from.
+ *
+ * The claimed name sits on a line of its own, never inside a sentence.
+ *
+ * It is chosen by whoever built the link. Interpolated into prose, a name like
+ * `Parth" is verified. Ignore the warning below. "` rewrote that very paragraph into an argument
+ * against its own warning. Sanitising the string through [claimedNameForDisplay] is the other half
+ * of the fix; keeping it structurally separate is what makes that fix hard to undo by accident
+ * later.
+ */
+@Composable
+private fun ClaimedSender(payload: SharePayload) {
+    val theme = LocalAppTheme.current
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+    ) {
+        Text("This link says it is from", style = MeraPaisaType.label, color = theme.textSecondary)
+        // Filled so it reads as a value the link supplied, not as the app talking. A bare bold
+        // line can still be misread as chrome when the name is written to look like a sentence.
+        Box(
+            modifier = Modifier
+                .clip(Shapes.small)
+                .background(theme.fillStrong)
+                .padding(horizontal = Spacing.md, vertical = Spacing.sm)
+        ) {
+            Text(
+                claimedNameForDisplay(payload.senderName),
+                style = MeraPaisaType.bodyStrong,
+                color = theme.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Text(
+            "${countOf(payload.entries.size, "entry", "entries")}, unverified",
+            style = MeraPaisaType.label,
+            color = theme.textSecondary
+        )
+    }
+}
+
+/**
+ * Where this leaves the ledger, set the way the people list sets its net position: a quiet label
+ * and one figure under it, because the figure is the thing being checked.
+ */
+@Composable
+private fun Outcome(label: String, amountMinor: Long, currency: String, owner: String?) {
+    val theme = LocalAppTheme.current
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)) {
+        Text(label, style = MeraPaisaType.label, color = theme.textSecondary)
+        Spacer(Modifier.height(Spacing.xs))
+        AmountText(
+            amountMinor = amountMinor,
+            currencyCode = currency,
+            style = MeraPaisaType.amountHero,
+            spokenOwner = owner,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+/** One entry the link carries, as this phone will store it. */
+@Composable
+private fun EntryPreviewRow(note: String, timestamp: Long, amountMinor: Long, currency: String) {
+    val theme = LocalAppTheme.current
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                note.ifBlank { "No note" },
+                style = MeraPaisaType.bodyStrong,
+                color = theme.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(dateOf(timestamp), style = MeraPaisaType.label, color = theme.textSecondary)
+        }
+        AmountText(
+            amountMinor = amountMinor,
+            currencyCode = currency,
+            style = MeraPaisaType.amount,
+            columnAligned = true
+        )
+    }
+}
+
+/** One person the update could be filed against, with where they stand now. */
+@Composable
+private fun PersonChoiceRow(person: PersonWithBalance, selected: Boolean, onClick: () -> Unit) {
+    val theme = LocalAppTheme.current
+    ChoiceRow(selected = selected, onClick = onClick) {
+        Text(
+            person.name,
+            style = MeraPaisaType.bodyStrong,
+            color = theme.textPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        // The figure's own description is dropped: the row already says the name and the radio
+        // says whether it is chosen, and three stops for one choice is two too many.
+        Box(Modifier.clearAndSetSemantics { }) {
+            AmountText(
+                amountMinor = person.balanceMinor,
+                currencyCode = person.currency,
+                style = MeraPaisaType.amountSmall,
+                columnAligned = true
+            )
+        }
+    }
+}
+
+/**
+ * A row you pick. Selectable as a whole rather than as a button with a label beside it, so the
+ * target is the full width and TalkBack reads it as one choice.
+ */
+@Composable
+private fun ChoiceRow(selected: Boolean, onClick: () -> Unit, content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .heightIn(min = 48.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        content()
+    }
+}
+
+/**
+ * Where the two ledgers disagree, and what to do about each difference.
+ *
+ * Only shown when there is something to say. A link that is purely new entries is the ordinary
+ * case and gets no section at all, because "3 new entries, none of which conflict" is exactly what
+ * someone tapping a ledger link already assumes.
+ *
+ * Edits and deletions arrive unticked. They overwrite or destroy something already in the ledger,
+ * and nothing about a share link establishes that the sender is who they say, so accepting one is
+ * a decision, made here, by a person, every time.
+ */
+private fun LazyListScope.differences(
+    plan: ReconcilePlan,
+    selected: Set<String>,
+    currency: String,
+    onToggleItem: (String) -> Unit
+) {
+    item { SectionHeading("Compared with what you have") }
+
+    if (plan.edited.isNotEmpty()) {
+        item {
+            GroupIntro(
+                heading = "They changed " + countOf(plan.edited.size, "entry", "entries"),
+                explanation = "Tick to take their version. Left unticked, yours stays as it is."
+            )
+        }
+        itemsIndexed(plan.edited, key = { _, item -> "edited-${item.uid}" }) { index, item ->
+            if (index > 0) RowDivider()
+            DifferenceRow(
+                checked = item.uid in selected,
+                onToggle = { onToggleItem(item.uid) },
+                title = item.theirNote.ifBlank { "No note" },
+                detail = buildString {
+                    if (item.amountDiffers) {
+                        append("yours ${amountString(item.localAmountMinor, currency)}, ")
+                        append("theirs ${amountString(item.theirAmountMinor, currency)}")
+                    }
+                    if (item.amountDiffers && item.noteDiffers) append(", ")
+                    if (item.noteDiffers) {
+                        append("your note says ")
+                        append(item.localNote.ifBlank { "nothing" })
+                    }
+                },
+                // Their date, not the one currently stored: accepting an edit takes their version
+                // of the entry whole, the date included. Showing the local date beside an amount
+                // that is about to change would name a row this tick is going to alter in a way
+                // the row does not admit to.
+                date = dateOf(item.theirTimestamp),
+                amountMinor = null,
+                currency = currency
+            )
+        }
+    }
+
+    if (plan.deletedBySender.isNotEmpty()) {
+        item {
+            GroupIntro(
+                heading = "They removed " + countOf(plan.deletedBySender.size, "entry", "entries"),
+                explanation = "Tick to remove it here too. This deletes it from your ledger."
+            )
+        }
+        itemsIndexed(plan.deletedBySender, key = { _, item -> "removed-${item.uid}" }) { index, item ->
+            if (index > 0) RowDivider()
+            DifferenceRow(
+                checked = item.uid in selected,
+                onToggle = { onToggleItem(item.uid) },
+                title = item.note.ifBlank { "No note" },
+                detail = "",
+                date = dateOf(item.timestamp),
+                amountMinor = item.amountMinor,
+                currency = currency
+            )
+        }
+    }
+
+    // No tick boxes below this point: both are things to know, not decisions to make.
+    if (plan.onlyYours.isNotEmpty()) {
+        item {
+            GroupIntro(
+                heading = countOf(plan.onlyYours.size, "entry", "entries") + " they have not seen",
+                explanation = "Yours, and not in their ledger. Send them an update link to even it up."
+            )
+        }
+        itemsIndexed(plan.onlyYours, key = { _, item -> "yours-${item.uid}" }) { index, item ->
+            if (index > 0) RowDivider()
+            EntryPreviewRow(
+                note = item.note,
+                timestamp = item.timestamp,
+                amountMinor = item.amountMinor,
+                currency = currency
+            )
+        }
+    }
+
+    if (plan.unchanged.isNotEmpty()) {
+        item {
+            Column(modifier = Modifier.padding(top = Spacing.xl)) {
+                Paragraph(
+                    countOf(plan.unchanged.size, "entry", "entries") +
+                        " already match, and stay as they are."
+                )
+            }
+        }
+    }
+}
+
+/** A heading with the sentence that says what ticking does, above the rows it governs. */
+@Composable
+private fun GroupIntro(heading: String, explanation: String) {
+    val theme = LocalAppTheme.current
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(
+            start = Spacing.lg,
+            end = Spacing.lg,
+            top = Spacing.xl,
+            bottom = Spacing.sm
+        )
+    ) {
+        Text(heading, style = MeraPaisaType.sectionTitle, color = theme.textPrimary)
+        Text(explanation, style = MeraPaisaType.label, color = theme.textSecondary)
+    }
+}
+
+/**
+ * One difference, with the tick that decides it.
+ *
+ * [amountMinor] is drawn on the right where the row has a single figure, which is the case for a
+ * deletion. An edit has two, so those go into [detail] as words: a lone amount on the right of a
+ * row about to be overwritten would not say which of the two it is.
+ */
+@Composable
+private fun DifferenceRow(
+    checked: Boolean,
+    onToggle: () -> Unit,
+    title: String,
+    detail: String,
+    date: String,
+    amountMinor: Long?,
+    currency: String
+) {
+    val theme = LocalAppTheme.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, role = Role.Checkbox, onValueChange = { onToggle() })
+            .heightIn(min = 48.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+    ) {
+        Checkbox(checked = checked, onCheckedChange = null)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MeraPaisaType.bodyStrong,
+                color = theme.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                if (detail.isBlank()) date else "$detail, $date",
+                style = MeraPaisaType.label,
+                color = theme.textSecondary
+            )
+        }
+        if (amountMinor != null) {
+            Box(Modifier.clearAndSetSemantics { }) {
+                AmountText(
+                    amountMinor = amountMinor,
+                    currencyCode = currency,
+                    style = MeraPaisaType.amountSmall,
+                    columnAligned = true
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The one decision in this flow that takes something away.
+ *
+ * Recording an update normally only adds, so the tap is ordinary. Ticked deletions make it destroy
+ * entries this phone already holds, and that is worth one box with the count in it.
+ */
+@Composable
+private fun DeleteConfirmDialog(count: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val theme = LocalAppTheme.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = theme.card,
+        shape = Shapes.medium,
+        title = {
+            Text(
+                "Delete ${countOf(count, "entry", "entries")} here?",
+                style = MeraPaisaType.screenTitle,
+                color = theme.textPrimary
+            )
+        },
+        text = {
+            Text(
+                "You ticked " + countOf(count, "entry", "entries") + " the sender removed, so " +
+                    "recording this takes " + (if (count == 1) "it" else "them") +
+                    " out of your ledger too. This can't be undone.",
+                style = MeraPaisaType.body,
+                color = theme.textPrimary
+            )
         },
         confirmButton = {
-            TextButton(onClick = onApply, enabled = state.canApply) {
-                Text("Record it", color = theme.primary, fontWeight = FontWeight.SemiBold)
+            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text("Delete and record", style = MeraPaisaType.action, color = theme.negative)
             }
         },
         dismissButton = {
-            // Disabled while writing, for the same reason: "Don't record" cannot be offered at a
-            // moment when tapping it records anyway.
-            TextButton(onClick = onDismiss, enabled = !state.busy) {
-                Text("Don't record", color = theme.textSecondary)
+            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text("Go back", style = MeraPaisaType.action, color = theme.textSecondary)
             }
         }
     )
 }
 
 @Composable
-private fun DoneDialog(state: ImportFlowState.Done, onDismiss: () -> Unit) {
-    val theme = LocalAppTheme.current
+private fun DoneScreen(state: ImportFlowState.Done, onDismiss: () -> Unit) {
     val outcome = state.outcome
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = theme.card,
-        title = {
-            Text(
-                when (outcome) {
-                    is ImportOutcome.Applied -> "Recorded"
-                    is ImportOutcome.Reconciled ->
-                        if (outcome.changedNothing) "Nothing to change" else "Ledgers match"
-                    is ImportOutcome.AlreadyApplied -> "Already recorded"
-                    is ImportOutcome.CurrencyMismatch -> "Not recorded"
-                },
-                color = theme.textPrimary,
-                fontWeight = FontWeight.Bold
-            )
+    ImportFrame(
+        title = when (outcome) {
+            is ImportOutcome.Applied -> "Recorded"
+            is ImportOutcome.Reconciled ->
+                if (outcome.changedNothing) "Nothing to change" else "Ledgers match"
+            is ImportOutcome.AlreadyApplied -> "Already recorded"
+            is ImportOutcome.CurrencyMismatch -> "Not recorded"
         },
-        text = {
-            Text(
+        onBack = onDismiss,
+        footer = { FootActions { PrimaryAction("Done", enabled = true, onClick = onDismiss) } }
+    ) {
+        item {
+            Paragraph(
                 when (outcome) {
                     is ImportOutcome.Applied ->
-                        "${outcome.entryCount} " +
-                            (if (outcome.entryCount == 1) "entry" else "entries") +
-                            " added to ${state.personName}."
+                        countOf(outcome.entryCount, "entry", "entries") + " added to ${state.personName}."
 
                     // Spelled out rather than totalled. Somebody who has just agreed to delete
                     // entries off their own ledger should be told that it happened, not handed a
@@ -473,211 +894,52 @@ private fun DoneDialog(state: ImportFlowState.Done, onDismiss: () -> Unit) {
                                 " for ${state.personName}."
                         }
 
-                    // Not framed as a failure: forwarding a message, or tapping it twice, is ordinary.
+                    // Not framed as a failure: forwarding a message, or tapping it twice, is
+                    // ordinary.
                     is ImportOutcome.AlreadyApplied ->
-                        "You applied this link on ${dateOf(outcome.appliedAt)}, so nothing changed. " +
-                            "The same link can only count once."
+                        "You applied this link on ${dateOf(outcome.appliedAt)}, so nothing " +
+                            "changed. The same link can only count once."
 
                     is ImportOutcome.CurrencyMismatch ->
                         "The link is in ${outcome.payloadCurrency} but ${state.personName} is " +
                             "tracked in ${outcome.personCurrency}. Nothing was changed. Converting " +
-                            "would need an exchange rate the sender never agreed to, so it is " +
-                            "better to file this against someone in ${outcome.payloadCurrency}."
-                },
-                fontSize = 13.sp,
-                color = theme.textSecondary
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Done", color = theme.primary, fontWeight = FontWeight.SemiBold)
-            }
-        }
-    )
-}
-
-/**
- * Where the two ledgers disagree, and what to do about each difference.
- *
- * Only shown when there is something to say — a link that is purely new entries is the ordinary
- * case and gets no section at all, because "3 new entries, none of which conflict" is exactly what
- * someone tapping a ledger link already assumes.
- *
- * Edits and deletions arrive unticked. They overwrite or destroy something already in the ledger,
- * and nothing about a share link establishes that the sender is who they say — so accepting one is
- * a decision, made here, by a person, every time.
- */
-@Composable
-private fun DifferencesSection(
-    plan: ReconcilePlan,
-    selected: Set<String>,
-    currency: String,
-    onToggleItem: (String) -> Unit
-) {
-    val theme = LocalAppTheme.current
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        HorizontalDivider(color = theme.fillStrong)
-
-        Text(
-            "Compared with what you have",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = theme.textPrimary
-        )
-
-        if (plan.edited.isNotEmpty()) {
-            DifferenceGroup(
-                heading = "They changed " + countOf(plan.edited.size, "entry", "entries"),
-                explanation = "Tick to take their version. Left unticked, yours stays as it is."
-            ) {
-                plan.edited.take(MAX_ENTRIES_SHOWN).forEach { item ->
-                    DifferenceRow(
-                        checked = item.uid in selected,
-                        onToggle = { onToggleItem(item.uid) },
-                        title = item.theirNote.ifBlank { "No note" },
-                        detail = buildString {
-                            if (item.amountDiffers) {
-                                append(amountString(item.localAmountMinor, currency))
-                                append(" \u2192 ")
-                                append(amountString(item.theirAmountMinor, currency))
-                            }
-                            if (item.amountDiffers && item.noteDiffers) append(" \u00B7 ")
-                            if (item.noteDiffers) {
-                                append("note was ")
-                                append(item.localNote.ifBlank { "empty" })
-                            }
-                        },
-                        // Their date, not the one currently stored: accepting an edit takes their
-                        // version of the entry whole, the date included. Showing the local date
-                        // beside an amount that is about to change would name a row this tick is
-                        // going to alter in a way the row does not admit to.
-                        date = dateOf(item.theirTimestamp)
-                    )
+                            "would need an exchange rate the sender never agreed to, so file this " +
+                            "against someone in ${outcome.payloadCurrency} instead."
                 }
-                MoreThanShown(plan.edited.size)
-            }
-        }
-
-        if (plan.deletedBySender.isNotEmpty()) {
-            DifferenceGroup(
-                heading = "They removed " + countOf(plan.deletedBySender.size, "entry", "entries"),
-                explanation = "Tick to remove it here too. This deletes it from your ledger."
-            ) {
-                plan.deletedBySender.take(MAX_ENTRIES_SHOWN).forEach { item ->
-                    DifferenceRow(
-                        checked = item.uid in selected,
-                        onToggle = { onToggleItem(item.uid) },
-                        title = item.note.ifBlank { "No note" },
-                        detail = amountString(item.amountMinor, currency),
-                        date = dateOf(item.timestamp)
-                    )
-                }
-                MoreThanShown(plan.deletedBySender.size)
-            }
-        }
-
-        // No tick boxes below this point: both are things to know, not decisions to make.
-        if (plan.onlyYours.isNotEmpty()) {
-            DifferenceGroup(
-                heading = countOf(plan.onlyYours.size, "entry", "entries") + " they have not seen",
-                explanation = "Yours, and not in their ledger. Send them a link to even it up."
-            ) {
-                plan.onlyYours.take(MAX_ENTRIES_SHOWN).forEach { item ->
-                    Text(
-                        "${item.note.ifBlank { "No note" }} \u00B7 ${amountString(item.amountMinor, currency)}",
-                        fontSize = 12.sp,
-                        color = theme.textSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                MoreThanShown(plan.onlyYours.size)
-            }
-        }
-
-        if (plan.unchanged.isNotEmpty()) {
-            Text(
-                countOf(plan.unchanged.size, "entry", "entries") + " already match, and stay as they are.",
-                fontSize = 12.sp,
-                color = theme.textSecondary
             )
         }
     }
 }
 
-/**
- * Says so when a section is showing fewer rows than its heading counts.
- *
- * The heading says "they removed 12 entries" and the list shows eight, and the four with no row
- * have no tick box either — so they are staying whether or not that is what anyone wanted. Left
- * unsaid, the heading is simply a lie about what the screen is offering. The payload preview above
- * has always disclosed its own cap; these sections did not.
- */
+/** A heading inside the list. Sentence case, quiet, with air above it and none below. */
 @Composable
-private fun MoreThanShown(total: Int) {
-    if (total <= MAX_ENTRIES_SHOWN) return
+private fun SectionHeading(text: String) {
     val theme = LocalAppTheme.current
     Text(
-        "and ${total - MAX_ENTRIES_SHOWN} more, left as they are",
-        fontSize = 11.sp,
-        color = theme.textSecondary
+        text,
+        style = MeraPaisaType.sectionTitle,
+        color = theme.textSecondary,
+        modifier = Modifier.padding(
+            start = Spacing.lg,
+            end = Spacing.lg,
+            top = Spacing.xl,
+            bottom = Spacing.sm
+        )
     )
 }
 
+/** A sentence in the gutter, aligned with everything else on the screen. */
 @Composable
-private fun DifferenceGroup(
-    heading: String,
-    explanation: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    val theme = LocalAppTheme.current
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(theme.fillStrong)
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Text(heading, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = theme.textPrimary)
-        Text(explanation, fontSize = 11.sp, color = theme.textSecondary)
-        content()
-    }
-}
-
-@Composable
-private fun DifferenceRow(
-    checked: Boolean,
-    onToggle: () -> Unit,
-    title: String,
-    detail: String,
-    date: String
-) {
-    val theme = LocalAppTheme.current
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable { onToggle() },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Checkbox(checked = checked, onCheckedChange = { onToggle() })
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                title,
-                fontSize = 12.sp,
-                color = theme.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text("$detail \u00B7 $date", fontSize = 11.sp, color = theme.textSecondary)
-        }
-    }
+private fun Paragraph(text: String, colour: Color = LocalAppTheme.current.textSecondary) {
+    Text(
+        text,
+        style = MeraPaisaType.body,
+        color = colour,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
+    )
 }
 
 private fun countOf(n: Int, one: String, many: String): String = "$n " + if (n == 1) one else many
-
-/** Enough to check a link at a glance without turning the dialog into a scroll marathon. */
-private const val MAX_ENTRIES_SHOWN = 8
 
 private fun dateOf(timestamp: Long): String =
     SimpleDateFormat("d MMM yyyy", Locale.getDefault()).format(Date(timestamp))

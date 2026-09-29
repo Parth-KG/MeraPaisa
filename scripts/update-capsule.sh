@@ -7,7 +7,7 @@
 # Run from a git post-commit hook. Only the text between CAPSULE:AUTO:BEGIN and CAPSULE:AUTO:END is
 # rewritten; the hand-written narrative around it is never touched.
 #
-# Installing the hook (needed once per clone — .git/hooks is not version-controlled, which is why
+# Installing the hook (needed once per clone, since .git/hooks is not version-controlled, which is why
 # this script lives in the repo rather than inside .git):
 #
 #   cat > .git/hooks/post-commit <<'SH'
@@ -80,14 +80,14 @@ instr_count="$(grep -rho '@Test' app/src/androidTest 2>/dev/null | wc -l | tr -d
 # ---------------------------------------------------------------------------------------------
 
 block="$(cat <<EOF
-*Regenerated automatically on commit — do not edit by hand. Last run $(now).*
+*Regenerated automatically on commit. Do not edit by hand. Last run $(now).*
 
 | | |
 |---|---|
 | **Version** | ${version_name:-?} (versionCode ${version_code:-?}) |
 | **Room schema** | ${schema:-?} |
 | **Branch** | ${branch:-?}${dirty:+ · ${dirty} uncommitted file(s)} |
-| **HEAD** | \`${head_line:-?}\` — ${head_date:-?} |
+| **HEAD** | \`${head_line:-?}\` (${head_date:-?}) |
 | **Kotlin sources** | ${kt_count:-?} files in \`app/src/main/java\` |
 | **Unit tests** | ${unit_line:-unavailable} |
 | **Instrumentation** | ${instr_count:-?} \`@Test\` methods (run on a device, not by this hook) |
@@ -107,14 +107,14 @@ EOF
 if [ ! -f "$CAPSULE" ]; then
   mkdir -p "$(dirname "$CAPSULE")" 2>/dev/null || exit 0
   {
-    echo "# Context Capsule — Mera Paisa (Android app)"
+    echo "# Context Capsule: Mera Paisa (Android app)"
     echo
     echo "**How to use this:** Paste this whole file at the start of a new chat and say"
     echo "\"continue from this.\""
     echo
     echo "> This file was regenerated as a stub because it was missing. The hand-written narrative"
-    echo "> — what the app is, the design decisions and their reasons, the shipped history and the"
-    echo "> release plan — is **not** recoverable from git and will need rewriting."
+    echo "> The narrative half, meaning what the app is, the design decisions and their reasons,"
+    echo "> the shipped history and the release plan, is **not** recoverable from git."
     echo
     echo "$BEGIN"
     echo "$END"
@@ -132,7 +132,7 @@ begin, end, block = os.environ['BEGIN'], os.environ['END'], os.environ['BLOCK']
 s = io.open(path, encoding='utf-8').read()
 
 # Match the LAST pair, not the first. The capsule's own prose describes these markers, and an
-# earlier version of this script spliced the generated block into the middle of that sentence —
+# earlier version of this script spliced the generated block into the middle of that sentence,
 # destroying the explanation of how the file works. The narrative is not recoverable from git, so
 # this is the one bug here that would genuinely cost something.
 i = s.rfind(begin)
@@ -143,7 +143,7 @@ if i < 0 or j < 0 or j < i:
 sys.stdout.write(s[:i + len(begin)] + "\n" + block + "\n" + s[j:])
 PY
 
-# Only replace if something was actually produced — never truncate the capsule on a failure.
+# Only replace if something was actually produced. Never truncate the capsule on a failure.
 if [ -s "$tmp" ]; then
   cat "$tmp" > "$CAPSULE" 2>/dev/null
   echo "capsule updated: ${CAPSULE/#$HOME/~}"

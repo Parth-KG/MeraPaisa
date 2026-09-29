@@ -4,38 +4,85 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.*
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.kg.merapaisa.CurrencyStore
 import com.kg.merapaisa.LocalAppTheme
-import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.SUPPORTED_CURRENCIES
 import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.deleteProfilePhoto
 import com.kg.merapaisa.saveProfilePhoto
+import com.kg.merapaisa.ui.AVATAR_HUES
+import com.kg.merapaisa.ui.avatarInk
+import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.theme.Shapes
+import com.kg.merapaisa.ui.theme.Spacing
 import kotlinx.coroutines.launch
-import com.kg.merapaisa.CurrencyStore
 
+/**
+ * A name, a face, and the currency this person's balance is kept in.
+ *
+ * It was an AlertDialog wrapped around five fields, which is a box sized for a question holding a
+ * form. A dialog is for a decision; a short form goes on a sheet that can take the height and be
+ * scrolled, so this is one now.
+ *
+ * The currency is the last one used rather than a fixed rupee, because somebody who has just added
+ * two people in dollars is almost certainly adding a third.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, String, String) -> Unit) {
     val theme = LocalAppTheme.current
     val context = LocalContext.current
-    var photoPath by remember { mutableStateOf<String?>(null) }
-    var pfpType by remember { mutableStateOf("initials") }
     val scope = rememberCoroutineScope()
+
+    var name by remember { mutableStateOf("") }
+    var pfpType by remember { mutableStateOf("initials") }
+    var photoPath by remember { mutableStateOf<String?>(null) }
+    var emoji by remember { mutableStateOf("") }
+    var selectedColour by remember { mutableStateOf(AVATAR_HUES.first()) }
+
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
@@ -47,17 +94,12 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
             }
         }
     }
+
     val lastCurrency by CurrencyStore.getLastCurrency(context).collectAsState(initial = "INR")
     var selectedCurrency by remember { mutableStateOf("INR") }
     LaunchedEffect(lastCurrency) { selectedCurrency = lastCurrency }
-    var name by remember { mutableStateOf("") }
-    var emoji by remember { mutableStateOf("😊") }
-    var selectedColor by remember { mutableStateOf(com.kg.merapaisa.ui.AVATAR_HUES.first()) }
 
-
-
-    // See AvatarInk: only the hue survives, since the ink is re-lit for the theme.
-    val colors = com.kg.merapaisa.ui.AVATAR_HUES
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val dismiss = {
         // Nothing was saved, so the picked file has no owner.
@@ -65,95 +107,307 @@ fun AddPersonDialog(onDismiss: () -> Unit, onAdd: (String, String, String, Strin
         onDismiss()
     }
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = dismiss,
-        title = { Text("Add Person", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name", color = theme.textSecondary) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+        sheetState = sheetState,
+        shape = Shapes.sheet,
+        containerColor = theme.surface,
+        contentColor = theme.textPrimary,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = theme.outline) }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                "New person",
+                style = MeraPaisaType.screenTitle,
+                color = theme.textPrimary,
+                modifier = Modifier.padding(horizontal = Spacing.lg)
+            )
+            Spacer(Modifier.height(Spacing.lg))
 
-                Text("Profile Picture", color = theme.textSecondary, fontSize = 13.sp)
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Name") },
+                placeholder = { Text("Asha, Rondu") },
+                textStyle = MeraPaisaType.body,
+                singleLine = true,
+                shape = Shapes.medium,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
+            )
 
-                // PFP type selector
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("initials","emoji","photo").forEach { type ->
-                        FilterChip(
-                            selected = pfpType == type,
-                            onClick = {
-                                // Only switch to "photo" once one is actually saved — cancelling
-                                // the picker used to leave an avatar with no image and no fallback.
-                                if (type == "photo") {
-                                    launcher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                    )
-                                } else {
-                                    pfpType = type
-                                }
-                            },
-                            label = { Text(type.replaceFirstChar { it.uppercase() }, fontSize = 12.sp) }
-                        )
-                    }
-                }
-
-                if (pfpType == "emoji") {
-                    OutlinedTextField(
-                        value = emoji,
-                        onValueChange = { emoji = it },
-                        label = { Text("Emoji", color = theme.textSecondary) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+            AvatarPicker(
+                pfpType = pfpType,
+                onTypeChange = { pfpType = it },
+                emoji = emoji,
+                onEmojiChange = { emoji = it },
+                hasPhoto = photoPath != null,
+                selectedColour = selectedColour,
+                onColourChange = { selectedColour = it },
+                onPickPhoto = {
+                    launcher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                     )
                 }
+            )
 
-                if (pfpType == "initials") {
-                    Text("Color", color = theme.textSecondary, fontSize = 13.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        colors.forEach { c ->
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(android.graphics.Color.parseColor(c)))
-                                    .border(if (selectedColor == c) 2.dp else 0.dp, theme.textPrimary, CircleShape)
-                                    .clickable { selectedColor = c }
-                            )
-                        }
-                    }
-                }
-                Text("Currency", color = theme.textSecondary, fontSize = 13.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SUPPORTED_CURRENCIES.forEach { c ->
-                        FilterChip(
-                            selected = selectedCurrency == c,
-                            onClick = { selectedCurrency = c },
-                            label = { Text(currencySymbol(c), fontSize = 14.sp) }
-                        )
-                    }
-                }
+            SheetHeading("Currency")
+            CurrencyChips(selected = selectedCurrency, onSelect = { selectedCurrency = it })
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedButton(
+                onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { dismiss() } },
+                shape = Shapes.small,
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                border = BorderStroke(1.dp, theme.outline),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
+            ) {
+                Text("Cancel", style = MeraPaisaType.action)
             }
-        },
-        confirmButton = {
             Button(
                 onClick = {
-                    if (name.isNotBlank()) {
-                        val pfpValue = when (pfpType) {
-                            "emoji" -> emoji
-                            "photo" -> photoPath ?: ""
-                            else -> name.take(2)
-                        }
-                        onAdd(name, pfpType, pfpValue, selectedColor,selectedCurrency)
+                    val personName = name.trim()
+                    val type = avatarTypeFor(pfpType, emoji, photoPath)
+                    val value = avatarValueFor(type, personName, emoji, photoPath)
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        onAdd(personName, type, value, selectedColour, selectedCurrency)
                     }
-                }
-            ) { Text("Add", fontWeight = FontWeight.Bold) }
-        },
-        dismissButton = {
-            TextButton(onClick = dismiss) { Text("Cancel", color = theme.textSecondary) }
+                },
+                enabled = name.isNotBlank(),
+                shape = Shapes.small,
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = theme.primary,
+                    contentColor = theme.background
+                )
+            ) {
+                Text("Add person", style = MeraPaisaType.action)
+            }
         }
+    }
+}
+
+/**
+ * What the avatar ends up being, once the picker's state is read honestly.
+ *
+ * A type is only kept if it has something to draw with. An emoji nobody typed and a photo that was
+ * never chosen both used to save as their own type and leave a blank tile in the list, so both
+ * fall back to initials, which every person has.
+ */
+internal fun avatarTypeFor(pfpType: String, emoji: String, photoPath: String?): String = when {
+    pfpType == "emoji" && emoji.isBlank() -> "initials"
+    pfpType == "photo" && photoPath == null -> "initials"
+    else -> pfpType
+}
+
+/** The value that goes with [avatarTypeFor]: the emoji, the file, or the first two letters. */
+internal fun avatarValueFor(
+    type: String,
+    personName: String,
+    emoji: String,
+    photoPath: String?
+): String = when (type) {
+    "emoji" -> emoji.trim()
+    "photo" -> photoPath.orEmpty()
+    else -> personName.take(2)
+}
+
+/**
+ * How a person will look in the list, chosen here and drawn the same way here as there.
+ *
+ * Shared with the edit sheet on purpose: two forms describing the same avatar have to offer the
+ * same choices, or the same person changes appearance depending on which one you happened to open.
+ *
+ * The swatches are drawn through `avatarInk`, not by parsing the stored hex. The stored value is a
+ * choice of hue and the ink is re-lit for the theme, so a picker showing the raw hex would be
+ * showing a colour that never appears on screen: on Paper every swatch would sit lighter than the
+ * avatar it makes, and on Amoled darker.
+ */
+@Composable
+internal fun AvatarPicker(
+    pfpType: String,
+    onTypeChange: (String) -> Unit,
+    emoji: String,
+    onEmojiChange: (String) -> Unit,
+    hasPhoto: Boolean,
+    selectedColour: String,
+    onColourChange: (String) -> Unit,
+    onPickPhoto: () -> Unit
+) {
+    val theme = LocalAppTheme.current
+
+    SheetHeading("Profile picture")
+    Row(
+        modifier = Modifier.padding(horizontal = Spacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+    ) {
+        AVATAR_TYPES.forEach { (type, label) ->
+            FilterChip(
+                selected = pfpType == type,
+                onClick = {
+                    // Photo only becomes the type once a file is actually saved. Setting it on the
+                    // tap left an avatar with no image and no fallback whenever somebody opened
+                    // the picker and backed out of it.
+                    if (type == "photo") onPickPhoto() else onTypeChange(type)
+                },
+                shape = Shapes.small,
+                modifier = Modifier.heightIn(min = 48.dp),
+                label = { Text(label, style = MeraPaisaType.action) }
+            )
+        }
+    }
+
+    if (pfpType == "emoji") {
+        Spacer(Modifier.height(Spacing.md))
+        OutlinedTextField(
+            value = emoji,
+            onValueChange = onEmojiChange,
+            label = { Text("Emoji") },
+            supportingText = {
+                Text(
+                    "One character from your keyboard. Left empty, the tile shows initials.",
+                    style = MeraPaisaType.label
+                )
+            },
+            textStyle = MeraPaisaType.body,
+            singleLine = true,
+            shape = Shapes.medium,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
+        )
+    }
+
+    if (pfpType == "photo") {
+        Spacer(Modifier.height(Spacing.sm))
+        Text(
+            if (hasPhoto) "Tap Photo again to choose a different one."
+            else "No photo chosen yet, so the tile will show initials.",
+            style = MeraPaisaType.label,
+            color = theme.textSecondary,
+            modifier = Modifier.padding(horizontal = Spacing.lg)
+        )
+    } else {
+        // Offered for an emoji as well as for initials, because the tile an emoji sits on is
+        // washed in this same ink. Only a photo covers the tile completely, and picking a colour
+        // nobody will ever see is a control that does nothing.
+        SheetHeading("Colour")
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            AVATAR_HUES.forEach { hue ->
+                ColourSwatch(
+                    hue = hue,
+                    selected = selectedColour == hue,
+                    onSelect = { onColourChange(hue) }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * One colour on offer, at the size it will be drawn and in the ink it will be drawn with.
+ *
+ * The tap target is the full 48dp square; the ink inside it is smaller, so eight of them fit two
+ * to a line on a narrow phone without any of them becoming a target you have to aim at.
+ */
+@Composable
+private fun ColourSwatch(hue: String, selected: Boolean, onSelect: () -> Unit) {
+    val theme = LocalAppTheme.current
+    val ink = remember(hue, theme.isDark) { avatarInk(hue, theme.isDark) }
+    val name = AVATAR_HUE_NAMES[hue] ?: "Avatar colour"
+
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
+            .semantics { contentDescription = name },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(Shapes.circle)
+                .background(ink)
+                .border(
+                    width = if (selected) 3.dp else 1.dp,
+                    color = if (selected) theme.textPrimary else theme.outline,
+                    shape = Shapes.circle
+                )
+        )
+    }
+}
+
+/** The currencies a balance can be kept in. Symbols, because that is what the amounts will wear. */
+@Composable
+internal fun CurrencyChips(selected: String, enabled: Boolean = true, onSelect: (String) -> Unit) {
+    Row(
+        modifier = Modifier.padding(horizontal = Spacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+    ) {
+        SUPPORTED_CURRENCIES.forEach { code ->
+            FilterChip(
+                selected = selected == code,
+                enabled = enabled,
+                onClick = { onSelect(code) },
+                shape = Shapes.small,
+                modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = code },
+                label = { Text(currencySymbol(code), style = MeraPaisaType.body) }
+            )
+        }
+    }
+}
+
+/** A quiet label over a block of a form, with air above it and none below. */
+@Composable
+internal fun SheetHeading(text: String) {
+    val theme = LocalAppTheme.current
+    Text(
+        text,
+        style = MeraPaisaType.sectionTitle,
+        color = theme.textSecondary,
+        modifier = Modifier.padding(
+            start = Spacing.lg,
+            end = Spacing.lg,
+            top = Spacing.xl,
+            bottom = Spacing.sm
+        )
     )
 }
+
+/** The three kinds of avatar, with the word each one is offered under. */
+private val AVATAR_TYPES = listOf(
+    "initials" to "Initials",
+    "emoji" to "Emoji",
+    "photo" to "Photo"
+)
+
+/**
+ * What to call each hue out loud.
+ *
+ * A swatch is a coloured square with no text in it, so without these TalkBack reads eight
+ * identical unlabelled controls and the picker becomes unusable for anyone who cannot see which
+ * one is which. The names are the ones the palette itself is written with.
+ */
+private val AVATAR_HUE_NAMES = mapOf(
+    "#3F6DA8" to "Indigo",
+    "#2E8079" to "Teal",
+    "#6E8C3A" to "Olive",
+    "#A8802E" to "Ochre",
+    "#A65A2E" to "Rust",
+    "#A6423F" to "Brick",
+    "#8C4A7D" to "Plum",
+    "#5B5F8C" to "Slate"
+)

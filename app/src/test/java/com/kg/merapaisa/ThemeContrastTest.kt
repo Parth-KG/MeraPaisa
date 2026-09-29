@@ -6,7 +6,7 @@ import org.junit.Test
 import kotlin.math.pow
 
 /**
- * Secondary text is real content — dates, "you owe", balances-at-a-glance — so it has to be
+ * Secondary text is real content (dates, "you owe", balances at a glance), so it has to be
  * readable, not decorative. Every theme must clear the WCAG AA 4.5:1 ratio against the two
  * surfaces that text actually sits on: the screen background and the card fill.
  */
@@ -24,7 +24,7 @@ class ThemeContrastTest {
         }.filter { (_, ratio) -> ratio < MIN_RATIO }
 
         assertTrue(
-            "these fall below $MIN_RATIO:1 —\n" +
+            "these fall below $MIN_RATIO:1\n" +
                 failures.joinToString("\n") { (label, ratio) -> "  %s = %.2f:1".format(label, ratio) },
             failures.isEmpty()
         )
@@ -57,7 +57,7 @@ class ThemeContrastTest {
         }.filter { (_, measured) -> measured.first < measured.second }
 
         assertTrue(
-            "these surfaces are indistinguishable —\n" +
+            "these surfaces are indistinguishable\n" +
                 failures.joinToString("\n") { (label, measured) ->
                     "  %s = %.3f:1, needs %.3f:1".format(label, measured.first, measured.second)
                 },
@@ -82,7 +82,7 @@ class ThemeContrastTest {
         }.filter { (_, d) -> d < MIN_THEME_DISTANCE }
 
         assertTrue(
-            "these are too similar to be worth offering separately —\n" +
+            "these are too similar to be worth offering separately\n" +
                 tooClose.joinToString("\n") { (pair, d) -> "  %s = %.1f".format(pair, d) },
             tooClose.isEmpty()
         )
@@ -110,7 +110,7 @@ class ThemeContrastTest {
         const val MIN_SELECTED_SEPARATION = 1.10
         const val MIN_THEME_DISTANCE = 15.0
 
-        /** CIE76 distance in Lab space — a rough stand-in for "tell these apart at a glance". */
+        /** CIE76 distance in Lab space, a rough stand-in for "tell these apart at a glance". */
         fun distance(a: Color, b: Color): Double {
             fun lab(c: Color): Triple<Double, Double, Double> {
                 fun lin(v: Float): Double {

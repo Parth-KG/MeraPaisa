@@ -36,13 +36,13 @@ import com.kg.merapaisa.ui.dialogs.MoveDebtDialog
 import com.kg.merapaisa.ui.dialogs.ReminderDialog
 import com.kg.merapaisa.CurrencyStore
 import com.kg.merapaisa.ui.dialogs.CreateGroupDialog
-import com.kg.merapaisa.ui.dialogs.SettingsDialog
+import com.kg.merapaisa.ui.dialogs.SettingsScreen
 import com.kg.merapaisa.ui.groups.AddExpenseDialog
 import com.kg.merapaisa.ui.groups.GroupDetailScreen
 import com.kg.merapaisa.ui.groups.GroupRow
 import com.kg.merapaisa.ui.groups.SettleUpSheet
 import com.kg.merapaisa.ui.groups.GroupsEmptyState
-import com.kg.merapaisa.ui.dialogs.TransactionHistoryDialog
+import com.kg.merapaisa.ui.dialogs.EntryHistoryScreen
 import com.kg.merapaisa.ui.share.ImportLedgerDialog
 import com.kg.merapaisa.ui.share.ShareLedgerSheet
 import com.kg.merapaisa.ui.backup.BackupDialog
@@ -365,15 +365,15 @@ fun MainScreen(viewModel: MainViewModel) {
             )
         }
         if (historyPerson != null) {
-            TransactionHistoryDialog(
+            EntryHistoryScreen(
                 person = historyPerson,
                 viewModel = viewModel,
-                onDismiss = { viewModel.showHistory(null) }
+                onBack = { viewModel.showHistory(null) }
             )
         }
         if (ui.showSettingsDialog) {
             val appLockEnabled by SecurityStore.isAppLockEnabled(context).collectAsState(initial = false)
-            SettingsDialog(
+            SettingsScreen(
                 currentThemeName = theme.name,
                 appLockEnabled = appLockEnabled,
                 appLockAvailable = remember { canAuthenticate(context) },

@@ -1,23 +1,62 @@
 package com.kg.merapaisa.ui.backup
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
+import com.kg.merapaisa.data.RestoreCounts
 import com.kg.merapaisa.data.RestoreMode
 import com.kg.merapaisa.ui.BackupFlowState
 import com.kg.merapaisa.ui.RestoreSource
+import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.theme.Shapes
+import com.kg.merapaisa.ui.theme.Spacing
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -27,8 +66,16 @@ import java.util.Locale
  *
  * The restore half exists to answer one question before anything happens: *what is this about to
  * do to my ledger?* A restore can delete every person and entry, so the counts are on screen, in
- * the selected mode, before the button is live — and the two things a file cannot put back (groups
+ * the selected mode, before the button is live, and the two things a file cannot put back (groups
  * from a CSV, photos from anywhere) are stated rather than discovered afterwards.
+ *
+ * All of that used to live in AlertDialogs: a scrolling menu, a scrolling review with two radio
+ * options and a warning block, and two more for the result. A dialog is a box sized for a
+ * question, and none of these are questions. They are screens now, switched by [BackupFlowState]
+ * the way the group screen is, with a back arrow and their actions named at the foot.
+ *
+ * One AlertDialog is left, and it is the only genuine decision here: replacing a ledger destroys
+ * what is already on the phone, so it is asked as a question, in a box, with the count in it.
  */
 @Composable
 fun BackupDialog(
@@ -43,18 +90,135 @@ fun BackupDialog(
     onDismiss: () -> Unit
 ) {
     when (state) {
-        is BackupFlowState.Menu -> MenuDialog(
+        is BackupFlowState.Menu -> MenuScreen(
             state, onSaveBackup, onRestore, onPickFolder, onTurnOffAuto, onBackUpNow, onDismiss
         )
-        BackupFlowState.Working -> WorkingDialog()
-        is BackupFlowState.Reviewing -> ReviewDialog(state, onModeChange, onApply, onDismiss)
-        is BackupFlowState.Unreadable -> MessageDialog(state.title, state.detail, onDismiss)
-        is BackupFlowState.Done -> MessageDialog(state.title, state.detail, onDismiss)
+        BackupFlowState.Working -> WorkingScreen()
+        is BackupFlowState.Reviewing -> ReviewScreen(state, onModeChange, onApply, onDismiss)
+        is BackupFlowState.Unreadable -> MessageScreen(state.title, state.detail, "Close", onDismiss)
+        is BackupFlowState.Done -> MessageScreen(state.title, state.detail, "Done", onDismiss)
+    }
+}
+
+/**
+ * The shape every step of this flow takes: a back arrow, a title in the gutter, a list, and the
+ * actions named at the foot.
+ *
+ * [onBack] is null while a file is being read or written. There is nothing to go back to in the
+ * middle of a write, so the arrow is not drawn and the system back is swallowed rather than
+ * leaving the screen while the work carries on behind it.
+ */
+@Composable
+private fun BackupFrame(
+    title: String,
+    onBack: (() -> Unit)?,
+    footer: (@Composable () -> Unit)? = null,
+    content: LazyListScope.() -> Unit
+) {
+    val theme = LocalAppTheme.current
+
+    BackHandler(enabled = true) { onBack?.invoke() }
+
+    Column(modifier = Modifier.fillMaxSize().background(theme.background)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+                )
+                .padding(horizontal = Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (onBack != null) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.widthIn(min = 48.dp).heightIn(min = 48.dp)
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = theme.textPrimary
+                    )
+                }
+            } else {
+                // Keeps the title where it sits on every other step, so the screen does not jump
+                // up by a row the moment a file starts being written.
+                Spacer(Modifier.height(48.dp))
+            }
+        }
+
+        Text(
+            title,
+            style = MeraPaisaType.screenTitle,
+            color = theme.textPrimary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                .padding(horizontal = Spacing.lg)
+        )
+
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
+            contentPadding = PaddingValues(top = Spacing.md, bottom = Spacing.lg),
+            content = content
+        )
+
+        footer?.invoke()
+    }
+}
+
+/** The actions, side by side at the foot, clear of the navigation bar. */
+@Composable
+private fun FootActions(content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(
+                WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
+            )
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        content = content
+    )
+}
+
+@Composable
+private fun RowScope.PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
+    val theme = LocalAppTheme.current
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        shape = Shapes.small,
+        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = theme.primary,
+            contentColor = theme.background
+        )
+    ) {
+        Text(label, style = MeraPaisaType.action)
     }
 }
 
 @Composable
-private fun MenuDialog(
+private fun RowScope.SecondaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
+    val theme = LocalAppTheme.current
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        shape = Shapes.small,
+        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+        border = BorderStroke(1.dp, theme.outline),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
+    ) {
+        Text(label, style = MeraPaisaType.action)
+    }
+}
+
+@Composable
+private fun MenuScreen(
     state: BackupFlowState.Menu,
     onSaveBackup: () -> Unit,
     onRestore: () -> Unit,
@@ -66,131 +230,137 @@ private fun MenuDialog(
     val theme = LocalAppTheme.current
     val automatic = state.folderName != null
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = theme.card,
-        title = { Text("Back up & restore", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                ActionRow(
-                    title = "Save a backup",
-                    subtitle = "One file with everything — people, entries, groups and expenses.",
-                    enabled = !state.busy,
-                    onClick = onSaveBackup
-                )
-                ActionRow(
-                    title = "Restore from a file",
-                    subtitle = "A backup, or a ledger CSV this app exported.",
-                    enabled = !state.busy,
-                    onClick = onRestore
-                )
+    BackupFrame(
+        title = "Back up & restore",
+        onBack = onDismiss,
+        footer = {
+            // The two things anyone opens this screen for, named, one tap away, the way the group
+            // screen carries its own two.
+            FootActions {
+                PrimaryAction("Save a backup", enabled = !state.busy, onClick = onSaveBackup)
+                SecondaryAction("Restore from a file", enabled = !state.busy, onClick = onRestore)
+            }
+        }
+    ) {
+        item {
+            Paragraph(
+                "A backup is one file with everything: people, entries, groups and expenses. " +
+                    "Restoring reads one back, or a ledger CSV this app exported."
+            )
+        }
 
-                HorizontalDivider(color = theme.outline, modifier = Modifier.padding(vertical = 6.dp))
+        item { SectionHeading("Weekly backup") }
 
-                Text(
-                    "Weekly backup",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = theme.textPrimary
-                )
-
-                if (automatic) {
-                    Text(
-                        "Saving to ${state.folderName} once a week, keeping the last 12.",
-                        fontSize = 12.sp,
-                        color = theme.textSecondary
-                    )
-                    if (state.lastRun > 0) {
+        if (automatic) {
+            item {
+                Paragraph("Saving to ${state.folderName} once a week, keeping the last 12.")
+            }
+            item {
+                if (state.lastRun > 0) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+                    ) {
                         Text(
-                            "Last run ${dateTimeOf(state.lastRun)} — ${state.lastResult.orEmpty()}",
-                            fontSize = 11.sp,
-                            // An automatic job runs when nobody is watching, so a failure has to be
-                            // legible here or it looks identical to never having been set up.
-                            color = if (state.lastResult?.startsWith("Backed up") == true) theme.textSecondary else theme.negative
+                            "Last run ${dateTimeOf(state.lastRun)}",
+                            style = MeraPaisaType.label,
+                            color = theme.textSecondary
                         )
-                    } else {
-                        Text("It has not run yet.", fontSize = 11.sp, color = theme.textSecondary)
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = onBackUpNow, enabled = !state.busy) {
-                            Text(if (state.busy) "Working…" else "Back up now", color = theme.primary)
-                        }
-                        TextButton(onClick = onPickFolder, enabled = !state.busy) {
-                            Text("Change folder", color = theme.textSecondary)
-                        }
-                        TextButton(onClick = onTurnOffAuto, enabled = !state.busy) {
-                            Text("Turn off", color = theme.negative)
+                        val result = state.lastResult.orEmpty()
+                        if (result.isNotBlank()) {
+                            Text(
+                                result,
+                                style = MeraPaisaType.label,
+                                // A weekly job runs when nobody is watching, so a failure has to be
+                                // legible here or it looks identical to never having been set up.
+                                color = if (result.startsWith("Backed up")) theme.textSecondary
+                                else theme.negative
+                            )
                         }
                     }
                 } else {
-                    Text(
-                        "Off. Pick a folder and Mera Paisa will save a backup there every week, " +
-                            "keeping the last 12.",
-                        fontSize = 12.sp,
-                        color = theme.textSecondary
-                    )
-                    TextButton(onClick = onPickFolder, enabled = !state.busy) {
-                        Text("Choose a folder", color = theme.primary)
-                    }
+                    Paragraph("It has not run yet.")
                 }
-
-                HorizontalDivider(color = theme.outline, modifier = Modifier.padding(vertical = 6.dp))
-
-                // Said here rather than discovered on a new phone, where it is too late.
-                Text(
-                    "Profile photos are not included in a backup — restoring on another phone " +
-                        "shows initials for those people instead.",
-                    fontSize = 11.sp,
-                    color = theme.textSecondary
+            }
+            item { Spacer(Modifier.height(Spacing.sm)) }
+            item {
+                ActionRow(
+                    title = if (state.busy) "Working…" else "Back up now",
+                    subtitle = "Writes one straight away, without waiting for the week.",
+                    enabled = !state.busy,
+                    onClick = onBackUpNow
                 )
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close", color = theme.primary) }
+            item { RowDivider() }
+            item {
+                ActionRow(
+                    title = "Change folder",
+                    subtitle = "Later backups go to the new folder. The ones already saved stay where they are.",
+                    enabled = !state.busy,
+                    onClick = onPickFolder
+                )
+            }
+            item { RowDivider() }
+            item {
+                ActionRow(
+                    title = "Turn off weekly backups",
+                    subtitle = "Nothing saved is deleted, and you can still save a backup by hand.",
+                    enabled = !state.busy,
+                    onClick = onTurnOffAuto,
+                    ink = theme.negative
+                )
+            }
+        } else {
+            item {
+                Paragraph(
+                    "Off. Pick a folder and Mera Paisa saves a backup there every week, " +
+                        "keeping the last 12."
+                )
+            }
+            item { Spacer(Modifier.height(Spacing.sm)) }
+            item {
+                ActionRow(
+                    title = "Choose a folder",
+                    subtitle = "Any folder on this phone that the app can write to.",
+                    enabled = !state.busy,
+                    onClick = onPickFolder
+                )
+            }
         }
-    )
-}
 
-@Composable
-private fun ActionRow(title: String, subtitle: String, enabled: Boolean, onClick: () -> Unit) {
-    val theme = LocalAppTheme.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .clickable(enabled = enabled) { onClick() }
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = theme.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(subtitle, color = theme.textSecondary, fontSize = 11.sp)
+        item { SectionHeading("What a backup leaves out") }
+        item {
+            // Said here rather than discovered on a new phone, where it is too late.
+            Paragraph(
+                "Profile photos. Restoring on another phone shows initials for those people instead."
+            )
         }
     }
 }
 
 @Composable
-private fun WorkingDialog() {
+private fun WorkingScreen() {
     val theme = LocalAppTheme.current
-    AlertDialog(
-        onDismissRequest = {},
-        containerColor = theme.card,
-        title = { Text("Working", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
-        text = {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                Text("Nothing has changed yet.", fontSize = 13.sp, color = theme.textSecondary)
+    BackupFrame(title = "Working", onBack = null) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = theme.primary)
+                Text(
+                    "Nothing has changed yet.",
+                    style = MeraPaisaType.body,
+                    color = theme.textSecondary
+                )
             }
-        },
-        confirmButton = {}
-    )
+        }
+    }
 }
 
 @Composable
-private fun ReviewDialog(
+private fun ReviewScreen(
     state: BackupFlowState.Reviewing,
     onModeChange: (RestoreMode) -> Unit,
     onApply: () -> Unit,
@@ -199,162 +369,290 @@ private fun ReviewDialog(
     val theme = LocalAppTheme.current
     val plan = state.plan
     val inserts = plan.inserts
+    val replacing = state.mode == RestoreMode.Replace
+    // Replace deletes a ledger, so it is asked rather than assumed. Merge is not asked, because
+    // adding what is missing takes nothing away and can be run twice with the same result.
+    val destructive = replacing && !plan.deletes.isZero
+    var confirming by remember { mutableStateOf(false) }
 
+    BackupFrame(
+        title = "Restore",
+        onBack = if (state.busy) null else onDismiss,
+        footer = {
+            FootActions {
+                PrimaryAction(
+                    label = if (replacing) "Replace my ledger" else "Add what is missing",
+                    enabled = !state.busy && !plan.changesNothing,
+                    onClick = { if (destructive) confirming = true else onApply() }
+                )
+                SecondaryAction("Don't restore", enabled = !state.busy, onClick = onDismiss)
+            }
+        }
+    ) {
+        item {
+            Paragraph(
+                when (state.source) {
+                    RestoreSource.Json ->
+                        "A full backup" +
+                            (state.exportedAt?.let { ", saved ${dateTimeOf(it)}" } ?: "") +
+                            (state.appVersion?.let { " by version $it" } ?: "") + "."
+                    RestoreSource.Csv ->
+                        "A ledger CSV. It holds people and entries only, with no groups or expenses."
+                },
+                colour = theme.textPrimary
+            )
+        }
+
+        item { SectionHeading("How should it be applied?") }
+        item {
+            ModeOption(
+                selected = state.mode == RestoreMode.Merge,
+                title = "Add what is missing",
+                subtitle = "Keeps everything you already have. Safe to run twice.",
+                onClick = { onModeChange(RestoreMode.Merge) }
+            )
+        }
+        item { RowDivider() }
+        item {
+            ModeOption(
+                selected = replacing,
+                title = "Replace everything",
+                subtitle = "Deletes your current ledger first, then restores the file exactly.",
+                onClick = { onModeChange(RestoreMode.Replace) }
+            )
+        }
+
+        item { SectionHeading("What this will do") }
+
+        if (destructive) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.lg)
+                        .clip(Shapes.medium)
+                        .background(theme.fillStrong)
+                        .padding(Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+                ) {
+                    Text(
+                        deletesSentence(plan.deletes),
+                        style = MeraPaisaType.bodyStrong,
+                        color = theme.negative
+                    )
+                    if (state.replaceWouldLoseGroups) {
+                        // The trap this whole flag exists for: a CSV has no groups in it, so
+                        // replacing from one destroys them and restores none.
+                        Text(
+                            "A CSV contains no groups, so those " +
+                                "${if (plan.deletes.groups == 1) "group is" else "groups are"} " +
+                                "deleted and not restored. Use a full backup if you need them.",
+                            style = MeraPaisaType.body,
+                            color = theme.negative
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            Paragraph(
+                "Adds ${countPhrase(inserts.people, "person", "people")}, " +
+                    "${countPhrase(inserts.transactions, "entry", "entries")}" +
+                    (if (inserts.groups > 0) ", ${countPhrase(inserts.groups, "group", "groups")}" else "") +
+                    (if (inserts.expenses > 0) ", ${countPhrase(inserts.expenses, "expense", "expenses")}" else "") +
+                    ".",
+                colour = theme.textPrimary
+            )
+        }
+
+        if (state.mode == RestoreMode.Merge && !plan.alreadyPresent.isZero) {
+            item {
+                Paragraph(
+                    "Already here and left alone: " +
+                        "${countPhrase(plan.alreadyPresent.people, "person", "people")}, " +
+                        "${countPhrase(plan.alreadyPresent.transactions, "entry", "entries")}" +
+                        (if (plan.alreadyPresent.groups > 0) ", ${countPhrase(plan.alreadyPresent.groups, "group", "groups")}" else "") +
+                        "."
+                )
+            }
+        }
+
+        if (plan.changesNothing) {
+            item {
+                Paragraph(
+                    "Your ledger already holds everything in this file, so nothing would change."
+                )
+            }
+        }
+    }
+
+    if (confirming) {
+        ReplaceConfirmDialog(
+            deletes = plan.deletes,
+            losesGroups = state.replaceWouldLoseGroups,
+            onConfirm = { confirming = false; onApply() },
+            onDismiss = { confirming = false }
+        )
+    }
+}
+
+/**
+ * The one decision in this flow, and the one thing here still shaped like a dialog.
+ *
+ * The review screen can be read at leisure and scrolled past; this cannot. It names the count it
+ * is about to destroy rather than the file it is about to restore, because the count is the part
+ * that cannot be got back.
+ */
+@Composable
+private fun ReplaceConfirmDialog(
+    deletes: RestoreCounts,
+    losesGroups: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val theme = LocalAppTheme.current
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = theme.card,
-        title = { Text("Restore", color = theme.textPrimary, fontWeight = FontWeight.Bold) },
+        shape = Shapes.medium,
+        title = {
+            Text("Replace your ledger?", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
+        },
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 Text(
-                    when (state.source) {
-                        RestoreSource.Json ->
-                            "A full backup" +
-                                (state.exportedAt?.let { ", saved ${dateTimeOf(it)}" } ?: "") +
-                                (state.appVersion?.let { " by version $it" } ?: "") + "."
-                        RestoreSource.Csv ->
-                            "A ledger CSV. It holds people and entries only — no groups or expenses."
-                    },
-                    fontSize = 13.sp,
+                    deletesSentence(deletes),
+                    style = MeraPaisaType.body,
                     color = theme.textPrimary
                 )
-
-                Text("How should it be applied?", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = theme.textPrimary)
-
-                ModeOption(
-                    selected = state.mode == RestoreMode.Merge,
-                    title = "Add what is missing",
-                    subtitle = "Keeps everything you already have. Safe to run twice.",
-                    onClick = { onModeChange(RestoreMode.Merge) }
-                )
-                ModeOption(
-                    selected = state.mode == RestoreMode.Replace,
-                    title = "Replace everything",
-                    subtitle = "Deletes your current ledger first, then restores the file exactly.",
-                    onClick = { onModeChange(RestoreMode.Replace) }
-                )
-
-                HorizontalDivider(color = theme.outline)
-
-                Text("What this will do", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = theme.textPrimary)
-
-                if (state.mode == RestoreMode.Replace && !plan.deletes.isZero) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(theme.fillStrong)
-                            .padding(10.dp)
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                "Deletes ${countPhrase(plan.deletes.people, "person", "people")}, " +
-                                    "${countPhrase(plan.deletes.transactions, "entry", "entries")}" +
-                                    (if (plan.deletes.groups > 0) " and ${countPhrase(plan.deletes.groups, "group", "groups")}" else "") +
-                                    ". This cannot be undone.",
-                                fontSize = 12.sp,
-                                color = theme.negative,
-                                fontWeight = FontWeight.Medium
-                            )
-                            if (state.replaceWouldLoseGroups) {
-                                // The trap this whole flag exists for: a CSV has no groups in it,
-                                // so replacing from one destroys them and restores none.
-                                Text(
-                                    "A CSV contains no groups, so those " +
-                                        "${if (plan.deletes.groups == 1) "group is" else "groups are"} " +
-                                        "deleted and not restored. Use a full backup if you need them.",
-                                    fontSize = 12.sp,
-                                    color = theme.negative
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Text(
-                    "Adds ${countPhrase(inserts.people, "person", "people")}, " +
-                        "${countPhrase(inserts.transactions, "entry", "entries")}" +
-                        (if (inserts.groups > 0) ", ${countPhrase(inserts.groups, "group", "groups")}" else "") +
-                        (if (inserts.expenses > 0) ", ${countPhrase(inserts.expenses, "expense", "expenses")}" else "") +
-                        ".",
-                    fontSize = 13.sp,
-                    color = theme.textPrimary
-                )
-
-                if (state.mode == RestoreMode.Merge && !plan.alreadyPresent.isZero) {
+                if (losesGroups) {
                     Text(
-                        "Already here and left alone: " +
-                            "${countPhrase(plan.alreadyPresent.people, "person", "people")}, " +
-                            "${countPhrase(plan.alreadyPresent.transactions, "entry", "entries")}" +
-                            (if (plan.alreadyPresent.groups > 0) ", ${countPhrase(plan.alreadyPresent.groups, "group", "groups")}" else "") +
-                            ".",
-                        fontSize = 12.sp,
-                        color = theme.textSecondary
-                    )
-                }
-
-                if (plan.changesNothing) {
-                    Text(
-                        "Your ledger already contains everything in this file, so nothing would change.",
-                        fontSize = 12.sp,
-                        color = theme.textSecondary
+                        "The CSV puts no groups back.",
+                        style = MeraPaisaType.body,
+                        color = theme.negative
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onApply, enabled = !state.busy && !plan.changesNothing) {
-                Text(
-                    if (state.mode == RestoreMode.Replace) "Replace my ledger" else "Add them",
-                    color = if (state.mode == RestoreMode.Replace) theme.negative else theme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
+            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text("Replace my ledger", style = MeraPaisaType.action, color = theme.negative)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel", color = theme.textSecondary) }
+            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text("Keep my ledger", style = MeraPaisaType.action, color = theme.textSecondary)
+            }
         }
     )
 }
 
+@Composable
+private fun MessageScreen(title: String, detail: String, action: String, onDismiss: () -> Unit) {
+    BackupFrame(
+        title = title,
+        onBack = onDismiss,
+        footer = { FootActions { PrimaryAction(action, enabled = true, onClick = onDismiss) } }
+    ) {
+        item { Paragraph(detail) }
+    }
+}
+
+/** A heading inside the list. Sentence case, quiet, with air above it and none below. */
+@Composable
+private fun SectionHeading(text: String) {
+    val theme = LocalAppTheme.current
+    Text(
+        text,
+        style = MeraPaisaType.sectionTitle,
+        color = theme.textSecondary,
+        modifier = Modifier.padding(
+            start = Spacing.lg,
+            end = Spacing.lg,
+            top = Spacing.xl,
+            bottom = Spacing.sm
+        )
+    )
+}
+
+/** A sentence in the gutter, aligned with everything else on the screen. */
+@Composable
+private fun Paragraph(text: String, colour: Color = LocalAppTheme.current.textSecondary) {
+    Text(
+        text,
+        style = MeraPaisaType.body,
+        color = colour,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
+    )
+}
+
+/**
+ * One thing you can do to the weekly backup: a row on the background, not a tile.
+ *
+ * The subtitle says what the tap costs, because none of these three are guessable from a verb:
+ * changing the folder leaves the old backups behind, and turning the job off deletes nothing.
+ */
+@Composable
+private fun ActionRow(
+    title: String,
+    subtitle: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    ink: Color = LocalAppTheme.current.textPrimary
+) {
+    val theme = LocalAppTheme.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { onClick() }
+            .heightIn(min = 48.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MeraPaisaType.bodyStrong,
+                color = if (enabled) ink else theme.textSecondary
+            )
+            Text(subtitle, style = MeraPaisaType.label, color = theme.textSecondary)
+        }
+    }
+}
+
+/**
+ * One of the two ways a restore can be applied.
+ *
+ * Selectable as a whole row rather than as a button with a label beside it, so the target is the
+ * full width and TalkBack reads the pair as one choice instead of a control and some stray text.
+ */
 @Composable
 private fun ModeOption(selected: Boolean, title: String, subtitle: String, onClick: () -> Unit) {
     val theme = LocalAppTheme.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { onClick() }
-            .padding(vertical = 2.dp),
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .heightIn(min = 48.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
-        RadioButton(selected = selected, onClick = onClick)
+        RadioButton(selected = selected, onClick = null)
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontSize = 13.sp, color = theme.textPrimary)
-            Text(subtitle, fontSize = 11.sp, color = theme.textSecondary)
+            Text(title, style = MeraPaisaType.bodyStrong, color = theme.textPrimary)
+            Text(subtitle, style = MeraPaisaType.label, color = theme.textSecondary)
         }
     }
 }
 
-@Composable
-private fun MessageDialog(title: String, detail: String, onDismiss: () -> Unit) {
-    val theme = LocalAppTheme.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = theme.card,
-        title = { Text(title, color = theme.textPrimary, fontWeight = FontWeight.Bold) },
-        text = { Text(detail, fontSize = 13.sp, color = theme.textSecondary) },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Done", color = theme.primary, fontWeight = FontWeight.SemiBold)
-            }
-        }
-    )
-}
+/** What Replace is about to destroy, in the same words wherever it is said. */
+private fun deletesSentence(deletes: RestoreCounts): String =
+    "Deletes ${countPhrase(deletes.people, "person", "people")}, " +
+        "${countPhrase(deletes.transactions, "entry", "entries")}" +
+        (if (deletes.groups > 0) " and ${countPhrase(deletes.groups, "group", "groups")}" else "") +
+        ". This can't be undone."
 
 private fun countPhrase(n: Int, singular: String, plural: String): String =
     "$n ${if (n == 1) singular else plural}"

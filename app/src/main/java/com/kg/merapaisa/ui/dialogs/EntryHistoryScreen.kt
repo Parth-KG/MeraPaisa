@@ -1,0 +1,431 @@
+package com.kg.merapaisa.ui.dialogs
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.kg.merapaisa.LocalAppTheme
+import com.kg.merapaisa.data.PersonWithBalance
+import com.kg.merapaisa.data.Transaction
+import com.kg.merapaisa.ui.MainViewModel
+import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.format.AmountText
+import com.kg.merapaisa.ui.format.SignStyle
+import com.kg.merapaisa.ui.format.amountSpoken
+import com.kg.merapaisa.ui.format.amountString
+import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.theme.Shapes
+import com.kg.merapaisa.ui.theme.Spacing
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+
+/**
+ * Everything ever recorded with one person, newest first.
+ *
+ * This was an AlertDialog with a LazyColumn inside it and three more AlertDialogs stacked on top,
+ * which is a whole ledger read through a letterbox: a dialog is sized for a question, and a
+ * person's history is the longest thing in the app. It is a screen now, built like
+ * `GroupDetailScreen`, and the two decisions it still asks for are the only dialogs left.
+ *
+ * The entries are grouped by day. A flat run of timestamps makes you read the date on every line
+ * to work out where one day ends, whereas a heading says it once and the lines below it only have
+ * to carry a time.
+ */
+@Composable
+fun EntryHistoryScreen(person: PersonWithBalance, viewModel: MainViewModel, onBack: () -> Unit) {
+    val theme = LocalAppTheme.current
+    // Keyed on the person, because `getTransactions` builds a fresh Flow on every call and
+    // collecting a new one each recomposition would restart the query for nothing.
+    val stream = remember(person.id) { viewModel.getTransactions(person.id) }
+    val entries by stream.collectAsState(initial = emptyList())
+
+    var showClearConfirm by remember { mutableStateOf(false) }
+    var pendingReversal by remember { mutableStateOf<Transaction?>(null) }
+    var editingEntry by remember { mutableStateOf<Transaction?>(null) }
+
+    // The screen is switched on by state and drawn over the people list rather than pushed onto a
+    // back stack, so back has to be caught here or it would fall through to the list underneath.
+    BackHandler(enabled = true) { onBack() }
+
+    val count = if (entries.size == 1) "1 entry" else "${entries.size} entries"
+
+    Column(modifier = Modifier.fillMaxSize().background(theme.background)) {
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+                )
+                .padding(horizontal = Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.widthIn(min = 48.dp).heightIn(min = 48.dp)
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = theme.textPrimary
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            // Clearing stays in the top bar rather than moving to a named button at the foot. It
+            // is rare and destructive, and the foot of a screen is where the thing you came to do
+            // belongs. There is nothing to clear on an empty history, and an item that always
+            // refuses is worse than no item.
+            if (entries.isNotEmpty()) {
+                TextButton(
+                    onClick = { showClearConfirm = true },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
+                    Text("Clear history", style = MeraPaisaType.action, color = theme.negative)
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                .padding(horizontal = Spacing.lg)
+        ) {
+            Text(
+                "${person.name}'s history",
+                style = MeraPaisaType.screenTitle,
+                color = theme.textPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (entries.isNotEmpty()) {
+                Text(count, style = MeraPaisaType.label, color = theme.textSecondary)
+            }
+        }
+
+        if (entries.isEmpty()) {
+            Text(
+                "Nothing recorded yet. Amounts you add for ${person.name} turn up here, newest first.",
+                style = MeraPaisaType.body,
+                color = theme.textSecondary,
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                    .padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.xl)
+            )
+        }
+
+        val days = rememberDays(entries)
+
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
+                ),
+            contentPadding = PaddingValues(bottom = Spacing.lg)
+        ) {
+            days.forEach { day ->
+                item(key = "day-${day.key}") { DayHeading(day.heading) }
+                // The index restarts inside each day, so the first line of a day carries no
+                // hairline: the heading above it is already the separation.
+                itemsIndexed(day.entries, key = { _, t -> "entry-${t.id}" }) { index, t ->
+                    if (index > 0) RowDivider()
+                    EntryRow(
+                        entry = t,
+                        person = person,
+                        time = day.timeOf(t),
+                        onEdit = { editingEntry = t },
+                        onReverse = { pendingReversal = t }
+                    )
+                }
+            }
+        }
+    }
+
+    editingEntry?.let { target ->
+        EditEntrySheet(
+            entry = target,
+            currency = person.currency,
+            onSave = {
+                viewModel.editTransaction(it)
+                editingEntry = null
+            },
+            onDelete = {
+                viewModel.deleteTransaction(it)
+                editingEntry = null
+            },
+            onDismiss = { editingEntry = null }
+        )
+    }
+
+    pendingReversal?.let { target ->
+        ConfirmDialog(
+            title = "Reverse this entry and the newer ones?",
+            body = "Adds one entry that cancels this one and every entry newer than it, so " +
+                "${person.name}'s balance goes back to what it was before. Nothing is deleted: " +
+                "the old entries stay in the history.",
+            confirmLabel = "Reverse entries",
+            // Not destructive: it writes a line rather than removing any, so it takes the accent
+            // that every other action on the screen takes.
+            confirmColour = theme.primary,
+            onConfirm = {
+                viewModel.rollbackToTransaction(person, target)
+                pendingReversal = null
+            },
+            onDismiss = { pendingReversal = null }
+        )
+    }
+
+    if (showClearConfirm) {
+        // What is owed survives a clear: the balance is derived from these rows, so clearing them
+        // carries the outstanding amount across as one opening entry. Saying so is the difference
+        // between a warning somebody reads and one they guess at. The figure is written into the
+        // sentence with no sign, because the words either side of it already say which way it runs.
+        val body = when {
+            person.balanceMinor == 0L ->
+                "Deletes $count. You two are even, so the balance stays at zero. " +
+                    "This can't be undone."
+
+            person.balanceMinor > 0 ->
+                "Deletes $count. ${person.name} still owes you " +
+                    amountString(person.balanceMinor, person.currency, SignStyle.None) +
+                    ", carried over as a single opening entry. This can't be undone."
+
+            else ->
+                "Deletes $count. You still owe ${person.name} " +
+                    amountString(person.balanceMinor, person.currency, SignStyle.None) +
+                    ", carried over as a single opening entry. This can't be undone."
+        }
+        ConfirmDialog(
+            title = "Clear ${person.name}'s history?",
+            body = body,
+            confirmLabel = "Clear history",
+            onConfirm = {
+                viewModel.clearTransactionsForPerson(person.id)
+                showClearConfirm = false
+            },
+            onDismiss = { showClearConfirm = false }
+        )
+    }
+}
+
+/** A day's worth of entries, with the heading and the clock already worked out for them. */
+private class HistoryDay(
+    val key: String,
+    val heading: String,
+    val entries: List<Transaction>,
+    private val clock: SimpleDateFormat
+) {
+    fun timeOf(entry: Transaction): String = clock.format(Date(entry.timestamp))
+}
+
+/**
+ * Cuts the history into days, newest first.
+ *
+ * The rows arrive ordered by time, so grouping by a day key keeps that order without a second
+ * sort. The key is a formatted date rather than a division of the timestamp: days are not all the
+ * same length once a clock changes, and the phone's own calendar is the only thing that knows
+ * where this person's midnight falls.
+ *
+ * Today and yesterday are named in words because that is how anybody would say them out loud, and
+ * the year is left off within this one, where it is the same on every line and carries nothing.
+ */
+@Composable
+private fun rememberDays(entries: List<Transaction>): List<HistoryDay> {
+    val locale = Locale.getDefault()
+    return remember(entries, locale) {
+        val key = SimpleDateFormat("yyyy-MM-dd", locale)
+        val thisYear = SimpleDateFormat("EEEE d MMMM", locale)
+        val otherYear = SimpleDateFormat("d MMMM yyyy", locale)
+        val clock = SimpleDateFormat("h:mm a", locale)
+
+        val calendar = Calendar.getInstance()
+        val todayKey = key.format(calendar.time)
+        val currentYear = calendar.get(Calendar.YEAR)
+        calendar.add(Calendar.DAY_OF_YEAR, -1)
+        val yesterdayKey = key.format(calendar.time)
+
+        entries.groupBy { key.format(Date(it.timestamp)) }.map { (dayKey, sameDay) ->
+            val date = Date(sameDay.first().timestamp)
+            val stamp = Calendar.getInstance().apply { time = date }
+            HistoryDay(
+                key = dayKey,
+                heading = when {
+                    dayKey == todayKey -> "Today"
+                    dayKey == yesterdayKey -> "Yesterday"
+                    stamp.get(Calendar.YEAR) == currentYear -> thisYear.format(date)
+                    else -> otherYear.format(date)
+                },
+                entries = sameDay,
+                clock = clock
+            )
+        }
+    }
+}
+
+/** The date over a day's entries. Sentence case, quiet, with air above it and none below. */
+@Composable
+private fun DayHeading(text: String) {
+    val theme = LocalAppTheme.current
+    Text(
+        text,
+        style = MeraPaisaType.sectionTitle,
+        color = theme.textSecondary,
+        modifier = Modifier.padding(
+            start = Spacing.lg,
+            end = Spacing.lg,
+            top = Spacing.xl,
+            bottom = Spacing.sm
+        )
+    )
+}
+
+/**
+ * One line of the ledger: a row on the background, not a tile.
+ *
+ * The figure keeps its sign and its ink, because an entry is money running one way or the other
+ * and this is the one screen where you can see which. An entry with no note says the direction in
+ * words instead, so the row never opens with an empty line.
+ *
+ * The two actions sit apart. Tapping the line opens it for correction, which is what you reach for
+ * after a typo; reversing is its own button because it reaches past this entry to every newer one,
+ * and that is not something to hit by aiming at a row.
+ */
+@Composable
+private fun EntryRow(
+    entry: Transaction,
+    person: PersonWithBalance,
+    time: String,
+    onEdit: () -> Unit,
+    onReverse: () -> Unit
+) {
+    val theme = LocalAppTheme.current
+    val title = entry.note.ifBlank {
+        if (entry.amountMinor > 0) "They owe you" else "You owe them"
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(end = Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clickable(onClickLabel = "Edit this entry", onClick = onEdit)
+                .padding(start = Spacing.lg, end = Spacing.sm, top = Spacing.md, bottom = Spacing.md)
+                // Merged rather than cleared, so the line is one stop for TalkBack while the
+                // button beside it stays a stop of its own.
+                .semantics(mergeDescendants = true) {
+                    contentDescription =
+                        "$title, $time, ${amountSpoken(entry.amountMinor, person.currency, person.name)}"
+                },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    title,
+                    style = MeraPaisaType.bodyStrong,
+                    color = theme.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(time, style = MeraPaisaType.label, color = theme.textSecondary)
+            }
+            Box(Modifier.clearAndSetSemantics { }) {
+                AmountText(
+                    amountMinor = entry.amountMinor,
+                    currencyCode = person.currency,
+                    style = MeraPaisaType.amount,
+                    columnAligned = true
+                )
+            }
+        }
+
+        IconButton(
+            onClick = onReverse,
+            modifier = Modifier.widthIn(min = 48.dp).heightIn(min = 48.dp)
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.Undo,
+                contentDescription = "Reverse this entry and the newer ones",
+                tint = theme.textSecondary
+            )
+        }
+    }
+}
+
+/**
+ * A decision, which is the one thing a dialog is for: it names what will happen in the title and
+ * in the button, so neither the question nor the answer depends on reading the sentence between
+ * them.
+ */
+@Composable
+private fun ConfirmDialog(
+    title: String,
+    body: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    confirmColour: Color = LocalAppTheme.current.negative
+) {
+    val theme = LocalAppTheme.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = Shapes.medium,
+        containerColor = theme.surface,
+        title = { Text(title, style = MeraPaisaType.screenTitle, color = theme.textPrimary) },
+        text = { Text(body, style = MeraPaisaType.body, color = theme.textSecondary) },
+        confirmButton = {
+            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(confirmLabel, style = MeraPaisaType.action, color = confirmColour)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text("Cancel", style = MeraPaisaType.action, color = theme.textSecondary)
+            }
+        }
+    )
+}

@@ -795,7 +795,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         onSuccess = { size ->
                             BackupFlowState.Done(
                                 "Backup saved",
-                                "Everything is in that file — people, entries, groups and expenses. " +
+                                "Everything is in that file: people, entries, groups and expenses. " +
                                     "Keep it somewhere that is not this phone. (${size / 1024} KB)"
                             )
                         },
@@ -948,7 +948,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     onFailure = { e ->
                         BackupFlowState.Unreadable(
                             "The restore did not finish",
-                            "Nothing was changed — the whole restore runs as one database " +
+                            "Nothing was changed. The whole restore runs as one database " +
                                 "transaction, so a failure leaves your ledger as it was. " +
                                 "(${e.message ?: e::class.simpleName})"
                         )
