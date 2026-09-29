@@ -285,7 +285,7 @@ fun EditPersonDialog(
  * currency twice without saving described a conversion that was never going to happen.
  */
 @Composable
-private fun ConvertCurrencyDialog(
+internal fun ConvertCurrencyDialog(
     personName: String,
     from: String,
     to: String,

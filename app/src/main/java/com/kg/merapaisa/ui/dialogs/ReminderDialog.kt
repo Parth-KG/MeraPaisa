@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
+import com.kg.merapaisa.data.Transaction
 import com.kg.merapaisa.data.buildActivityLog
 import com.kg.merapaisa.ui.MainViewModel
 import com.kg.merapaisa.ui.format.amountString
@@ -52,17 +53,30 @@ import kotlinx.coroutines.launch
  * The draft is the whole point of the screen, so it is a field you can rewrite rather than a
  * preview: what this app knows is the figure, and what you know is how you talk to this person.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReminderDialog(
     person: PersonWithBalance,
     viewModel: MainViewModel,
     onDismiss: () -> Unit
 ) {
+    // Keyed on the person: `getTransactions` builds a fresh Flow on every call, and collecting a
+    // new one on each recomposition restarted the query every time the draft changed.
+    val stream = remember(person.id) { viewModel.getTransactions(person.id) }
+    val entries by stream.collectAsState(initial = emptyList())
+    ReminderSheet(person = person, entries = entries, onDismiss = onDismiss)
+}
+
+/** The sheet itself, given the entries, so the gallery can draw it without a database. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReminderSheet(
+    person: PersonWithBalance,
+    entries: List<Transaction>,
+    onDismiss: () -> Unit
+) {
     val theme = LocalAppTheme.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val entries by viewModel.getTransactions(person.id).collectAsState(initial = emptyList())
 
     var message by remember(person.id) { mutableStateOf(buildReminderText(person)) }
     var includeLog by remember { mutableStateOf(false) }

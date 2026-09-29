@@ -73,11 +73,34 @@ import java.util.Locale
  */
 @Composable
 fun EntryHistoryScreen(person: PersonWithBalance, viewModel: MainViewModel, onBack: () -> Unit) {
-    val theme = LocalAppTheme.current
     // Keyed on the person, because `getTransactions` builds a fresh Flow on every call and
     // collecting a new one each recomposition would restart the query for nothing.
     val stream = remember(person.id) { viewModel.getTransactions(person.id) }
     val entries by stream.collectAsState(initial = emptyList())
+
+    EntryHistoryContent(
+        person = person,
+        entries = entries,
+        onBack = onBack,
+        onEdit = viewModel::editTransaction,
+        onDelete = viewModel::deleteTransaction,
+        onReverse = { target -> viewModel.rollbackToTransaction(person, target) },
+        onClear = { viewModel.clearTransactionsForPerson(person.id) }
+    )
+}
+
+/** The screen itself, given the entries, so the gallery can draw it without a database. */
+@Composable
+fun EntryHistoryContent(
+    person: PersonWithBalance,
+    entries: List<Transaction>,
+    onBack: () -> Unit,
+    onEdit: (Transaction) -> Unit,
+    onDelete: (Transaction) -> Unit,
+    onReverse: (Transaction) -> Unit,
+    onClear: () -> Unit
+) {
+    val theme = LocalAppTheme.current
 
     var showClearConfirm by remember { mutableStateOf(false) }
     var pendingReversal by remember { mutableStateOf<Transaction?>(null) }
@@ -187,11 +210,11 @@ fun EntryHistoryScreen(person: PersonWithBalance, viewModel: MainViewModel, onBa
             entry = target,
             currency = person.currency,
             onSave = {
-                viewModel.editTransaction(it)
+                onEdit(it)
                 editingEntry = null
             },
             onDelete = {
-                viewModel.deleteTransaction(it)
+                onDelete(it)
                 editingEntry = null
             },
             onDismiss = { editingEntry = null }
@@ -209,7 +232,7 @@ fun EntryHistoryScreen(person: PersonWithBalance, viewModel: MainViewModel, onBa
             // that every other action on the screen takes.
             confirmColour = theme.primary,
             onConfirm = {
-                viewModel.rollbackToTransaction(person, target)
+                onReverse(target)
                 pendingReversal = null
             },
             onDismiss = { pendingReversal = null }
@@ -241,7 +264,7 @@ fun EntryHistoryScreen(person: PersonWithBalance, viewModel: MainViewModel, onBa
             body = body,
             confirmLabel = "Clear history",
             onConfirm = {
-                viewModel.clearTransactionsForPerson(person.id)
+                onClear()
                 showClearConfirm = false
             },
             onDismiss = { showClearConfirm = false }
