@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.KeyboardType
@@ -440,9 +441,15 @@ private fun SplitShareRow(
     //
     // Trailing zeros are kept. Trimming them turned a share of 2,469.10 into "2469.1", which reads
     // as a different and slightly wrong number, and parseAmountToMinor accepts either.
-    var text by remember(shownMinor) {
-        mutableStateOf(formatMinorPlain(shownMinor, sourceCurrency, trimZeros = false))
-    }
+    //
+    // While the field has focus it shows exactly what was typed, and only takes the formatted
+    // figure back once focus leaves. Rebuilding the text from the amount on every keystroke
+    // snapped "600" back to "60.00" on the first backspace, so a share could not be cleared, and
+    // the next digit landed after the ".00".
+    var editing by remember { mutableStateOf(false) }
+    var typed by remember { mutableStateOf("") }
+    val formatted = formatMinorPlain(shownMinor, sourceCurrency, trimZeros = false)
+    val text = if (editing) typed else formatted
 
     val supporting = when {
         convertedAmountMinor != null && participant.currency != sourceCurrency && locked ->
@@ -505,7 +512,7 @@ private fun SplitShareRow(
             BasicTextField(
                 value = text,
                 onValueChange = { newText ->
-                    text = newText
+                    typed = newText
                     parseAmountToMinor(newText)?.let { onAmountChange(it) }
                 },
                 textStyle = MeraPaisaType.amount.copy(
@@ -517,7 +524,12 @@ private fun SplitShareRow(
                 cursorBrush = SolidColor(theme.primary),
                 // Sizes to its content: the floor keeps an empty field tappable, the ceiling stops
                 // a pathological amount swallowing the name.
-                modifier = Modifier.widthIn(min = 56.dp, max = 140.dp)
+                modifier = Modifier
+                    .widthIn(min = 56.dp, max = 140.dp)
+                    .onFocusChanged { state ->
+                        if (state.isFocused && !editing) typed = formatted
+                        editing = state.isFocused
+                    }
             )
         }
 
@@ -525,8 +537,13 @@ private fun SplitShareRow(
             Icon(
                 if (locked) Icons.Filled.Lock else Icons.Outlined.LockOpen,
                 contentDescription =
-                    if (locked) "Unlock ${participant.name}'s share"
-                    else "Lock ${participant.name}'s share",
+                    // "You" is a name here, so the row for you would read "Lock You's share".
+                    when {
+                        participant.name == "You" && locked -> "Unlock your share"
+                        participant.name == "You" -> "Lock your share"
+                        locked -> "Unlock ${participant.name}'s share"
+                        else -> "Lock ${participant.name}'s share"
+                    },
                 tint = if (locked) theme.primary else theme.textSecondary
             )
         }
