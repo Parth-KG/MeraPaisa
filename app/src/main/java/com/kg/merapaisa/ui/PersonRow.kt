@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -78,20 +79,24 @@ fun PersonRow(
             .background(if (isSelected) theme.fillStrong else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = { showMenu = true })
             .padding(horizontal = Spacing.lg, vertical = Spacing.md)
-            // One description for the whole row, so TalkBack reads "Asha owes you 1,200 rupees"
-            // rather than spelling out a name, a label and a figure as three separate stops.
-            .clearAndSetSemantics {
+            // One description for the row, so TalkBack reads "Asha owes you 1,200 rupees" rather
+            // than spelling out a name, a label and a figure as three separate stops. Merged, not
+            // cleared: clearing the row took the history button inside it along with the words,
+            // and TalkBack could no longer reach a person's history at all.
+            .semantics(mergeDescendants = true) {
                 contentDescription = amountSpoken(person.balanceMinor, person.currency, person.name)
             },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
-        PfpView(person = person.person, size = 40)
+        // The initials, name and figure add nothing to the row's own sentence, so they are
+        // silenced here rather than merged in and read twice.
+        Box(Modifier.clearAndSetSemantics { }) { PfpView(person = person.person, size = 40) }
 
         // The amount never shrinks to make room for a long name: it is the thing being read. When
         // the two cannot share a line, at large type, the amount drops under the name.
         LabelAndAmount(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).clearAndSetSemantics { },
             label = {
                 Column {
                     Text(
