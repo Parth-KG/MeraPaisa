@@ -50,6 +50,8 @@ import com.kg.merapaisa.repository.LedgerChangeNotifier
 import com.kg.merapaisa.repository.PersonRepository
 import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.format.amountSpoken
+import com.kg.merapaisa.ui.AVATAR_WASH
+import com.kg.merapaisa.ui.avatarInk
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Spacing
@@ -84,6 +86,9 @@ private fun paletteFor(themeName: String): WidgetPalette {
 }
 
 /** Three cells by one: room for where you stand overall and nothing else. */
+/** Four rows is what the taller widget holds, including the line that says what is left out. */
+private const val MAX_WIDGET_ROWS = 4
+
 private val NetOnly = DpSize(180.dp, 40.dp)
 
 /** Four cells by two, the smallest size that can hold the net position and a name under it. */
@@ -221,12 +226,25 @@ private fun NetPositionRow(
             maxLines = 1,
             modifier = GlanceModifier.defaultWeight()
         )
-        totals.take(2).forEach { total ->
+        // Two figures is what a strip can hold. A third silently vanishing is the one truncation
+        // that cannot be allowed to pass without a word: the line says "Overall", and somebody
+        // reading two currencies has no way to know a third exists. Rows can be cut because the
+        // list is plainly a list; a total that is quietly incomplete just reads as wrong.
+        val shown = totals.take(2)
+        shown.forEach { total ->
             Text(
                 amountString(total.amountMinor, total.currency, SignStyle.Always),
                 style = amountStyle(palette, total.amountMinor),
                 maxLines = 1,
                 modifier = GlanceModifier.padding(start = Spacing.sm)
+            )
+        }
+        if (totals.size > shown.size) {
+            Text(
+                "+${totals.size - shown.size}",
+                style = labelStyle(palette),
+                maxLines = 1,
+                modifier = GlanceModifier.padding(start = Spacing.xs)
             )
         }
     }
@@ -241,9 +259,23 @@ private fun NetPositionRow(
 @Composable
 private fun PersonList(persons: List<PersonWithBalance>, palette: WidgetPalette) {
     Column(modifier = GlanceModifier.fillMaxWidth()) {
-        persons.take(4).forEachIndexed { index, person ->
+        // Three rows when there are more to come, so the line saying so is on screen rather than
+        // just off the bottom edge. A disclosure the widget crops away is no disclosure.
+        val shown = if (persons.size > MAX_WIDGET_ROWS) persons.take(MAX_WIDGET_ROWS - 1)
+        else persons.take(MAX_WIDGET_ROWS)
+        shown.forEachIndexed { index, person ->
             if (index > 0) RowHairline(palette)
             PersonWidgetRow(person, palette)
+        }
+        // Says what it left out. A list that stops at four looks complete on a home screen, and
+        // somebody owed money by a fifth person would never learn it from here.
+        if (persons.size > shown.size) {
+            Text(
+                "and ${persons.size - shown.size} more",
+                style = labelStyle(palette),
+                maxLines = 1,
+                modifier = GlanceModifier.fillMaxWidth().padding(top = Spacing.sm)
+            )
         }
     }
 }
@@ -374,13 +406,11 @@ private fun overallLabel(persons: List<PersonWithBalance>, totals: List<Currency
  * on screen. Picked per mode rather than once, so the day and night palettes each get their own.
  */
 private fun avatarTint(person: PersonWithBalance, palette: WidgetPalette) =
+    // Through avatarInk, exactly as the app does it. Reading the stored hex straight gave every
+    // avatar the same Material green on a home screen while the ledger behind it had already
+    // re-lit them per theme, so the widget looked like a different app's.
     palette.of { theme ->
-        val ownColour = try {
-            Color(android.graphics.Color.parseColor(person.person.pfpColor))
-        } catch (e: IllegalArgumentException) {
-            theme.primary
-        }
-        ownColour.copy(alpha = 0.3f)
+        avatarInk(person.person.pfpColor, theme.isDark).copy(alpha = AVATAR_WASH * 2.5f)
     }
 
 /**

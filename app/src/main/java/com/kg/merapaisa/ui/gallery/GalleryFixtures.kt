@@ -131,6 +131,10 @@ object Fixtures {
             id = id,
             name = name,
             pfpValue = name.take(2).uppercase(),
+            // A different hue each, walking the picker's palette. Leaving these at the stored
+            // default made every avatar in every screenshot the same green, which is faithful to
+            // an untouched ledger and useless for judging a palette of eight.
+            pfpColor = com.kg.merapaisa.ui.AVATAR_HUES[(id.toInt() - 1).coerceAtLeast(0) % com.kg.merapaisa.ui.AVATAR_HUES.size],
             sortOrder = id.toInt(),
             isSettled = settled,
             currency = currency
