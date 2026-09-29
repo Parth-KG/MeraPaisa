@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,7 +62,7 @@ fun SettleUpSheet(
     onDismiss: () -> Unit
 ) {
     val theme = LocalAppTheme.current
-    val nameOf = { id: Long -> members.firstOrNull { it.id == id }?.name ?: "Someone" }
+    val names = remember(members) { MemberNames(members) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
@@ -101,7 +102,7 @@ fun SettleUpSheet(
             ) { index, t ->
                 if (index > 0) RowDivider(TextRowInset)
                 TransferRow(
-                    line = "${nameOf(t.fromPersonId)} pays ${nameOf(t.toPersonId)}",
+                    line = names.pays(t.fromPersonId, t.toPersonId),
                     amountMinor = t.amountMinor,
                     currency = currency
                 ) {
@@ -194,3 +195,25 @@ internal fun TransferRow(
  */
 internal fun spokenFigure(amountMinor: Long, currency: String): String =
     "${amountParts(amountMinor, currency, SignStyle.None).digits} ${normaliseCurrency(currency)}"
+
+/**
+ * How a sentence in a group names a member.
+ *
+ * You are a member of every group, as the row called "You", so a plain name in a sentence produced
+ * "xyz pays You", "You is owed ₹2,000" and "paid by You". These put "you" where grammar wants it:
+ * "You pay Asha", "Asha pays you", "paid by you".
+ */
+internal class MemberNames(private val members: List<Person>) {
+    private fun member(id: Long) = members.firstOrNull { it.id == id }
+
+    fun isYou(id: Long): Boolean = member(id)?.isSelf == true
+
+    /** At the start of a sentence. */
+    fun subject(id: Long): String = if (isYou(id)) "You" else member(id)?.name ?: "Someone"
+
+    /** Anywhere after the start. */
+    fun objectOf(id: Long): String = if (isYou(id)) "you" else member(id)?.name ?: "someone"
+
+    fun pays(from: Long, to: Long): String =
+        if (isYou(from)) "You pay ${objectOf(to)}" else "${subject(from)} pays ${objectOf(to)}"
+}

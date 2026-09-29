@@ -84,7 +84,7 @@ fun GroupDetailScreen(
     onSimplifyChange: (Boolean) -> Unit
 ) {
     val theme = LocalAppTheme.current
-    val nameOf = { id: Long -> members.firstOrNull { it.id == id }?.name ?: "Someone" }
+    val names = remember(members) { MemberNames(members) }
     val everyoneEven = balances.all { it.amountMinor == 0L }
     // Repayments are expenses in the arithmetic but not spending, and showing them in one list
     // made a 500 dinner and a 500 repayment look identical.
@@ -156,7 +156,7 @@ fun GroupDetailScreen(
                 ) { index, t ->
                     if (index > 0) RowDivider(TextRowInset)
                     TransferRow(
-                        line = "${nameOf(t.fromPersonId)} pays ${nameOf(t.toPersonId)}",
+                        line = names.pays(t.fromPersonId, t.toPersonId),
                         amountMinor = t.amountMinor,
                         currency = group.currency
                     )
@@ -193,7 +193,8 @@ fun GroupDetailScreen(
             itemsIndexed(balances, key = { _, b -> "balance-${b.personId}" }) { index, b ->
                 if (index > 0) RowDivider(TextRowInset)
                 MemberBalanceRow(
-                    name = nameOf(b.personId),
+                    name = names.subject(b.personId),
+                    isYou = names.isYou(b.personId),
                     amountMinor = b.amountMinor,
                     currency = group.currency
                 )
@@ -214,7 +215,7 @@ fun GroupDetailScreen(
                 if (index > 0) RowDivider(TextRowInset)
                 EntryRow(
                     title = e.description,
-                    subtitle = "paid by ${nameOf(e.paidByPersonId)}",
+                    subtitle = "paid by ${names.objectOf(e.paidByPersonId)}",
                     amountMinor = e.amountMinor,
                     currency = group.currency,
                     deleteLabel = "Delete expense",
@@ -230,7 +231,7 @@ fun GroupDetailScreen(
                 itemsIndexed(settlements, key = { _, e -> "settlement-${e.id}" }) { index, e ->
                     if (index > 0) RowDivider(TextRowInset)
                     EntryRow(
-                        title = "${nameOf(e.paidByPersonId)} paid back",
+                        title = "${names.subject(e.paidByPersonId)} paid back",
                         subtitle = null,
                         amountMinor = e.amountMinor,
                         currency = group.currency,
@@ -304,11 +305,12 @@ private fun SectionHeading(text: String) {
  * whatever the number says.
  */
 @Composable
-private fun MemberBalanceRow(name: String, amountMinor: Long, currency: String) {
+private fun MemberBalanceRow(name: String, isYou: Boolean, amountMinor: Long, currency: String) {
     val theme = LocalAppTheme.current
+    // Your own row is "You", so it takes "are owed" and "owe" rather than "is owed" and "owes".
     val standing = when {
-        amountMinor > 0 -> "is owed"
-        amountMinor < 0 -> "owes"
+        amountMinor > 0 -> if (isYou) "are owed" else "is owed"
+        amountMinor < 0 -> if (isYou) "owe" else "owes"
         else -> "even"
     }
 
