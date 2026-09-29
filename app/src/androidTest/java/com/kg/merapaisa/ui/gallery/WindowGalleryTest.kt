@@ -6,7 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.FontScale
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kg.merapaisa.themes
@@ -32,7 +33,7 @@ import java.io.FileOutputStream
 class WindowGalleryTest {
 
     @get:Rule
-    val compose = createComposeRule()
+    val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val outputDir: File by lazy {
         val ctx = InstrumentationRegistry.getInstrumentation().targetContext
@@ -44,16 +45,32 @@ class WindowGalleryTest {
     @Test
     fun captureEverySheetAndDialog() = capture(fontScale = 1f, label = "")
 
-    /** The history screen's own sheet at double type, alongside the history itself. */
+    /**
+     * The history screen's own sheet at double type, alongside the history itself.
+     *
+     * DeviceConfigurationOverride alone does not reach these: a sheet or dialog is its own window,
+     * which reads its density from the activity, so the first run at "double type" produced images
+     * identical to the normal ones. The scale is set on the activity's configuration as well.
+     */
     @Test
     fun captureLargeTypeSheets() = capture(
         fontScale = 2f,
         label = "-fs2",
-        only = setOf("sheet-edit-entry", "dialog-delete-person")
+        only = setOf("sheet-edit-entry", "dialog-delete-person", "sheet-add-person", "sheet-reminder", "sheet-settle-up")
     )
 
     private fun capture(fontScale: Float, label: String, only: Set<String>? = null) {
         val cases = GalleryWindowCases.filter { only == null || it.first in only }
+        if (fontScale != 1f) {
+            compose.runOnUiThread {
+                val resources = compose.activity.resources
+                val config = android.content.res.Configuration(resources.configuration).apply {
+                    this.fontScale = fontScale
+                }
+                @Suppress("DEPRECATION")
+                resources.updateConfiguration(config, resources.displayMetrics)
+            }
+        }
         val themeState = mutableStateOf(themes.first())
         val caseState = mutableStateOf<(@Composable () -> Unit)?>(null)
 
