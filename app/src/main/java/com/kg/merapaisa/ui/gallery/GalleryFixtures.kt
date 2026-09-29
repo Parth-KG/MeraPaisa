@@ -1,5 +1,6 @@
 package com.kg.merapaisa.ui.gallery
 
+import com.kg.merapaisa.data.OPENING_UID_PREFIX
 import com.kg.merapaisa.data.BackupSnapshot
 import com.kg.merapaisa.data.CurrencyTotal
 import com.kg.merapaisa.data.Expense
@@ -263,6 +264,45 @@ object Fixtures {
                 targetPersonId = asha.id,
                 plan = plan,
                 selected = setOf("n1")
+            )
+        }
+
+    /**
+     * The entries an import holds back: their opening balance after they cleared, one deleted
+     * here that they still have, and one dated before a clear with no record of its uid. All
+     * three start unticked; only the ordinary new entry is ticked.
+     */
+    val importHeldBack: ImportFlowState.Confirming
+        get() {
+            val t = 1_727_000_000_000
+            val payload = SharePayload(
+                payloadId = "gallery-held",
+                senderName = "Asha",
+                currency = "INR",
+                entries = listOf(
+                    SharedEntry(t + 6 * DAY, -900_00, "Opening balance", OPENING_UID_PREFIX + "a"),
+                    SharedEntry(t + 5 * DAY, -500_00, "Cab to the airport", "n1"),
+                    SharedEntry(t + 2 * DAY, 120_00, "Typo, 1200 meant", "del1"),
+                    SharedEntry(t, -80_00, "Parking", "old1")
+                ),
+                scope = ShareScope.Full,
+                formatVersion = 2
+            )
+            val plan = ReconcilePlan(
+                items = listOf(
+                    ReconcileItem.New(OPENING_UID_PREFIX + "a", t + 6 * DAY, 900_00, "Opening balance", theirOpening = true),
+                    ReconcileItem.New("n1", t + 5 * DAY, 500_00, "Cab to the airport"),
+                    ReconcileItem.New("del1", t + 2 * DAY, -120_00, "Typo, 1200 meant", deletedHere = true),
+                    ReconcileItem.New("old1", t, 80_00, "Parking", predatesClear = true)
+                ),
+                scope = ShareScope.Full,
+                comparable = true
+            )
+            return ImportFlowState.Confirming(
+                payload = payload,
+                targetPersonId = asha.id,
+                plan = plan,
+                selected = plan.defaultSelection
             )
         }
 

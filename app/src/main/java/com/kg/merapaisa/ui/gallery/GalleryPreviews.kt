@@ -146,6 +146,17 @@ fun NumPadCase() {
     )
 }
 
+/** Yen has no fractions, so its keypad has no point: the slot stays empty beside the 0. */
+@Composable
+fun NumPadYenCase() {
+    NumPad(
+        person = Fixtures.asha.copy(person = Fixtures.asha.person.copy(currency = "JPY"), balanceMinor = 12_500_00),
+        input = "1250",
+        onKey = {}, onSettleToggle = {}, onAdd = {}, onSubtract = {},
+        note = "", onNoteChange = {}, showNote = false, onToggleNote = {}
+    )
+}
+
 @Composable
 fun EmptyActiveCase() = EmptyState(tab = Tab.Active, modifier = Modifier.fillMaxSize(), onAddPerson = {})
 
@@ -336,6 +347,9 @@ fun ImportPasteCase() = Import(ImportFlowState.Pasting())
 fun ImportConfirmCase() = Import(Fixtures.importConfirming)
 
 @Composable
+fun ImportHeldBackCase() = Import(Fixtures.importHeldBack)
+
+@Composable
 fun ImportDoneCase() = Import(Fixtures.importDone)
 
 @Composable
@@ -368,6 +382,7 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "net-total-single" to { NetTotalSingleCase() },
     "net-total-even" to { NetTotalEvenCase() },
     "numpad" to { NumPadCase() },
+    "numpad-yen" to { NumPadYenCase() },
     "empty-active" to { EmptyActiveCase() },
     "empty-settled" to { EmptySettledCase() },
     "empty-groups" to { EmptyGroupsCase() },
@@ -387,6 +402,7 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "backup-done" to { BackupDoneCase() },
     "import-paste" to { ImportPasteCase() },
     "import-confirm" to { ImportConfirmCase() },
+    "import-held-back" to { ImportHeldBackCase() },
     "import-done" to { ImportDoneCase() },
     "update-available" to { UpdateAvailableCase() },
     "update-downloading" to { UpdateDownloadingCase() },
@@ -409,6 +425,16 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
         EditPersonDialog(
             person = Fixtures.chaitanya.person,
             groupCount = 0,
+            converting = false,
+            conversionError = null,
+            onDismiss = {},
+            onSave = { _, _, _, _, _, _ -> }
+        )
+    },
+    "sheet-edit-person-in-group" to {
+        EditPersonDialog(
+            person = Fixtures.chaitanya.person,
+            groupCount = 2,
             converting = false,
             conversionError = null,
             onDismiss = {},
@@ -473,6 +499,40 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
                 "other members of those groups owe. This can't be undone.",
             confirmLabel = "Delete",
             dismissLabel = "Keep ${person.name}",
+            onConfirm = {},
+            onDismiss = {}
+        )
+    },
+    // The sentences MainScreen, EditEntrySheet and GroupDetailScreen build for these cases.
+    "dialog-settle-up" to {
+        DecisionDialog(
+            title = "Settle up with Asha?",
+            body = "Records Asha paying you ${amountString(1_250_00, "INR")}, which squares you, and " +
+                "moves them to Settled. Reopening them later doesn't undo the payment.",
+            confirmLabel = "Settle up",
+            dismissLabel = "Not yet",
+            onConfirm = {},
+            onDismiss = {}
+        )
+    },
+    "dialog-delete-entry" to {
+        DecisionDialog(
+            title = "Delete this entry?",
+            body = "The ${amountString(340_00, "INR")} goes from the history, and the balance moves " +
+                "back by that much. This can't be undone.",
+            confirmLabel = "Delete",
+            dismissLabel = "Keep it",
+            onConfirm = {},
+            onDismiss = {}
+        )
+    },
+    "dialog-delete-expense" to {
+        DecisionDialog(
+            title = "Delete Hotel?",
+            body = "Removes this ${amountString(6_000_00, "INR")} expense from the group, and what its " +
+                "members owe each other changes to match. This can't be undone.",
+            confirmLabel = "Delete",
+            dismissLabel = "Keep it",
             onConfirm = {},
             onDismiss = {}
         )
