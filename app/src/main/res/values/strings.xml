@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Mera Paisa</string>
+    <!--
+      Read in the widget picker, next to a preview the size of a thumbnail, so it has to say what
+      the widget shows rather than sell it.
+    -->
+    <string name="widget_description">Where you stand with each person, on your home screen.</string>
 </resources>

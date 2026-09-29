@@ -1,24 +1,37 @@
 package com.kg.merapaisa.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.kg.merapaisa.LocalAppTheme
+import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.theme.Shapes
+import com.kg.merapaisa.ui.theme.Spacing
 
 /**
- * What is on screen while the app is locked. Deliberately shows nothing of the ledger — not
- * a name, not a balance — because this view is also what appears behind the system prompt.
+ * What is on screen while the app is locked.
+ *
+ * Deliberately shows nothing of the ledger, not a name and not a balance, because this view is
+ * also what appears behind the system prompt and in the recents thumbnail.
+ *
+ * The padlock is gone. A large icon centred above a sentence is the empty-screen mannerism the
+ * design avoids everywhere else, and here it was drawing attention to a screen whose whole job is
+ * to be uninteresting. Left aligned with the app's gutter, so unlocking lands on a layout that
+ * already matches the ledger underneath.
  */
 @Composable
 fun LockedScreen(onUnlock: () -> Unit) {
@@ -29,27 +42,28 @@ fun LockedScreen(onUnlock: () -> Unit) {
             .fillMaxSize()
             .background(theme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .padding(horizontal = Spacing.lg, vertical = Spacing.xxl),
+        horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            Icons.Default.Lock,
-            contentDescription = null,
-            tint = theme.textSecondary,
-            modifier = Modifier.size(48.dp)
-        )
-        Spacer(modifier = Modifier.height(20.dp))
-        Text("Mera Paisa is locked", color = theme.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-        Spacer(modifier = Modifier.height(8.dp))
+        Text("Locked", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
         Text(
-            "Unlock with your fingerprint, face or device PIN.",
+            "Your ledger is hidden until you unlock it.",
+            style = MeraPaisaType.body,
             color = theme.textSecondary,
-            fontSize = 14.sp
+            modifier = Modifier.padding(top = Spacing.xs, bottom = Spacing.xl)
         )
-        Spacer(modifier = Modifier.height(28.dp))
-        Button(onClick = onUnlock, shape = RoundedCornerShape(14.dp)) {
-            Text("Unlock", fontWeight = FontWeight.SemiBold)
+        Button(
+            onClick = onUnlock,
+            shape = Shapes.small,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = theme.primary,
+                contentColor = theme.background
+            )
+        ) {
+            // Names what happens, and matches what the system prompt will then ask for.
+            Text("Unlock with fingerprint or PIN", style = MeraPaisaType.action)
         }
     }
 }

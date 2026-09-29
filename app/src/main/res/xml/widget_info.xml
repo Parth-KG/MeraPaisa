@@ -1,10 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- No updatePeriodMillis: the repository pushes the widget on every ledger write. -->
+<!--
+  No updatePeriodMillis: the repository pushes the widget on every ledger write.
+
+  The two resize floors are the two layouts DebtWidget declares. 180x40dp is three cells by one,
+  where only the net position fits; the default four by three opens out into the people behind it.
+  minWidth and minHeight are what Android 11 and below place it at, targetCellWidth and
+  targetCellHeight what Android 12 and above use, which is why both are set.
+
+  previewImage is still the launcher icon. A real one has to be captured off a device.
+-->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_description"
     android:minWidth="250dp"
     android:minHeight="110dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="40dp"
     android:targetCellWidth="4"
-    android:targetCellHeight="2"
+    android:targetCellHeight="3"
     android:previewImage="@mipmap/ic_launcher"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:resizeMode="horizontal|vertical"
