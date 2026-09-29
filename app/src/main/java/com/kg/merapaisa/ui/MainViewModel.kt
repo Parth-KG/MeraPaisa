@@ -209,6 +209,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun confirmDelete(personId: Long?) = _uiState.update { it.copy(pendingDeleteId = personId) }
 
+    fun confirmDeleteGroup(groupId: Long?) = _uiState.update { it.copy(pendingGroupDeleteId = groupId) }
+
     fun composeReminder(personId: Long?) = _uiState.update { it.copy(pendingReminderId = personId) }
 
     /** Splits are entered in whichever currency you last used, not in a hardcoded one. */

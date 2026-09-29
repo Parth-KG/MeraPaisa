@@ -31,6 +31,8 @@ data class MainUiState(
     val editingPersonId: Long? = null,
     val historyPersonId: Long? = null,
     val pendingDeleteId: Long? = null,
+    /** The group whose delete is waiting on a confirmation, if any. */
+    val pendingGroupDeleteId: Long? = null,
     val pendingReminderId: Long? = null,
     val split: SplitFlowState? = null,
     /** The share-link sheet, absent when it is not open. */

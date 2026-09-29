@@ -105,6 +105,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val editingPerson = persons.find { it.id == ui.editingPersonId }
     val historyPerson = persons.find { it.id == ui.historyPersonId }
     val pendingDelete = persons.find { it.id == ui.pendingDeleteId }
+    val pendingGroupDelete = groups.find { it.group.id == ui.pendingGroupDeleteId }
     val pendingReminder = persons.find { it.id == ui.pendingReminderId }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -193,7 +194,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             GroupRow(
                                 summary = summary,
                                 onClick = { viewModel.openGroup(summary.group.id) },
-                                onDelete = { viewModel.deleteGroup(summary.group.id) }
+                                onDelete = { viewModel.confirmDeleteGroup(summary.group.id) }
                             )
                         }
                     }
@@ -555,6 +556,39 @@ fun MainScreen(viewModel: MainViewModel) {
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.confirmDelete(null) }) {
+                    Text("Cancel", color = theme.textSecondary)
+                }
+            }
+        )
+    }
+
+    // Deleting a group cascades away its expenses and payments, and each of those is part of what
+    // you and its members owe each other. It went straight through from the long-press menu, with
+    // nothing to catch a mis-tap, which was the one destructive action in the app left unasked.
+    pendingGroupDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { viewModel.confirmDeleteGroup(null) },
+            title = {
+                Text("Delete ${target.group.name}?", color = theme.textPrimary, style = MeraPaisaType.sectionTitle)
+            },
+            text = {
+                Text(
+                    "Removes every expense and payment in it, and whatever they added to its " +
+                        "members' balances. This can't be undone.",
+                    color = theme.textSecondary,
+                    style = MeraPaisaType.body
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteGroup(target.group.id)
+                    viewModel.confirmDeleteGroup(null)
+                }) {
+                    Text("Delete", color = theme.negative)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.confirmDeleteGroup(null) }) {
                     Text("Cancel", color = theme.textSecondary)
                 }
             }
