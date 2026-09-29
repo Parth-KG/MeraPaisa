@@ -135,14 +135,14 @@ fun NumPad(
 
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             DirectionButton(
-                label = "They paid me",
+                label = "You paid them",
                 ink = theme.positive,
                 enabled = amountIsUsable,
                 onClick = onAdd,
                 modifier = Modifier.weight(1f)
             )
             DirectionButton(
-                label = "I paid them",
+                label = "They paid you",
                 ink = theme.negative,
                 enabled = amountIsUsable,
                 onClick = onSubtract,
