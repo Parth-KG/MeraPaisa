@@ -332,7 +332,12 @@ fun SplitAdjustmentsContent(
                     modifier = Modifier.padding(top = Spacing.xs)
                 )
             }
-            if (convertedAmounts == null && conversionError == null) {
+            // Only when somebody is in another currency. With everyone in the source currency the
+            // amounts are ready a frame after the screen opens, and the line flashed up for that
+            // one frame on every ordinary split.
+            if (convertedAmounts == null && conversionError == null &&
+                participants.any { it.currency != sourceCurrency }
+            ) {
                 Text(
                     "Getting today's rates…",
                     style = MeraPaisaType.label,
