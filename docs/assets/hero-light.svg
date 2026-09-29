@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360"
-     role="img" aria-label="Mera Paisa. Who owes whom, in everyone's own currency. No account, no login, no server. A bill of 2,400 rupees split four ways: Alex is locked at 800 and the remaining 1,600 redistributes as 534, 533 and 533.">
+     role="img" aria-label="Mera Paisa. Who owes whom, in everyone's own currency. No account, no server, no analytics. An expense of 2,400 rupees split four ways: Asha is locked at 800 and the remaining 1,600 redistributes as 534, 533 and 533.">
   <title>Mera Paisa: who owes whom, in everyone’s own currency</title>
   <style>
     .wordmark{ font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:56px; font-weight:700; letter-spacing:-1px; }
@@ -9,9 +9,9 @@
     .total   { font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:23px; font-weight:700; }
     .nm      { font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:15px; }
     .amt     { font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:16px; font-weight:700; }
-    .eyebrow { font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size:11px; letter-spacing:2.2px; }
-    .micro   { font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size:10px; letter-spacing:1.6px; }
-    .cap     { font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size:11px; letter-spacing:0.4px; }
+    .eyebrow { font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:14px; }
+    .micro   { font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:13px; }
+    .cap     { font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:13px; }
     @media (prefers-reduced-motion: no-preference) {
       @keyframes slidein { from { opacity:0; transform:translateX(14px); } }
       @keyframes fadein  { from { opacity:0; } }
@@ -21,7 +21,7 @@
   <text x="64" y="52" class="eyebrow" fill="#59636E">Android, Kotlin, Jetpack Compose</text>
   <text x="64" y="146" class="wordmark" fill="#141920">Mera Paisa</text>
   <text x="64" y="188" class="tag" fill="#59636E">Who owes whom, in everyone’s own currency.</text>
-  <text x="64" y="224" class="hook" fill="#1B3A6B">No account. No login. No server.</text>
+  <text x="64" y="224" class="hook" fill="#1B3A6B">No account. No server. No analytics.</text>
   <text x="64" y="286" class="cur" fill="#1B3A6B" opacity="0.90">₹</text>
   <text x="108" y="286" class="cur" fill="#1B3A6B" opacity="0.77">$</text>
   <text x="152" y="286" class="cur" fill="#1B3A6B" opacity="0.64">€</text>
@@ -33,20 +33,20 @@
   <path d="M834.0 181.0 H862.0 M862.0 97.0 V265.0" stroke="#D4DCE5" stroke-width="1.5" fill="none"/>
   <path d="M862.0 97.0 H896.0" stroke="#D4DCE5" stroke-width="1.5"/>
   <rect x="900.0" y="76.0" width="244.0" height="42.0" rx="11" fill="#FFFFFF" stroke="#1B3A6B" stroke-width="1.6"/>
-  <text x="918.0" y="102.0" class="nm" fill="#59636E">Alex</text>
+  <text x="918.0" y="102.0" class="nm" fill="#59636E">Asha</text>
   <text x="1104.0" y="103.0" class="amt" text-anchor="end" fill="#1B3A6B">₹800</text>
   <g stroke="#1B3A6B" fill="none" stroke-width="1.6" stroke-linecap="round"><path d="M1118.5 92.5 v-2.2 a3.5 3.5 0 0 1 7 0 v2.2"/></g><rect x="1116.0" y="92.5" width="12" height="8.5" rx="2" fill="#1B3A6B"/>
   <path d="M862.0 153.0 H896.0" stroke="#D4DCE5" stroke-width="1.5"/>
   <rect x="900.0" y="132.0" width="244.0" height="42.0" rx="11" fill="#FFFFFF" stroke="#D4DCE5" stroke-width="1"/>
-  <text x="918.0" y="158.0" class="nm" fill="#59636E">John</text>
+  <text x="918.0" y="158.0" class="nm" fill="#59636E">Bilal</text>
   <text x="1126.0" y="159.0" class="amt" text-anchor="end" fill="#141920">₹534</text>
   <path d="M862.0 209.0 H896.0" stroke="#D4DCE5" stroke-width="1.5"/>
   <rect x="900.0" y="188.0" width="244.0" height="42.0" rx="11" fill="#FFFFFF" stroke="#D4DCE5" stroke-width="1"/>
-  <text x="918.0" y="214.0" class="nm" fill="#59636E">Noah</text>
+  <text x="918.0" y="214.0" class="nm" fill="#59636E">Chaitanya</text>
   <text x="1126.0" y="215.0" class="amt" text-anchor="end" fill="#141920">₹533</text>
   <path d="M862.0 265.0 H896.0" stroke="#D4DCE5" stroke-width="1.5"/>
   <rect x="900.0" y="244.0" width="244.0" height="42.0" rx="11" fill="#FFFFFF" stroke="#D4DCE5" stroke-width="1"/>
-  <text x="918.0" y="270.0" class="nm" fill="#59636E">Josh</text>
+  <text x="918.0" y="270.0" class="nm" fill="#59636E">Dev</text>
   <text x="1126.0" y="271.0" class="amt" text-anchor="end" fill="#141920">₹533</text>
   <text x="1144.0" y="336" class="cap" text-anchor="end" fill="#59636E">edit one share, the rest redistribute</text>
 </svg>

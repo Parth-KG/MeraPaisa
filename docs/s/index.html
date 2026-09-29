@@ -6,14 +6,15 @@
 <title>Mera Paisa update link</title>
 <meta name="robots" content="noindex">
 <style>
+  /* The app's own Paper and Midnight themes, so the page looks like the app it points to. */
   :root {
-    --bg: #fdf8f4; --card: #fff; --text: #1a0f0b; --muted: #6b5a50;
-    --accent: #c2410c; --line: #eadfd6;
+    --bg: #F4F6F8; --card: #FFFFFF; --text: #141920; --muted: #59636E;
+    --accent: #1B3A6B; --on-accent: #F4F6F8; --line: #D4DCE5;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #1a0f0b; --card: #241611; --text: #f7ece5; --muted: #a89086;
-      --accent: #ff8b66; --line: #3a251d;
+      --bg: #171C24; --card: #1E242E; --text: #F2EFE9; --muted: #A2AAB6;
+      --accent: #E8A33D; --on-accent: #171C24; --line: #2B3340;
     }
   }
   * { box-sizing: border-box; }
@@ -24,12 +25,12 @@
     display: flex; align-items: center; justify-content: center; min-height: 100vh;
   }
   main { max-width: 34rem; width: 100%; background: var(--card);
-         border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
+         border: 1px solid var(--line); border-radius: 12px; padding: 28px; }
   h1 { font-size: 1.4rem; margin: 0 0 4px; }
   p { margin: 0 0 14px; }
   .muted { color: var(--muted); font-size: 0.9rem; }
-  a.btn { display: inline-block; background: var(--accent); color: #fff; text-decoration: none;
-          padding: 11px 18px; border-radius: 10px; font-weight: 600; }
+  a.btn { display: inline-block; background: var(--accent); color: var(--on-accent);
+          text-decoration: none; padding: 11px 18px; border-radius: 8px; font-weight: 600; }
   ol { padding-left: 1.2rem; margin: 0 0 14px; }
   li { margin-bottom: 6px; }
   code { background: var(--bg); border: 1px solid var(--line); border-radius: 5px;
@@ -39,7 +40,7 @@
 </head>
 <body>
 <main>
-  <h1>Someone shared a ledger update with you</h1>
+  <h1>Someone sent you an update link</h1>
   <p class="muted">This page is a signpost. Everything in the link stays on your phone.</p>
 
   <hr>
@@ -47,13 +48,13 @@
   <p><strong>If you have Mera Paisa installed</strong>, open this link from the message you were
   sent and it will go straight into the app. If it opened this page instead, Android has not yet
   learned to route these links. Copy the whole message, then in Mera Paisa tap
-  <strong>Settings → Record a shared update</strong> and paste it.</p>
+  <strong>Settings → Record an update link</strong> and paste it.</p>
 
   <p><strong>If you do not have it yet:</strong></p>
   <ol>
     <li>Install Mera Paisa from the link below.</li>
     <li>Copy the whole message someone sent you.</li>
-    <li>Open <strong>Settings → Record a shared update</strong> and paste it.</li>
+    <li>Open <strong>Settings → Record an update link</strong> and paste it.</li>
   </ol>
 
   <p><a class="btn" href="https://github.com/Parth-KG/MeraPaisa/releases/latest">Get Mera Paisa</a></p>
