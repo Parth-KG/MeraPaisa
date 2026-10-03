@@ -7,10 +7,13 @@ import com.kg.merapaisa.data.currencyDecimals
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -145,20 +148,25 @@ fun NumPad(
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        Row(
+            modifier = Modifier.height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
             DirectionButton(
-                label = "You paid them",
+                label = "You paid for them",
+                hint = "or lent them money",
                 ink = theme.textPrimary,
                 enabled = amountIsUsable,
                 onClick = onAdd,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).fillMaxHeight()
             )
             DirectionButton(
-                label = "They paid you",
+                label = "They paid for you",
+                hint = "or paid you back",
                 ink = theme.textPrimary,
                 enabled = amountIsUsable,
                 onClick = onSubtract,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).fillMaxHeight()
             )
         }
 
@@ -219,6 +227,10 @@ private fun Key(key: String, onKey: (String) -> Unit, modifier: Modifier = Modif
  * These were a "+" and a "−" key, which say what the app will do to a number rather than what
  * happened between two people. The words tell them apart, not colour: green and red are the
  * amount inks, kept for amounts, so both buttons wear the same neutral tile.
+ *
+ * [hint] names the other way the same thing happens, so a loan and a repayment each have a
+ * button that says them. It is quieter by size and weight rather than colour, because the
+ * secondary ink falls under 4.5:1 on this tile in three themes.
  */
 @Composable
 private fun DirectionButton(
@@ -226,7 +238,8 @@ private fun DirectionButton(
     ink: androidx.compose.ui.graphics.Color,
     enabled: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hint: String? = null
 ) {
     val theme = LocalAppTheme.current
     Button(
@@ -241,9 +254,15 @@ private fun DirectionButton(
             disabledContentColor = ink.copy(alpha = 0.4f)
         )
     ) {
-        // Two lines at most rather than one: cut to a single line at large type, the buttons read
-        // "You paid" and "They", which is the one place a missing word changes where money goes.
-        Text(label, style = MeraPaisaType.action, maxLines = 2, textAlign = TextAlign.Center)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // Two lines at most rather than one: cut to a single line at large type, the buttons
+            // read "You paid" and "They", which is the one place a missing word changes where
+            // money goes.
+            Text(label, style = MeraPaisaType.action, maxLines = 2, textAlign = TextAlign.Center)
+            if (hint != null) {
+                Text(hint, style = MeraPaisaType.label, maxLines = 2, textAlign = TextAlign.Center)
+            }
+        }
     }
 }
 

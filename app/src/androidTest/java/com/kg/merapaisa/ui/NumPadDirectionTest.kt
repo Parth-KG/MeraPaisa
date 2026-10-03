@@ -19,8 +19,8 @@ import org.junit.runner.RunWith
  * Which way the money goes when a direction button is tapped.
  *
  * MainScreen wires onAdd to record a positive amount and onSubtract a negative one, and a positive
- * balance means "owes you". So the button for "you paid them" has to be the one calling onAdd:
- * you covered something, they owe you more. The button for "they paid you" has to call
+ * balance means "owes you". So the button for "you paid for them" has to be the one calling onAdd:
+ * you covered something, they owe you more. The button for "they paid for you" has to call
  * onSubtract: they paid you back, they owe you less.
  *
  * The redesign got this backwards. When the "+" and minus keys became words, "They paid me" went
@@ -61,9 +61,9 @@ class NumPadDirectionTest {
         var subtracted = 0
         render(onAdd = { added++ }, onSubtract = { subtracted++ })
 
-        compose.onNodeWithText("You paid them").performClick()
+        compose.onNodeWithText("You paid for them").performClick()
 
-        assertEquals("\"You paid them\" must increase what they owe you", 1, added)
+        assertEquals("\"You paid for them\" must increase what they owe you", 1, added)
         assertEquals("and must not also record a repayment", 0, subtracted)
     }
 
@@ -74,9 +74,9 @@ class NumPadDirectionTest {
         var subtracted = 0
         render(onAdd = { added++ }, onSubtract = { subtracted++ })
 
-        compose.onNodeWithText("They paid you").performClick()
+        compose.onNodeWithText("They paid for you").performClick()
 
-        assertEquals("\"They paid you\" must reduce what they owe you", 1, subtracted)
+        assertEquals("\"They paid for you\" must reduce what they owe you", 1, subtracted)
         assertEquals("and must not also increase it", 0, added)
     }
 }

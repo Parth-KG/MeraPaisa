@@ -97,7 +97,7 @@ Mera Paisa keeps all of that on your phone.
 
 ### Balances
 
-Add people with names, pictures and a currency; a new person starts in the currency you used last. Tap a name to open the numpad, type the amount, add a note if you want one, and say which way it went: **You paid them** or **They paid you**. The top of the list shows where you stand overall, a line per currency, closed with a double rule. Long-press a name for everything else: settle up, a reminder, a summary, an update link, moving the debt, editing or deleting them.
+Add people with names, pictures and a currency; a new person starts in the currency you used last. Tap a name to open the numpad, type the amount, add a note if you want one, and say which way it went: **You paid for them** or **They paid for you**. The top of the list shows where you stand overall, a line per currency, closed with a double rule. Long-press a name for everything else: settle up, a reminder, a summary, an update link, moving the debt, editing or deleting them.
 
 ### Active, Settled, and settling up
 
