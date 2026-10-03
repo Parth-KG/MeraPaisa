@@ -146,11 +146,7 @@ fun SettingsScreen(
                 // instead of waiting for the button at the foot. Until assetlinks.json is live at
                 // the domain root, a tapped link does not reach the app, which makes this the
                 // only way one can get in.
-                ActionRow(
-                    title = "Record an update link",
-                    subtitle = "Paste an update link someone sent you",
-                    onClick = onImportLink
-                )
+                ActionRow(title = "Record an update link", onClick = onImportLink)
             }
             item { RowDivider(TextRowInset) }
             item {
@@ -160,19 +156,14 @@ fun SettingsScreen(
                 // when there is nothing to write, so it does not appear and vanish.
                 ActionRow(
                     title = "Export as CSV",
-                    subtitle = if (canExport) "Every person and entry, as a spreadsheet"
-                    else "Nothing to export yet. Add a person first.",
+                    subtitle = if (canExport) null else "Nothing to export yet. Add a person first.",
                     enabled = canExport,
                     onClick = onExportCsv
                 )
             }
             item { RowDivider(TextRowInset) }
             item {
-                ActionRow(
-                    title = "Back up and restore",
-                    subtitle = "Save everything to one file, or bring a ledger back",
-                    onClick = onBackupRestore
-                )
+                ActionRow(title = "Back up and restore", onClick = onBackupRestore)
             }
             item {
                 // The manifest allows Android's own backup, so the database leaves the phone
@@ -180,9 +171,8 @@ fun SettingsScreen(
                 // on a new phone: it is the system's feature, and this app has no account of its
                 // own to confuse it with.
                 Text(
-                    "Android's own backup copies your ledger and settings to your Google " +
-                        "account when the phone is idle on Wi-Fi. That is a system feature. " +
-                        "Mera Paisa itself has no account and no server.",
+                    "Android's own backup also copies your ledger to your Google account. " +
+                        "Mera Paisa has no account or server of its own.",
                     style = MeraPaisaType.label,
                     color = theme.textSecondary,
                     modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)
@@ -299,16 +289,15 @@ private fun AppLockRow(enabled: Boolean, available: Boolean, onChange: (Boolean)
                 style = MeraPaisaType.bodyStrong,
                 color = if (available) theme.textPrimary else theme.textSecondary
             )
-            Text(
-                if (available) {
-                    "Ask for your fingerprint, face or screen lock before the ledger opens."
-                } else {
+            // Only when it cannot be turned on: then the row needs to say why, and what to set.
+            if (!available) {
+                Text(
                     "Your phone has no screen lock, so there is nothing to ask for. Set one in " +
-                        "Android settings and this can be turned on."
-                },
-                style = MeraPaisaType.label,
-                color = theme.textSecondary
-            )
+                        "Android settings and this can be turned on.",
+                    style = MeraPaisaType.label,
+                    color = theme.textSecondary
+                )
+            }
         }
         // The row owns the toggle, so the switch itself takes no callback: with both live, a tap
         // on the switch would be handled twice.
@@ -324,7 +313,7 @@ private fun AppLockRow(enabled: Boolean, available: Boolean, onChange: (Boolean)
 @Composable
 private fun ActionRow(
     title: String,
-    subtitle: String,
+    subtitle: String? = null,
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
@@ -343,7 +332,7 @@ private fun ActionRow(
                 style = MeraPaisaType.bodyStrong,
                 color = if (enabled) theme.textPrimary else theme.textSecondary
             )
-            Text(subtitle, style = MeraPaisaType.label, color = theme.textSecondary)
+            if (subtitle != null) Text(subtitle, style = MeraPaisaType.label, color = theme.textSecondary)
         }
     }
 }
