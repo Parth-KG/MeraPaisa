@@ -22,6 +22,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +31,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
@@ -47,6 +53,9 @@ import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.SheetFrame
 
+/** A field of [EditEntrySheet], for opening it with that field ready to type in. */
+enum class EntryField { Amount, Note }
+
 /**
  * Corrects or removes a single entry. Before this, a mistyped amount could only be papered over
  * with a compensating entry, leaving the mistake in the history for good.
@@ -62,7 +71,8 @@ fun EditEntrySheet(
     currency: String,
     onSave: (Transaction) -> Unit,
     onDelete: (Transaction) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    focus: EntryField? = null
 ) {
     val theme = LocalAppTheme.current
     // The digits only, no symbol and no grouping, because this is a field the user types back
@@ -73,15 +83,19 @@ fun EditEntrySheet(
         // The app's own minus, as the history beside it shows. The parser reads either.
         formatMinorPlain(entry.amountMinor, currency).removeSuffix(".00").replaceFirst("-", "\u2212")
     }
+    // The cursor starts after what is there, so a long-press that asked for a field lands ready to
+    // add to it.
     var amount by remember(entry.id) {
-        mutableStateOf(initialAmount)
+        mutableStateOf(TextFieldValue(initialAmount, TextRange(initialAmount.length)))
     }
-    var note by remember(entry.id) { mutableStateOf(entry.note) }
+    var note by remember(entry.id) { mutableStateOf(TextFieldValue(entry.note, TextRange(entry.note.length))) }
+    val amountFocus = remember { FocusRequester() }
+    val noteFocus = remember { FocusRequester() }
 
     // An untouched field keeps the stored figure. Yen is kept in hundredths and a split can leave
     // ¥33.34 in one entry, which the field shows as 33; saving a new note used to write back 33
     // and lose the rest.
-    val amountMinor = if (amount == initialAmount) entry.amountMinor else parseAmountToMinor(amount)
+    val amountMinor = if (amount.text == initialAmount) entry.amountMinor else parseAmountToMinor(amount.text)
     val isValid = amountMinor != null && amountMinor != 0L
     var confirmingDelete by remember(entry.id) { mutableStateOf(false) }
 
@@ -89,6 +103,17 @@ fun EditEntrySheet(
     val scope = rememberCoroutineScope()
 
     SheetFrame(onDismissRequest = onDismiss, sheetState = sheetState) {
+        // Asked from inside the sheet, which has its own window: from outside, the request ran
+        // before that window had laid out the fields and found nothing to focus.
+        if (focus != null) {
+            LaunchedEffect(entry.id, focus) {
+                val target = if (focus == EntryField.Amount) amountFocus else noteFocus
+                repeat(30) {
+                    withFrameNanos { }
+                    if (target.requestFocus()) return@LaunchedEffect
+                }
+            }
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -105,7 +130,7 @@ fun EditEntrySheet(
 
             OutlinedTextField(
                 value = amount,
-                onValueChange = { if (isTypableAmount(it, currency, allowNegative = true)) amount = it },
+                onValueChange = { if (isTypableAmount(it.text, currency, allowNegative = true)) amount = it },
                 label = { Text("Amount in ${currencySymbol(currency)}") },
                 supportingText = {
                     // Says which way the entry runs while it is valid, and what to type when it
@@ -119,7 +144,7 @@ fun EditEntrySheet(
                             amountMinor == 0L ->
                                 "An entry of zero moves nothing. Type another amount, or delete " +
                                     "this entry."
-                            amount.isBlank() ->
+                            amount.text.isBlank() ->
                                 "Type the amount. A minus in front flips which way this entry runs."
                             else ->
                                 "That is not an amount this app can read. Digits and one decimal " +
@@ -135,7 +160,7 @@ fun EditEntrySheet(
                 // the minus is the only way to turn an entry around.
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                 shape = Shapes.medium,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg).focusRequester(amountFocus)
             )
             Spacer(Modifier.height(Spacing.md))
             OutlinedTextField(
@@ -145,7 +170,7 @@ fun EditEntrySheet(
                 placeholder = { Text("Dinner, cab fare") },
                 singleLine = true,
                 shape = Shapes.medium,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg).focusRequester(noteFocus)
             )
 
             Spacer(Modifier.height(Spacing.md))
@@ -182,7 +207,7 @@ fun EditEntrySheet(
                     // The sheet plays its way out before the entry is written, so the list behind
                     // it is not seen reordering under a sheet that is still on screen.
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        onSave(entry.copy(amountMinor = minor, note = note.trim()))
+                        onSave(entry.copy(amountMinor = minor, note = note.text.trim()))
                     }
                 },
                 enabled = isValid,

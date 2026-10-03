@@ -3,7 +3,7 @@ package com.kg.merapaisa.ui.dialogs
 import com.kg.merapaisa.ui.format.entrySpoken
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +30,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
@@ -55,6 +57,7 @@ import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.format.amountSpoken
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -108,6 +111,8 @@ fun EntryHistoryContent(
     var showClearConfirm by remember { mutableStateOf(false) }
     var pendingReversal by remember { mutableStateOf<Transaction?>(null) }
     var editingEntry by remember { mutableStateOf<Transaction?>(null) }
+    // Which field a long-press asked for, so the sheet opens with it ready. A tap asks for none.
+    var editingField by remember { mutableStateOf<EntryField?>(null) }
 
     // The screen is switched on by state and drawn over the people list rather than pushed onto a
     // back stack, so back has to be caught here or it would fall through to the list underneath.
@@ -200,7 +205,8 @@ fun EntryHistoryContent(
                         entry = t,
                         person = person,
                         time = day.timeOf(t),
-                        onEdit = { editingEntry = t },
+                        onEdit = { editingField = null; editingEntry = t },
+                        onEditField = { field -> editingField = field; editingEntry = t },
                         onReverse = { pendingReversal = t }
                     )
                 }
@@ -220,7 +226,8 @@ fun EntryHistoryContent(
                 onDelete(it)
                 editingEntry = null
             },
-            onDismiss = { editingEntry = null }
+            onDismiss = { editingEntry = null },
+            focus = editingField
         )
     }
 
@@ -376,9 +383,11 @@ private fun EntryRow(
     person: PersonWithBalance,
     time: String,
     onEdit: () -> Unit,
+    onEditField: (EntryField) -> Unit,
     onReverse: () -> Unit
 ) {
     val theme = LocalAppTheme.current
+    var menuOpen by remember { mutableStateOf(false) }
     // An entry with no note is named for the keypad button that made it. "You owe them" under a
     // "They paid for you" entry described a debt the entry had not created.
     val title = entry.note.ifBlank {
@@ -392,7 +401,15 @@ private fun EntryRow(
         Row(
             modifier = Modifier
                 .weight(1f)
-                .clickable(onClickLabel = "Edit this entry", onClick = onEdit)
+                // A tap opens the whole entry, as it always has. Nobody found that, because a
+                // long-press did nothing, so a long-press now offers the two things people reach
+                // for: the note and the amount.
+                .combinedClickable(
+                    onClickLabel = "Edit this entry",
+                    onClick = onEdit,
+                    onLongClickLabel = "Edit the note or the amount",
+                    onLongClick = { menuOpen = true }
+                )
                 .padding(start = Spacing.lg, end = Spacing.sm, top = Spacing.md, bottom = Spacing.md)
                 // Merged rather than cleared, so the line is one stop for TalkBack while the
                 // button beside it stays a stop of its own.
@@ -403,15 +420,34 @@ private fun EntryRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    title,
-                    style = MeraPaisaType.bodyStrong,
-                    color = theme.textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(time, style = MeraPaisaType.label, color = theme.textSecondary)
+            // The menu anchors to the words it is about.
+            Box(modifier = Modifier.weight(1f)) {
+                Column {
+                    Text(
+                        title,
+                        style = MeraPaisaType.bodyStrong,
+                        color = theme.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(time, style = MeraPaisaType.label, color = theme.textSecondary)
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }, shape = Shapes.medium) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                if (entry.note.isBlank()) "Add a note" else "Edit note",
+                                style = MeraPaisaType.body,
+                                color = theme.textPrimary
+                            )
+                        },
+                        onClick = { menuOpen = false; onEditField(EntryField.Note) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Edit amount", style = MeraPaisaType.body, color = theme.textPrimary) },
+                        onClick = { menuOpen = false; onEditField(EntryField.Amount) }
+                    )
+                }
             }
             Box(Modifier.clearAndSetSemantics { }) {
                 AmountText(
