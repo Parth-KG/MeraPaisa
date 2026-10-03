@@ -247,6 +247,11 @@ private fun DirectionButton(
         enabled = enabled,
         modifier = modifier.heightIn(min = 52.dp),
         shape = Shapes.small,
+        // The default 24dp sides left half a phone's width too little for "You paid for them",
+        // which then wrapped even at normal size.
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            horizontal = Spacing.sm, vertical = Spacing.sm
+        ),
         colors = ButtonDefaults.buttonColors(
             containerColor = theme.fillStrong,
             contentColor = ink,
@@ -255,12 +260,12 @@ private fun DirectionButton(
         )
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // Two lines at most rather than one: cut to a single line at large type, the buttons
-            // read "You paid" and "They", which is the one place a missing word changes where
-            // money goes.
-            Text(label, style = MeraPaisaType.action, maxLines = 2, textAlign = TextAlign.Center)
+            // Room for three lines, never cut short: at large type a cut label read "They paid
+            // for" without the "you", which is the one place a missing word changes where money
+            // goes. The keypad scrolls at large type, so the height is there.
+            Text(label, style = MeraPaisaType.action, maxLines = 3, textAlign = TextAlign.Center)
             if (hint != null) {
-                Text(hint, style = MeraPaisaType.label, maxLines = 2, textAlign = TextAlign.Center)
+                Text(hint, style = MeraPaisaType.label, maxLines = 3, textAlign = TextAlign.Center)
             }
         }
     }
