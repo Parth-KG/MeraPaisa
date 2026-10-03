@@ -172,10 +172,12 @@ private fun PersonMenu(
         // Distinct from a summary: that sends text a human reads, this sends a link their app
         // records, so both ledgers end up agreeing.
         MenuRow("Send an update link", theme.textPrimary) { onDismiss(); onShareLedger() }
-        // Only when they owe you something. There is nothing to hand on otherwise, and an
-        // always-visible item that always refuses is worse than no item.
+        // Only when something is owed, named for which way it runs. At zero there is nothing to
+        // hand on, and an always-visible item that always refuses is worse than no item.
         if (person.balanceMinor > 0) {
             MenuRow("Move this debt", theme.textPrimary) { onDismiss(); onMoveDebt() }
+        } else if (person.balanceMinor < 0) {
+            MenuRow("Move what you owe", theme.textPrimary) { onDismiss(); onMoveDebt() }
         }
         MenuRow("Edit", theme.textPrimary) { onDismiss(); onEditClick() }
         MenuRow("Delete", theme.textPrimary) { onDismiss(); onDelete() }

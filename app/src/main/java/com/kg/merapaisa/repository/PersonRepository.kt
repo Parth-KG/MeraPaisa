@@ -89,11 +89,13 @@ class PersonRepository(
     }
 
     /**
-     * Moves part of one person's balance onto another. "Rondu owes you ₹624; move ₹100 to Sasti."
+     * Moves part of one person's balance onto another, whichever way it runs. "Rondu owes you
+     * ₹624; move ₹100 to Sasti." Or "You owe Rondu ₹500; he says pay ₹200 of it to Sasti."
      *
-     * Two equal and opposite entries sharing a timestamp, written together, so the total owed to
-     * you never changes, only who owes it. Useful when somebody pays on another's behalf, or when
-     * a debt genuinely changes hands.
+     * Two equal and opposite entries sharing a timestamp, written together, so the total between
+     * you and everyone never changes, only who it is with. Useful when somebody pays on another's
+     * behalf, or when a debt genuinely changes hands. The balance is checked inside the database
+     * transaction that writes the move.
      *
      * Returns a [MoveDebtResult] rather than throwing, because every refusal here is something the
      * user needs told rather than an error: refusing is the normal outcome of a mistaken tap.
@@ -119,13 +121,9 @@ class PersonRepository(
             return MoveDebtResult.CurrencyMismatch(fromCurrency, toCurrency)
         }
 
-        val available = dao.getBalanceNow(fromPersonId)
-        if (available <= 0L) return MoveDebtResult.NothingToMove(available)
-        if (amountMinor > available) return MoveDebtResult.MoreThanOwed(available)
-
-        dao.moveDebt(fromPersonId, toPersonId, amountMinor, from.name, to.name, note)
-        notifier.onLedgerChanged()
-        return MoveDebtResult.Moved(amountMinor)
+        val result = dao.moveDebt(fromPersonId, toPersonId, amountMinor, from.name, to.name, note)
+        if (result is MoveDebtResult.Moved) notifier.onLedgerChanged()
+        return result
     }
 
     /**
@@ -148,16 +146,15 @@ class PersonRepository(
         val from = dao.getPersonNow(fromPersonId) ?: return MoveDebtResult.PersonGone
         val to = dao.getPersonNow(toPersonId) ?: return MoveDebtResult.PersonGone
 
-        val available = dao.getBalanceNow(fromPersonId)
-        if (available <= 0L) return MoveDebtResult.NothingToMove(available)
-        if (amountMinor > available) return MoveDebtResult.MoreThanOwed(available)
-
-        // Grouped like every other figure in the history: "₹1,50,000", not "₹150000".
+        // Grouped like every other figure in the history: "₹1,50,000", not "₹150000". Both are
+        // the typed sizes, positive whichever way the debt runs.
         val conversion = "${amountString(amountMinor, from.currency)} as " +
             "${amountString(convertedMinor, to.currency)} at the day's rate"
-        dao.moveDebtConverted(fromPersonId, toPersonId, amountMinor, convertedMinor, from.name, to.name, conversion, note)
-        notifier.onLedgerChanged()
-        return MoveDebtResult.Moved(amountMinor)
+        val result = dao.moveDebtConverted(
+            fromPersonId, toPersonId, amountMinor, convertedMinor, from.name, to.name, conversion, note
+        )
+        if (result is MoveDebtResult.Moved) notifier.onLedgerChanged()
+        return result
     }
 
     suspend fun editTransaction(transaction: Transaction) {

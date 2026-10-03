@@ -275,17 +275,21 @@ sealed interface UpdateFlowState {
 }
 
 /**
- * Moving part of what one person owes onto somebody else.
+ * Moving part of the debt between you and one person onto somebody else, whichever way it runs.
  *
  * The amount is held as typed text rather than a parsed number so the field behaves like every
  * other amount field in the app. A half-typed "12." is a legal thing to be looking at, and
  * parsing on every keystroke would fight the user.
+ *
+ * [availableMinor] is the size of the debt, positive either way. [youOwe] says which way it runs:
+ * false when they owe you ("Move this debt"), true when you owe them ("Move what you owe").
  */
 data class MoveDebtFlowState(
     val fromPersonId: Long,
     val fromName: String,
     val currency: String,
     val availableMinor: Long,
+    val youOwe: Boolean = false,
     val amount: String = "",
     val toPersonId: Long? = null,
     val note: String = "",

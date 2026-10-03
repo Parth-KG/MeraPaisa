@@ -54,10 +54,11 @@ import com.kg.merapaisa.ui.format.TypedAmountText
 import com.kg.merapaisa.ui.SheetFrame
 
 /**
- * Moving part of what one person owes onto somebody else.
+ * Moving part of the debt between you and one person onto somebody else, whichever way it runs.
  *
- * "Rondu owes you ₹624, move ₹100 of that to Sasti." Two entries, equal and opposite, so the total
- * owed to you does not change; only who owes it.
+ * "Rondu owes you ₹624, move ₹100 of that to Sasti." Or the mirror: "You owe Rondu ₹500, and he
+ * says pay ₹200 of it to Sasti." Two entries, equal and opposite, so the total between you and
+ * everyone does not change; only who it is with.
  *
  * Anyone can take it. Someone kept in another currency takes it in theirs, converted at today's
  * rate when the move is saved, and the sheet says so once they are picked: moving ₹100 onto a
@@ -95,16 +96,16 @@ fun MoveDebtDialog(
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                "Move a debt",
+                if (state.youOwe) "Move what you owe" else "Move a debt",
                 style = MeraPaisaType.screenTitle,
                 color = theme.textPrimary,
                 modifier = Modifier.padding(horizontal = Spacing.lg)
             )
             Spacer(Modifier.height(Spacing.xs))
+            val owed = amountString(state.availableMinor, state.currency)
             Text(
-                "${state.fromName} owes you " +
-                    "${amountString(state.availableMinor, state.currency)}. Move part of that " +
-                    "onto somebody else.",
+                if (state.youOwe) "You owe ${state.fromName} $owed. Move part of that onto somebody else."
+                else "${state.fromName} owes you $owed. Move part of that onto somebody else.",
                 style = MeraPaisaType.body,
                 color = theme.textSecondary,
                 modifier = Modifier.padding(horizontal = Spacing.lg)
@@ -135,8 +136,8 @@ fun MoveDebtDialog(
             if (overAvailable) {
                 Spacer(Modifier.height(Spacing.sm))
                 Text(
-                    "That is more than ${state.fromName} owes you " +
-                        "(${amountString(state.availableMinor, state.currency)}). " +
+                    (if (state.youOwe) "That's more than you owe ${state.fromName} ($owed). "
+                    else "That is more than ${state.fromName} owes you ($owed). ") +
                         "Take a digit off, or move the whole balance.",
                     style = MeraPaisaType.label,
                     color = theme.negative,

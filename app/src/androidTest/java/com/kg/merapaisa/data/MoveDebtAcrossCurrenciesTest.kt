@@ -89,6 +89,32 @@ class MoveDebtAcrossCurrenciesTest {
         assertEquals(0L, dao.getBalanceNow(diego))
     }
 
+    /** You owe Asha ₹1,500 and move ₹1,000 of it onto Diego, who is kept in dollars. */
+    @Test
+    fun whatYouOweMovesInEachCurrency() = runBlocking {
+        val asha = person("Asha", -1_500_00, "INR")
+        val diego = person("Diego", 0, "USD")
+
+        val result = repo.moveDebtConverted(asha, diego, amountMinor = 1_000_00, convertedMinor = 12_05)
+
+        assertTrue("expected Moved, got $result", result is MoveDebtResult.Moved)
+        assertEquals("you owe Asha ₹500", -500_00L, dao.getBalanceNow(asha))
+        assertEquals("you owe Diego the converted $12.05", -12_05L, dao.getBalanceNow(diego))
+    }
+
+    @Test
+    fun movingMoreThanYouOweIsRefusedAcrossCurrencies() = runBlocking {
+        val asha = person("Asha", -500_00, "INR")
+        val diego = person("Diego", 0, "USD")
+
+        val result = repo.moveDebtConverted(asha, diego, 600_00, 7_20)
+
+        assertTrue("expected MoreThanOwed, got $result", result is MoveDebtResult.MoreThanOwed)
+        assertEquals(500_00L, (result as MoveDebtResult.MoreThanOwed).availableMinor)
+        assertEquals("a refused move writes nothing", -500_00L, dao.getBalanceNow(asha))
+        assertEquals(0L, dao.getBalanceNow(diego))
+    }
+
     @Test
     fun thePlainMoveStillRefusesWithoutARate() = runBlocking {
         val asha = person("Asha", 500_00, "INR")

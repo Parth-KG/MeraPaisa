@@ -166,11 +166,18 @@ interface PersonDao {
     }
 
     /**
-     * Moves [amountMinor] of what [fromPersonId] owes onto [toPersonId].
+     * Moves [amountMinor] of the debt between you and [fromPersonId] onto [toPersonId], whichever
+     * way it runs.
+     *
+     * If they owe you, [toPersonId] now owes you that much more. If you owe them, you now owe
+     * [toPersonId] that much more, or they owe you that much less. The direction is the sign of
+     * [fromPersonId]'s balance, and that balance is read here, inside the transaction that writes
+     * the move, so nothing can change it between the check and the write.
      *
      * Two entries, equal and opposite, sharing one timestamp so they sort together and read as the
      * single event they are. One transaction, because half of this landing would invent or destroy
-     * money: the whole point is that the total owed to you does not change, only who owes it.
+     * money: the whole point is that the total between you and everyone does not change, only who
+     * it is with.
      *
      * Each entry names the other person, so a year later the pair explains itself without needing
      * the other half in view.
@@ -183,36 +190,44 @@ interface PersonDao {
         fromName: String,
         toName: String,
         note: String = ""
-    ) {
+    ): MoveDebtResult {
+        val balance = getBalanceNow(fromPersonId)
+        if (balance == 0L) return MoveDebtResult.NothingToMove(0L)
+        val available = kotlin.math.abs(balance)
+        if (amountMinor > available) return MoveDebtResult.MoreThanOwed(available)
+        val signed = if (balance > 0L) amountMinor else -amountMinor
+
         val at = System.currentTimeMillis()
         val suffix = if (note.isBlank()) "" else ": $note"
         insertTransactions(
             listOf(
                 Transaction(
                     personId = fromPersonId,
-                    amountMinor = -amountMinor,
+                    amountMinor = -signed,
                     timestamp = at,
                     note = "Moved to $toName$suffix"
                 ),
                 Transaction(
                     personId = toPersonId,
-                    amountMinor = amountMinor,
+                    amountMinor = signed,
                     timestamp = at,
                     note = "Moved from $fromName$suffix"
                 )
             )
         )
-        // The receiver now owes something, so they belong back in the active list.
+        // The receiver's balance just moved, so they belong back in the active list.
         setSettled(toPersonId, false)
+        return MoveDebtResult.Moved(amountMinor)
     }
 
     /**
      * [moveDebt] between two people kept in different currencies.
      *
-     * The sender goes down by [fromAmountMinor] in their currency and the receiver up by
-     * [toAmountMinor] in theirs, converted by the caller at the day's rate. [conversion] says what
-     * was converted to what, and goes on both entries, so either half explains the other a year
-     * later. Same timestamp, one transaction: a failure writes neither.
+     * The sender's side moves by [fromAmountMinor] in their currency and the receiver's by
+     * [toAmountMinor] in theirs, converted by the caller at the day's rate, both in the direction
+     * the sender's balance runs, which is read and checked here as in [moveDebt]. [conversion] says
+     * what was converted to what, and goes on both entries, so either half explains the other a
+     * year later. Same timestamp, one transaction: a failure writes neither.
      */
     @androidx.room.Transaction
     suspend fun moveDebtConverted(
@@ -224,26 +239,33 @@ interface PersonDao {
         toName: String,
         conversion: String,
         note: String = ""
-    ) {
+    ): MoveDebtResult {
+        val balance = getBalanceNow(fromPersonId)
+        if (balance == 0L) return MoveDebtResult.NothingToMove(0L)
+        val available = kotlin.math.abs(balance)
+        if (fromAmountMinor > available) return MoveDebtResult.MoreThanOwed(available)
+        val direction = if (balance > 0L) 1L else -1L
+
         val at = System.currentTimeMillis()
         val suffix = if (note.isBlank()) "" else ": $note"
         insertTransactions(
             listOf(
                 Transaction(
                     personId = fromPersonId,
-                    amountMinor = -fromAmountMinor,
+                    amountMinor = -fromAmountMinor * direction,
                     timestamp = at,
                     note = "Moved to $toName, $conversion$suffix"
                 ),
                 Transaction(
                     personId = toPersonId,
-                    amountMinor = toAmountMinor,
+                    amountMinor = toAmountMinor * direction,
                     timestamp = at,
                     note = "Moved from $fromName, $conversion$suffix"
                 )
             )
         )
         setSettled(toPersonId, false)
+        return MoveDebtResult.Moved(fromAmountMinor)
     }
 
     /** As [recordEntry], for a split that touches several people at once. */

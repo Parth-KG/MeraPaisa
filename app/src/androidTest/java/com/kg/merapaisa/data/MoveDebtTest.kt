@@ -14,11 +14,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Moving part of one person's debt onto another.
+ * Moving part of one person's debt onto another, whichever way it runs.
  *
- * The invariant worth protecting: **the total owed to you must not change.** Only who owes it. A
- * move that quietly created or destroyed money would be the worst possible bug in a ledger, and it
- * would be invisible: every individual balance would still look plausible.
+ * The invariant worth protecting: **the total between you and everyone must not change.** Only who
+ * it is with. A move that quietly created or destroyed money would be the worst possible bug in a
+ * ledger, and it would be invisible: every individual balance would still look plausible.
  */
 @RunWith(AndroidJUnit4::class)
 class MoveDebtTest {
@@ -176,13 +176,6 @@ class MoveDebtTest {
         assertTrue(assertWroteNothing { repo.moveDebt(a, b, 1_000) } is MoveDebtResult.NothingToMove)
     }
 
-    /** You owe them, so there is no debt of theirs to hand on. */
-    @Test
-    fun movingFromSomeoneYouOweIsRefused() = runBlocking {
-        val a = person("A", -20_000)
-        val b = person("B", 0)
-        assertTrue(assertWroteNothing { repo.moveDebt(a, b, 1_000) } is MoveDebtResult.NothingToMove)
-    }
 
     @Test
     fun movingToTheSamePersonIsRefused() = runBlocking {
@@ -196,6 +189,74 @@ class MoveDebtTest {
         val b = person("B", 0)
         assertTrue(assertWroteNothing { repo.moveDebt(a, b, 0) } is MoveDebtResult.NotAnAmount)
         assertTrue(assertWroteNothing { repo.moveDebt(a, b, -5_000) } is MoveDebtResult.NotAnAmount)
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // What you owe: the same move, the other way
+    // -----------------------------------------------------------------------------------------
+
+    /**
+     * You owe Rondu ₹500 and he says to pay ₹200 of it to Sasti. You then owe Rondu ₹300, and Sasti
+     * ₹200 more, and what you owe in all has not moved.
+     */
+    @Test
+    fun movingWhatYouOweMovesItTheOtherWay() = runBlocking {
+        val rondu = person("Rondu", -50_000)
+        val sasti = person("Sasti", 0)
+        val before = totalOwed()
+
+        val result = repo.moveDebt(rondu, sasti, 20_000)
+
+        assertTrue("expected Moved, got $result", result is MoveDebtResult.Moved)
+        assertEquals("you owe Rondu ₹300", -30_000L, dao.getBalanceNow(rondu))
+        assertEquals("you owe Sasti ₹200", -20_000L, dao.getBalanceNow(sasti))
+        assertEquals("what you owe in all must not move", before, totalOwed())
+    }
+
+    @Test
+    fun whatYouOweMovesOntoSomeoneWhoOwesYou() = runBlocking {
+        val rondu = person("Rondu", -50_000)
+        val sasti = person("Sasti", 30_000)
+
+        repo.moveDebt(rondu, sasti, 20_000)
+
+        assertEquals("Sasti now owes you ₹200 less", 10_000L, dao.getBalanceNow(sasti))
+    }
+
+    @Test
+    fun theEntriesForWhatYouOweStillNameEachOther() = runBlocking {
+        val rondu = person("Rondu", -50_000)
+        val sasti = person("Sasti", 0)
+        repo.moveDebt(rondu, sasti, 20_000)
+
+        val out = dao.getTransactionsForPersonNow(rondu).last()
+        val into = dao.getTransactionsForPersonNow(sasti).single()
+        assertEquals(out.timestamp, into.timestamp)
+        assertEquals("Moved to Sasti", out.note)
+        assertEquals(20_000L, out.amountMinor)
+        assertEquals("Moved from Rondu", into.note)
+        assertEquals(-20_000L, into.amountMinor)
+    }
+
+    @Test
+    fun movingAllYouOweLeavesYouEven() = runBlocking {
+        val a = person("A", -20_000)
+        val b = person("B", 0)
+
+        repo.moveDebt(a, b, 20_000)
+
+        assertEquals(0L, dao.getBalanceNow(a))
+        assertEquals(-20_000L, dao.getBalanceNow(b))
+    }
+
+    @Test
+    fun movingMoreThanYouOweIsRefused() = runBlocking {
+        val a = person("A", -20_000)
+        val b = person("B", 0)
+        val result = assertWroteNothing { repo.moveDebt(a, b, 20_001) }
+
+        assertTrue("expected MoreThanOwed, got $result", result is MoveDebtResult.MoreThanOwed)
+        assertEquals("the size of what you owe", 20_000L, (result as MoveDebtResult.MoreThanOwed).availableMinor)
     }
 
     // -----------------------------------------------------------------------------------------

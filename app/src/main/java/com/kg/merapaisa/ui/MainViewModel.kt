@@ -1171,15 +1171,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Moving a debt between people
     // =========================================================================================
 
-    /** Opens the sheet for [personId], who must be owed something for there to be a debt to move. */
+    /**
+     * Opens the sheet for [personId]. Something has to be owed one way or the other for there to
+     * be a debt to move, which is why the menu offers it only then.
+     */
     fun openMoveDebt(personId: Long) {
         val person = persons.value.firstOrNull { it.id == personId } ?: return
+        if (person.balanceMinor == 0L) return
         _uiState.update {
             it.copy(moveDebt = MoveDebtFlowState(
                 fromPersonId = personId,
                 fromName = person.name,
                 currency = normaliseCurrency(person.currency),
-                availableMinor = person.balanceMinor
+                availableMinor = kotlin.math.abs(person.balanceMinor),
+                youOwe = person.balanceMinor < 0L
             ))
         }
     }
@@ -1202,9 +1207,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Performs the move, or leaves the sheet open saying why not.
      *
-     * The repository re-reads the balance under its own transaction, so the guard here is about
-     * not offering a live button rather than about correctness: two fast taps cannot both move
-     * the same money.
+     * The balance is read again inside the database transaction that writes the move, so the guard
+     * here is about not offering a live button rather than about correctness: two fast taps cannot
+     * both move the same money.
      */
     fun confirmMoveDebt() {
         val m = _uiState.value.moveDebt ?: return
@@ -1246,18 +1251,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     is MoveDebtResult.Moved -> state.copy(moveDebt = null, selectedId = null)
                     is MoveDebtResult.CurrencyMismatch -> state.copy(
                         moveDebt = m.copy(busy = false, problem =
-                            "${m.fromName}'s debt is in ${result.from} and the person you picked is " +
-                                "in ${result.to}. Moving it between currencies would need an exchange " +
-                                "rate nobody agreed to, so pick someone in ${result.from}.")
+                            (if (m.youOwe) "What you owe ${m.fromName}" else "${m.fromName}'s debt") +
+                                " is in ${result.from} and the person you picked is in ${result.to}. " +
+                                "Moving it between currencies would need an exchange rate nobody " +
+                                "agreed to, so pick someone in ${result.from}.")
                     )
                     is MoveDebtResult.MoreThanOwed -> state.copy(
                         moveDebt = m.copy(busy = false, problem =
-                            "That's more than ${m.fromName} owes you. Enter " +
+                            (if (m.youOwe) "That's more than you owe ${m.fromName}. Enter "
+                            else "That's more than ${m.fromName} owes you. Enter ") +
                                 "${amountString(result.availableMinor, m.currency)} or less.")
                     )
                     is MoveDebtResult.NothingToMove -> state.copy(
                         moveDebt = m.copy(busy = false, problem =
-                            "${m.fromName} does not owe you anything, so there is nothing to move.")
+                            if (m.youOwe) "You don't owe ${m.fromName} anything."
+                            else "${m.fromName} does not owe you anything, so there is nothing to move.")
                     )
                     MoveDebtResult.SamePerson -> state.copy(
                         moveDebt = m.copy(busy = false, problem = "Pick somebody other than ${m.fromName}.")

@@ -27,12 +27,15 @@ sealed interface MoveDebtResult {
      */
     data class CurrencyMismatch(val from: String, val to: String) : MoveDebtResult
 
-    /** They owe you nothing, or you owe them, so there is no debt of theirs to hand on. */
+    /** You are even with them, so there is no debt either way to hand on. */
     data class NothingToMove(val balanceMinor: Long) : MoveDebtResult
 
     /** One of the two people was deleted while the sheet was open. */
     data object PersonGone : MoveDebtResult
 
-    /** More than they actually owe. [availableMinor] is the most that could move. */
+    /**
+     * More than the debt between you. [availableMinor] is the most that could move, its size
+     * whichever way it runs.
+     */
     data class MoreThanOwed(val availableMinor: Long) : MoveDebtResult
 }

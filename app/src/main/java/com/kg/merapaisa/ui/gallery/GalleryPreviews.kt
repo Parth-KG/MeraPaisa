@@ -451,6 +451,13 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
             onKey = {}, onTargetChange = {}, onNoteChange = {}, onConfirm = {}, onDismiss = {}
         )
     },
+    "sheet-move-what-you-owe" to {
+        MoveDebtDialog(
+            state = Fixtures.moveWhatYouOwe,
+            people = Fixtures.mixedPeople,
+            onKey = {}, onTargetChange = {}, onNoteChange = {}, onConfirm = {}, onDismiss = {}
+        )
+    },
     "sheet-edit-entry" to {
         EditEntrySheet(
             entry = Fixtures.ashaHistory.first(),

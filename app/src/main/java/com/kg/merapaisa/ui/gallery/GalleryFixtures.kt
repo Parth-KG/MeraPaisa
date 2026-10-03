@@ -346,6 +346,17 @@ object Fixtures {
         toPersonId = asha.id
     )
 
+    /** The mirror: you owe Bilal ₹40 and move part of it onto Asha. */
+    val moveWhatYouOwe = MoveDebtFlowState(
+        fromPersonId = bilal.id,
+        fromName = bilal.name,
+        currency = "INR",
+        availableMinor = -bilal.balanceMinor,
+        youOwe = true,
+        amount = "25",
+        toPersonId = asha.id
+    )
+
     private fun personWith(
         id: Long,
         name: String,
