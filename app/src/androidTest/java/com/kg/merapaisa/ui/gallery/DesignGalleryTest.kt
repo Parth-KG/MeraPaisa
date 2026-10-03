@@ -67,7 +67,8 @@ class DesignGalleryTest {
         fontScale = 2f,
         label = "-fs2",
         only = setOf(
-            "people-rows", "net-total-multi", "net-total-single", "numpad", "group-detail",
+            "people-rows", "net-total-multi", "net-total-single", "net-total-multi-both-sides",
+            "net-total-single-both-sides", "numpad", "group-detail",
             "split-adjustments", "split-adjustments-locked", "history", "settings-themes-open"
         )
     )

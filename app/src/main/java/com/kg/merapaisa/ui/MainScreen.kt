@@ -54,8 +54,10 @@ import com.kg.merapaisa.data.backupFileName
 import com.kg.merapaisa.backup.BackupWriter
 import kotlinx.coroutines.launch
 import com.kg.merapaisa.SecurityStore
+import com.kg.merapaisa.TotalViewStore
 import com.kg.merapaisa.ThemeStore
 import com.kg.merapaisa.data.netTotalsByCurrency
+import com.kg.merapaisa.data.sidesByCurrency
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -220,8 +222,12 @@ fun MainScreen(viewModel: MainViewModel) {
             // Hidden while the keypad is up: the amount being typed is for one person, and with two
             // currencies the header left the list less than a row high, the chosen row cut in half.
             if (ui.tab == Tab.Active && ledgerReady && ui.selectedId == null) {
+                val bothSides by TotalViewStore.showsBothSides(context).collectAsState(initial = false)
                 NetPosition(
                     totals = netTotalsByCurrency(list),
+                    sides = sidesByCurrency(list),
+                    bothSides = bothSides,
+                    onToggle = { scope.launch { TotalViewStore.setShowsBothSides(context, !bothSides) } },
                     modifier = Modifier.windowInsetsPadding(
                         WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
                     )

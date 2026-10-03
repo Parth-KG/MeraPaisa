@@ -21,3 +21,30 @@ fun netTotalsByCurrency(persons: List<PersonWithBalance>): List<CurrencyTotal> =
         .filterValues { it != 0L }
         .map { (currency, amountMinor) -> CurrencyTotal(currency, amountMinor) }
         .sortedBy { it.currency }
+
+/**
+ * Both sides of where you stand in one currency, kept apart: what people owe you, and what you
+ * owe them, as a negative. Either may be zero, but not both.
+ */
+data class CurrencySides(val currency: String, val owedToYouMinor: Long, val youOweMinor: Long)
+
+/**
+ * What you are owed and what you owe, per currency, without netting the two.
+ *
+ * The net hides how much is out either way: being owed ₹1,000 and owing ₹900 reads as ₹100. This
+ * adds the positive balances and the negative ones separately. The same rules as the net: one
+ * entry per currency, never summed across currencies, "₹" and "INR" counted as one, and a currency
+ * where nobody owes anything either way left out.
+ */
+fun sidesByCurrency(persons: List<PersonWithBalance>): List<CurrencySides> =
+    persons
+        .groupBy { normaliseCurrency(it.currency) }
+        .map { (currency, people) ->
+            CurrencySides(
+                currency = currency,
+                owedToYouMinor = people.sumOf { maxOf(it.balanceMinor, 0L) },
+                youOweMinor = people.sumOf { minOf(it.balanceMinor, 0L) }
+            )
+        }
+        .filter { it.owedToYouMinor != 0L || it.youOweMinor != 0L }
+        .sortedBy { it.currency }

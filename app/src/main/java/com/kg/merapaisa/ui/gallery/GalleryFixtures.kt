@@ -2,6 +2,7 @@ package com.kg.merapaisa.ui.gallery
 
 import com.kg.merapaisa.data.OPENING_UID_PREFIX
 import com.kg.merapaisa.data.BackupSnapshot
+import com.kg.merapaisa.data.CurrencySides
 import com.kg.merapaisa.data.CurrencyTotal
 import com.kg.merapaisa.data.Expense
 import com.kg.merapaisa.data.Group
@@ -82,6 +83,14 @@ object Fixtures {
 
     val totalsSingle = listOf(CurrencyTotal("INR", 1_200_00))
     val totalsEven = listOf<CurrencyTotal>()
+
+    /** The same ledgers seen from both sides, each netting to the totals above. */
+    val sides = listOf(
+        CurrencySides("INR", 13_36_767_50, -40_00),
+        CurrencySides("JPY", 0, -12_000_00),
+        CurrencySides("USD", 1_050_25, 0)
+    )
+    val sidesSingle = listOf(CurrencySides("INR", 1_500_00, -300_00))
 
     /** Sixty characters: the note length a row has to truncate gracefully. */
     const val LONG_NOTE = "Dinner at the place near the station, split four ways ok?"

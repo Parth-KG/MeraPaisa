@@ -127,10 +127,22 @@ fun SettledPersonCase() {
 
 /** Three currencies, which must never be added together. */
 @Composable
-fun NetTotalMultiCase() = NetPosition(totals = Fixtures.totals, modifier = Modifier.fillMaxWidth())
+fun NetTotalMultiCase(bothSides: Boolean = false) = NetPosition(
+    totals = Fixtures.totals,
+    sides = Fixtures.sides,
+    bothSides = bothSides,
+    onToggle = {},
+    modifier = Modifier.fillMaxWidth()
+)
 
 @Composable
-fun NetTotalSingleCase() = NetPosition(totals = Fixtures.totalsSingle, modifier = Modifier.fillMaxWidth())
+fun NetTotalSingleCase(bothSides: Boolean = false) = NetPosition(
+    totals = Fixtures.totalsSingle,
+    sides = Fixtures.sidesSingle,
+    bothSides = bothSides,
+    onToggle = {},
+    modifier = Modifier.fillMaxWidth()
+)
 
 @Composable
 fun NetTotalEvenCase() = NetPosition(totals = Fixtures.totalsEven, modifier = Modifier.fillMaxWidth())
@@ -384,6 +396,8 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "people-settled-and-even" to { SettledPersonCase() },
     "net-total-multi" to { NetTotalMultiCase() },
     "net-total-single" to { NetTotalSingleCase() },
+    "net-total-multi-both-sides" to { NetTotalMultiCase(bothSides = true) },
+    "net-total-single-both-sides" to { NetTotalSingleCase(bothSides = true) },
     "net-total-even" to { NetTotalEvenCase() },
     "numpad" to { NumPadCase() },
     "numpad-yen" to { NumPadYenCase() },

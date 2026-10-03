@@ -102,4 +102,52 @@ class NetTotalTest {
 
         assertEquals("they cancel, so nothing is reported", 0, totals.size)
     }
+
+    // -----------------------------------------------------------------------------------------
+    // Both sides: what you are owed and what you owe, kept apart
+    // -----------------------------------------------------------------------------------------
+
+    @Test
+    fun bothSidesKeepsOwedAndOwingApartWithinACurrency() {
+        val sides = sidesByCurrency(
+            listOf(person(1, "INR", 1_000_00), person(2, "INR", 250_00), person(3, "INR", -900_00))
+        )
+        assertEquals(listOf(CurrencySides("INR", 1_250_00, -900_00)), sides)
+    }
+
+    @Test
+    fun bothSidesNeverAddsOneCurrencyToAnother() {
+        val sides = sidesByCurrency(
+            listOf(person(1, "USD", 20_00), person(2, "INR", -40_00), person(3, "JPY", 3_000_00))
+        )
+        assertEquals(
+            listOf(
+                CurrencySides("INR", 0, -40_00),
+                CurrencySides("JPY", 3_000_00, 0),
+                CurrencySides("USD", 20_00, 0)
+            ),
+            sides
+        )
+    }
+
+    /** Where the net cancels to nothing, both sides still has something to say. */
+    @Test
+    fun bothSidesShowsWhatTheNetCancelsAway() {
+        val people = listOf(person(1, "INR", 500_00), person(2, "INR", -500_00))
+        assertTrue(netTotalsByCurrency(people).isEmpty())
+        assertEquals(listOf(CurrencySides("INR", 500_00, -500_00)), sidesByCurrency(people))
+    }
+
+    @Test
+    fun `a legacy symbol and its code are one currency on both sides`() {
+        val sides = sidesByCurrency(listOf(person(1, "\u20B9", 300_00), person(2, "INR", -100_00)))
+        assertEquals(listOf(CurrencySides("INR", 300_00, -100_00)), sides)
+    }
+
+    @Test
+    fun aCurrencyWhereEveryoneIsEvenIsLeftOut() {
+        val sides = sidesByCurrency(listOf(person(1, "EUR", 0), person(2, "INR", 0), person(3, "USD", -5_00)))
+        assertEquals(listOf(CurrencySides("USD", 0, -5_00)), sides)
+        assertTrue(sidesByCurrency(listOf(person(1, "INR", 0))).isEmpty())
+    }
 }
