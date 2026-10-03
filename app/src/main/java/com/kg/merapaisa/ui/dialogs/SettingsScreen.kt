@@ -193,7 +193,7 @@ fun SettingsScreen(
             item {
                 ActionRow(
                     title = "Check for updates",
-                    subtitle = "You're on $appVersion. This asks GitHub if there's a newer version.",
+                    subtitle = "You're on $appVersion.",
                     onClick = onCheckUpdates
                 )
             }
