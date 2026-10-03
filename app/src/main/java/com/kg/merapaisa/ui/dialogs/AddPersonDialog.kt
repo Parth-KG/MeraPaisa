@@ -21,12 +21,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -58,6 +56,7 @@ import com.kg.merapaisa.ui.avatarInk
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
+import com.kg.merapaisa.ui.SheetFrame
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -119,14 +118,7 @@ fun AddPersonDialog(
         onDismiss()
     }
 
-    ModalBottomSheet(
-        onDismissRequest = dismiss,
-        sheetState = sheetState,
-        shape = Shapes.sheet,
-        containerColor = theme.surface,
-        contentColor = theme.textPrimary,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = theme.outline) }
-    ) {
+    SheetFrame(onDismissRequest = dismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

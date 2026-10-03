@@ -13,11 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -47,6 +45,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import com.kg.merapaisa.ui.DecisionDialog
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.format.SignStyle
+import com.kg.merapaisa.ui.SheetFrame
 
 /**
  * Corrects or removes a single entry. Before this, a mistyped amount could only be papered over
@@ -89,14 +88,7 @@ fun EditEntrySheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = Shapes.sheet,
-        containerColor = theme.surface,
-        contentColor = theme.textPrimary,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = theme.outline) }
-    ) {
+    SheetFrame(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
