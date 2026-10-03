@@ -55,6 +55,27 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.coversLedger
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.unit.IntOffset
+import com.kg.merapaisa.ui.theme.Motion
 
 /**
  * Everything about the app itself rather than about who owes whom.
@@ -68,7 +89,7 @@ import com.kg.merapaisa.ui.coversLedger
  * The theme list shows each theme rather than naming it. A name tells you nothing about what
  * Ocean does to your ledger, so every row carries a small piece of that theme drawn in its own
  * background, its own text ink and its own accent, which is what changing it will actually look
- * like.
+ * like. It stays folded into one row until asked for, because most visits are not about the theme.
  */
 @Composable
 fun SettingsScreen(
@@ -83,10 +104,31 @@ fun SettingsScreen(
     onCheckUpdates: () -> Unit,
     appVersion: String,
     onDismiss: () -> Unit,
-    onApply: (String) -> Unit
+    onApply: (String) -> Unit,
+    startWithThemesOpen: Boolean = false
 ) {
     val theme = LocalAppTheme.current
-    var pendingTheme by remember { mutableStateOf(currentThemeName) }
+    // Folded on every visit and stored nowhere, but turning the phone keeps it open.
+    var themesOpen by rememberSaveable { mutableStateOf(startWithThemesOpen) }
+    // A pick survives turning the phone too. Closing the list drops it, so nothing waits unseen.
+    var pendingTheme by rememberSaveable { mutableStateOf(currentThemeName) }
+    val listState = rememberLazyListState()
+
+    // The themes sit near the foot, so opening them scrolls just far enough to show the last one.
+    LaunchedEffect(themesOpen) {
+        if (!themesOpen) return@LaunchedEffect
+        val lastKey = themeKey(themes.last())
+        repeat(20) {
+            withFrameNanos { }
+            val info = listState.layoutInfo
+            val last = info.visibleItemsInfo.firstOrNull { it.key == lastKey }
+            val visibleEnd = info.viewportEndOffset - info.afterContentPadding
+            val needed = if (last == null) info.viewportSize.height / 2f
+            else (last.offset + last.size - visibleEnd).toFloat()
+            if (last != null && needed <= 0f) return@LaunchedEffect
+            listState.animateScrollBy(needed, tween(Motion.slow, easing = Motion.emphasized))
+        }
+    }
 
     // This is part of the main tree rather than a Dialog window, so back has to be caught here.
     // Left alone it falls through to the people list underneath and closes the app.
@@ -125,11 +167,16 @@ fun SettingsScreen(
                 .padding(horizontal = Spacing.lg)
         )
 
+        // With the button gone, the list itself has to clear the navigation bar.
+        val clearOfBar = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues()
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .weight(1f)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
-            contentPadding = PaddingValues(bottom = Spacing.lg)
+            contentPadding = PaddingValues(
+                bottom = Spacing.lg + if (themesOpen) 0.dp else clearOfBar.calculateBottomPadding()
+            )
         ) {
             item { SectionHeading("App lock") }
             item {
@@ -188,24 +235,38 @@ fun SettingsScreen(
                 )
             }
 
-            item { SectionHeading("Theme") }
-            itemsIndexed(themes, key = { _, t -> "theme-${t.name}" }) { index, t ->
-                if (index > 0) RowDivider(TextRowInset)
-                ThemeRow(
-                    preview = t,
-                    selected = pendingTheme == t.name,
-                    inUse = currentThemeName == t.name,
-                    onSelect = { pendingTheme = t.name }
+            item(key = "theme-summary") {
+                ThemeSummaryRow(
+                    inUse = theme,
+                    open = themesOpen,
+                    onToggle = {
+                        if (themesOpen) pendingTheme = currentThemeName
+                        themesOpen = !themesOpen
+                    }
                 )
             }
+            if (themesOpen) {
+                itemsIndexed(themes, key = { _, t -> themeKey(t) }) { index, t ->
+                    Column(Modifier.animateItem(fadeInSpec = Appear, placementSpec = Move, fadeOutSpec = Leave)) {
+                        if (index > 0) RowDivider(TextRowInset)
+                        ThemeRow(
+                            preview = t,
+                            selected = pendingTheme == t.name,
+                            inUse = currentThemeName == t.name,
+                            onSelect = { pendingTheme = t.name }
+                        )
+                    }
+                }
+            }
 
-            item {
+            item(key = "credit") {
                 Text(
                     "Made for fun by Parth, @Parth-KG on GitHub.",
                     style = MeraPaisaType.label,
                     color = theme.textSecondary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
+                        .animateItem(fadeInSpec = null, placementSpec = Move, fadeOutSpec = null)
                         .fillMaxWidth()
                         .padding(horizontal = Spacing.lg)
                         .padding(top = Spacing.xxl)
@@ -216,26 +277,35 @@ fun SettingsScreen(
         // One button, and it names the one thing this screen holds back until you ask. Everything
         // else acts on the tap. It is dead until you pick a different theme, the way Settle up is
         // dead when everyone is already even, because a live button that would change nothing is
-        // a lie about what tapping it does.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
-                )
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md)
+        // a lie about what tapping it does. And it is there only while the themes are: with them
+        // folded away, a dead button at the foot of every visit would be one for something unseen.
+        AnimatedVisibility(
+            visible = themesOpen,
+            enter = slideInVertically(tween(Motion.slow, easing = Motion.emphasizedDecelerate)) { it } +
+                fadeIn(tween(Motion.slow)),
+            exit = slideOutVertically(tween(Motion.medium, easing = Motion.emphasizedAccelerate)) { it } +
+                fadeOut(tween(Motion.medium))
         ) {
-            Button(
-                onClick = { onApply(pendingTheme) },
-                enabled = pendingTheme != currentThemeName,
-                shape = Shapes.small,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = theme.primary,
-                    contentColor = theme.background
-                )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
+                    )
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.md)
             ) {
-                Text("Use this theme", style = MeraPaisaType.action)
+                Button(
+                    onClick = { onApply(pendingTheme) },
+                    enabled = pendingTheme != currentThemeName,
+                    shape = Shapes.small,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = theme.primary,
+                        contentColor = theme.background
+                    )
+                ) {
+                    Text("Use this theme", style = MeraPaisaType.action)
+                }
             }
         }
     }
@@ -336,6 +406,66 @@ private fun ActionRow(
         }
     }
 }
+
+/**
+ * The theme in use, folded: its name, a swatch of it, and a chevron that turns as the list opens.
+ * The whole row toggles, and TalkBack hears one button, "Theme, Midnight", that says whether the
+ * list is open.
+ */
+@Composable
+private fun ThemeSummaryRow(inUse: AppTheme, open: Boolean, onToggle: () -> Unit) {
+    val theme = LocalAppTheme.current
+    val turn by animateFloatAsState(
+        targetValue = if (open) 180f else 0f,
+        animationSpec = tween(Motion.medium, easing = Motion.emphasized),
+        label = "chevron"
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            // The air a section heading has above it, outside what the tap covers.
+            .padding(top = Spacing.md)
+            .clickable(
+                onClickLabel = if (open) "Hide themes" else "Show themes",
+                role = Role.Button,
+                onClick = onToggle
+            )
+            .heightIn(min = 48.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Theme, ${inUse.name}"
+                stateDescription = if (open) "Expanded" else "Collapsed"
+            },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+    ) {
+        Text(
+            "Theme",
+            style = MeraPaisaType.bodyStrong,
+            color = theme.textPrimary,
+            modifier = Modifier.weight(1f).clearAndSetSemantics { }
+        )
+        ThemeSwatch(inUse)
+        Text(
+            inUse.name,
+            style = MeraPaisaType.body,
+            color = theme.textSecondary,
+            modifier = Modifier.clearAndSetSemantics { }
+        )
+        Icon(
+            Icons.Outlined.ExpandMore,
+            contentDescription = null,
+            tint = theme.textSecondary,
+            modifier = Modifier.rotate(turn)
+        )
+    }
+}
+
+private fun themeKey(theme: AppTheme) = "theme-${theme.name}"
+
+private val Appear = tween<Float>(Motion.medium, easing = Motion.emphasizedDecelerate)
+private val Leave = tween<Float>(Motion.quick, easing = Motion.emphasizedAccelerate)
+private val Move = tween<IntOffset>(Motion.medium, easing = Motion.emphasized)
 
 /**
  * One theme, shown rather than named.

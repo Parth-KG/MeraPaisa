@@ -297,9 +297,12 @@ fun HistoryEmptyCase() = EntryHistoryContent(
     onBack = {}, onEdit = {}, onDelete = {}, onReverse = {}, onClear = {}
 )
 
-/** The theme picker has to show every theme's own colours, whichever theme it is drawn in. */
+/**
+ * Settings as it opens, with the themes folded into one row, and with them open: the picker has to
+ * show every theme's own colours, whichever theme it is drawn in.
+ */
 @Composable
-fun SettingsCase() = SettingsScreen(
+fun SettingsCase(themesOpen: Boolean = false) = SettingsScreen(
     currentThemeName = LocalAppTheme.current.name,
     appLockEnabled = true,
     appLockAvailable = true,
@@ -311,7 +314,8 @@ fun SettingsCase() = SettingsScreen(
     onCheckUpdates = {},
     appVersion = "2.6.0",
     onDismiss = {},
-    onApply = {}
+    onApply = {},
+    startWithThemesOpen = themesOpen
 )
 
 @Composable
@@ -397,6 +401,7 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "history" to { HistoryCase() },
     "history-empty" to { HistoryEmptyCase() },
     "settings" to { SettingsCase() },
+    "settings-themes-open" to { SettingsCase(themesOpen = true) },
     "backup-menu" to { BackupMenuCase() },
     "backup-review" to { BackupReviewCase() },
     "backup-done" to { BackupDoneCase() },
