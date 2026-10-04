@@ -12,7 +12,7 @@
 
 [![Android](https://img.shields.io/badge/android-7.0%2B-6FBF8B?style=flat-square&labelColor=171C24&logo=android&logoColor=white)](#build-from-source)
 [![Kotlin](https://img.shields.io/badge/kotlin-100%25-E8A33D?style=flat-square&labelColor=171C24&logo=kotlin&logoColor=white)](#tech)
-[![Compose](https://img.shields.io/badge/jetpack%20compose-Material%203-5AB9D4?style=flat-square&labelColor=171C24)](#tech)
+[![Compose](https://img.shields.io/badge/jetpack%20compose-Material%203-89B4FA?style=flat-square&labelColor=171C24)](#tech)
 [![License](https://img.shields.io/badge/license-MIT-A2AAB6?style=flat-square&labelColor=171C24)](LICENSE)
 
 <br>
@@ -64,7 +64,7 @@ Mera Paisa keeps all of that on your phone.
 | **App lock** | Your fingerprint, face or screen lock before the ledger opens, and nothing on the widget or in screenshots while it is locked |
 | **In-app updates** | Checks GitHub for a newer release and installs it only if it is signed with the same key |
 | **Accessible** | TalkBack reads every figure with its direction in words, and every screen works at large text and on a phone turned sideways |
-| **Six themes** | Midnight, Amoled, Ocean, Sunset, Purple and Paper, each one tested for contrast |
+| **Five themes** | Midnight, and Catppuccin's Latte, Frappé, Macchiato and Mocha, each one tested for contrast |
 | **Backup** | Everything in one file, saved when you like or every week to a folder you pick, with a preview before any restore. Android's own backup also copies your ledger and settings to your Google account |
 
 ## Worth a closer look
@@ -145,7 +145,7 @@ Long-press a name and choose **Send a reminder**. An editable message appears wi
 
 ### Themes
 
-Six, each its own world rather than one palette recoloured: **Midnight**, **Amoled**, **Ocean**, **Sunset**, **Purple** and **Paper**. Text, secondary text and both amount colours clear the WCAG AA contrast ratio of 4.5:1 against the background, the surface and the card in every one, enforced by tests rather than by eye. Direction is written as well as coloured: what you owe carries a real minus sign, what you are owed carries none, and the words beside each figure say which way it runs, so telling green from red is never the only way to read a balance.
+Five: **Midnight**, drawn for this app, and the four flavours of [Catppuccin](https://github.com/catppuccin/catppuccin), **Latte**, **Frappé**, **Macchiato** and **Mocha**, from its palette v1.8.0 under the MIT licence. Text, secondary text and both amount colours clear the WCAG AA contrast ratio of 4.5:1 against the background, the surface and the card in every one, enforced by tests rather than by eye, which is why Latte's green and red are a shade darker than Catppuccin's own. Direction is written as well as coloured: what you owe carries a real minus sign, what you are owed carries none, and the words beside each figure say which way it runs, so telling green from red is never the only way to read a balance.
 
 ### Backup and restore
 
@@ -177,4 +177,4 @@ Working and in daily use. Built for me and a few friends, so the roadmap is what
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). The fonts (SIL Open Font License) and the Catppuccin palette (MIT) keep their own licences, in [third_party](third_party).
