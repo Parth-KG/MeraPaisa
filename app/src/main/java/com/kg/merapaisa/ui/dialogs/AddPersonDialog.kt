@@ -241,8 +241,8 @@ internal fun avatarValueFor(
  *
  * The swatches are drawn through `avatarInk`, not by parsing the stored hex. The stored value is a
  * choice of hue and the ink is re-lit for the theme, so a picker showing the raw hex would be
- * showing a colour that never appears on screen: on Paper every swatch would sit lighter than the
- * avatar it makes, and on Amoled darker.
+ * showing a colour that never appears on screen: on a light theme every swatch would sit lighter
+ * than the avatar it makes, and on a dark one darker.
  */
 @Composable
 internal fun AvatarPicker(

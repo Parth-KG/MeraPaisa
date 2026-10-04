@@ -67,7 +67,7 @@ class ThemeContrastTest {
 
     @Test
     fun allThemesAreNamedAndDistinct() {
-        assertTrue("expected 6 themes, found ${themes.size}", themes.size == 6)
+        assertTrue("expected 5 themes, found ${themes.size}", themes.size == 5)
         assertTrue("theme names must be unique", themes.map { it.name }.toSet().size == themes.size)
     }
 
@@ -90,10 +90,14 @@ class ThemeContrastTest {
 
     @Test
     fun everyRetiredThemeResolvesToASurvivor() {
-        // Anyone still on a removed theme should land somewhere deliberate, not the default.
+        // Anyone still on a removed theme should land somewhere deliberate, not the default. The
+        // light ones go to Latte and the dark ones to Mocha, each in one hop: a name that pointed
+        // at another retired name would fall through to the default.
         mapOf(
-            "Slate" to "Ocean", "Charcoal" to "Sunset", "Gold" to "Sunset",
-            "Cream" to "Paper", "Rose" to "Purple", "Vibrant" to "Purple", "Neon" to "Amoled"
+            "Paper" to "Latte", "Cream" to "Latte",
+            "Amoled" to "Mocha", "Ocean" to "Mocha", "Sunset" to "Mocha", "Purple" to "Mocha",
+            "Slate" to "Mocha", "Charcoal" to "Mocha", "Gold" to "Mocha", "Rose" to "Mocha",
+            "Vibrant" to "Mocha", "Neon" to "Mocha"
         ).forEach { (retired, expected) ->
             assertTrue(
                 "$retired should resolve to $expected, got ${getThemeByName(retired).name}",

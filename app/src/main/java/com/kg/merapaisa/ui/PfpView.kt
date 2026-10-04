@@ -26,8 +26,8 @@ import java.io.File
 fun PfpView(person: Person, size: Int) {
     val theme = LocalAppTheme.current
     // The stored colour is a choice of hue, not of luminance: no single value can be legible on
-    // both Paper and Amoled. avatarInk keeps the hue somebody picked and gives it the lightness
-    // this theme needs, which also rescues every avatar already in the ledger.
+    // both a light theme and a dark one. avatarInk keeps the hue somebody picked and gives it the
+    // lightness this theme needs, which also rescues every avatar already in the ledger.
     val color = remember(person.pfpColor, theme.isDark) { avatarInk(person.pfpColor, theme.isDark) }
     // A circle, which is the one shape the design reserves for avatars. It was a square rounded
     // at 32 percent of its size: the same soft-tile family as everything else the redesign moved

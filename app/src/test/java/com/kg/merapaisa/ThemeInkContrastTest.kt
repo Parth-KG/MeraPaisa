@@ -1,6 +1,7 @@
 package com.kg.merapaisa
 
 import androidx.compose.ui.graphics.Color
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.pow
@@ -72,6 +73,26 @@ class ThemeInkContrastTest {
 
         assertTrue(
             "a button label falls below $MIN_RATIO:1 on: " +
+                failures.joinToString { (name, ratio) -> "%s (%.2f:1)".format(name, ratio) },
+            failures.isEmpty()
+        )
+    }
+
+    /**
+     * Words on a key.
+     *
+     * The keypad's keys and its two direction buttons are `fillStrong`, and the digits, the button
+     * labels and the hint under each label are textPrimary on it. Nothing above measures that
+     * tile, and the hint is small, so it gets the body-text floor too.
+     */
+    @Test
+    fun wordsOnAKeyAreLegible() {
+        val failures = themes
+            .map { it.name to contrastRatio(it.textPrimary, it.fillStrong) }
+            .filter { (_, ratio) -> ratio < MIN_RATIO }
+
+        assertTrue(
+            "text on a key falls below $MIN_RATIO:1 on: " +
                 failures.joinToString { (name, ratio) -> "%s (%.2f:1)".format(name, ratio) },
             failures.isEmpty()
         )
@@ -155,14 +176,21 @@ class ThemeInkContrastTest {
         assertTrue("these use pure #FFFFFF for textPrimary: $failures", failures.isEmpty())
     }
 
-    /** Amoled exists to switch pixels off. Anything above zero defeats the point. */
+    /**
+     * Midnight is the app's own theme, kept exactly as drawn when the others were replaced by
+     * Catppuccin's flavours. It stays first, because that is where the default and every name the
+     * app no longer knows land.
+     */
     @Test
-    fun amoledIsTrueBlack() {
-        val amoled = themes.first { it.name == "Amoled" }
-        assertTrue(
-            "Amoled's background must be #000000, was ${amoled.background}",
-            amoled.background == Color(0xFF000000)
+    fun midnightIsKeptExactly() {
+        val drawn = AppTheme(
+            name = "Midnight",
+            background = Color(0xFF171C24), surface = Color(0xFF1E242E), card = Color(0xFF242B36),
+            primary = Color(0xFFE8A33D), secondary = Color(0xFFB9A98C),
+            textPrimary = Color(0xFFF2EFE9), textSecondary = Color(0xFFA2AAB6),
+            positive = Color(0xFF6FBF8B), negative = Color(0xFFE8736A)
         )
+        assertEquals(drawn, themes.first())
     }
 
     private companion object {

@@ -81,13 +81,13 @@ import com.kg.merapaisa.ui.theme.Motion
  * Everything about the app itself rather than about who owes whom.
  *
  * It was an AlertDialog, and it had outgrown one badly: a switch, three places to go, an export,
- * six themes and a credit line, stacked inside a box sized for a question and scrolling against
+ * every theme and a credit line, stacked inside a box sized for a question and scrolling against
  * its own buttons. A dialog is for a decision. This is a screen now, built like the group screen:
  * a back arrow, the title in the gutter, sections of rows on the background, and one named button
  * at the foot.
  *
  * The theme list shows each theme rather than naming it. A name tells you nothing about what
- * Ocean does to your ledger, so every row carries a small piece of that theme drawn in its own
+ * Macchiato does to your ledger, so every row carries a small piece of that theme drawn in its own
  * background, its own text ink and its own accent, which is what changing it will actually look
  * like. It stays folded into one row until asked for, because most visits are not about the theme.
  */
@@ -471,8 +471,8 @@ private val Move = tween<IntOffset>(Motion.medium, easing = Motion.emphasized)
  * One theme, shown rather than named.
  *
  * Selection is a wash of fill and a tick, not the accent alone: the row is the one place in the
- * app where six different accents sit under each other, and picking the selected one out by
- * colour would be exactly the reading a colour-blind user cannot do.
+ * app where every theme's accent sits under the next, and picking the selected one out by colour
+ * would be exactly the reading a colour-blind user cannot do.
  */
 @Composable
 private fun ThemeRow(

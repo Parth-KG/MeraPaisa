@@ -230,7 +230,7 @@ private fun Key(key: String, onKey: (String) -> Unit, modifier: Modifier = Modif
  *
  * [hint] names the other way the same thing happens, so a loan and a repayment each have a
  * button that says them. It is quieter by size and weight rather than colour, because the
- * secondary ink falls under 4.5:1 on this tile in three themes.
+ * secondary ink is not held to 4.5:1 on this tile, and falls under it in Latte.
  */
 @Composable
 private fun DirectionButton(

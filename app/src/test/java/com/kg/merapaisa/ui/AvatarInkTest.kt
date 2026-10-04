@@ -6,11 +6,11 @@ import org.junit.Test
 import kotlin.math.pow
 
 /**
- * Avatar colours, which have to survive six themes without being chosen six times.
+ * Avatar colours, which have to survive every theme without being chosen once per theme.
  *
- * The stored value is a hue. [avatarInk] supplies the lightness, because a colour that reads on
- * Paper disappears on Amoled and one that reads on black glares on paper. These tests are what
- * stop a future palette edit from quietly reintroducing that.
+ * The stored value is a hue. [avatarInk] supplies the lightness, because a colour that reads on a
+ * light page disappears on a dark one, and one that reads on a dark page glares on a light one.
+ * These tests are what stop a future palette edit from quietly reintroducing that.
  */
 class AvatarInkTest {
 

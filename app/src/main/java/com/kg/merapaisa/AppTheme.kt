@@ -39,16 +39,17 @@ data class AppTheme(
 }
 
 /**
- * Six worlds, not one palette rotated six times.
+ * Midnight, the app's own theme, and Catppuccin's four flavours.
  *
- * What was here before was a single neutral ramp recoloured: Ocean, Sunset and Purple had
- * identical saturation and value and differed only in hue, and Sunset's background was Ocean's
- * with the RGB bytes reversed. Ten of the twelve accents were stock swatches, straight off the
- * Material 2014 and Flat UI sheets, and in every theme the accent and the "owed to you" ink were
- * the same colour, so a button and a credit balance could not be told apart.
+ * Catppuccin (github.com/catppuccin/palette, v1.8.0, MIT) is one palette at four depths, from
+ * Latte by day to Mocha at night, so unlike the themes it replaced, its flavours are meant to look
+ * related. The page and the sheets are each flavour's base, and rows, keys and menus sit on its
+ * mantle. Catppuccin's own guide raises them on surface0 instead, but there avatars fall under
+ * 4.5:1 in Frappé and Macchiato, and so do Frappé's secondary text and red. Where a flavour
+ * departs from Catppuccin, the comment on it says what moved and why.
  *
- * Each theme now has its own neutral ramp in its own hue and temperature, its own accent for
- * actions, and its own pair of inks for amounts. The accent is never an amount colour.
+ * Every theme has its own accent for actions and its own pair of inks for amounts, and the accent
+ * is never an amount colour.
  *
  * Contrast is not guesswork: ThemeInkContrastTest holds every one of these to 4.5:1 for text and
  * for both amount inks, on background, surface and card, and checks the label on an accent button.
@@ -64,68 +65,68 @@ val themes = listOf(
         textPrimary = Color(0xFFF2EFE9), textSecondary = Color(0xFFA2AAB6),
         positive = Color(0xFF6FBF8B), negative = Color(0xFFE8736A)
     ),
-    // True black with a monochrome ramp, for OLED. The accent is the off-white itself, so a
-    // button is a light slab with black type on it. Only the amount inks carry any colour, and
-    // they are muted: nothing here is allowed to glow.
+    // Catppuccin Latte, the light flavour. Subtext1 for secondary text, because subtext0 is 4.06:1
+    // on mantle. Green and red are darkened with their hue kept: Catppuccin's green is 2.96:1 on
+    // the page, and its red is 4.46:1 on mantle and sits close to Material Red 800. Of Latte's
+    // colours only mauve and red carry a button label at 4.5:1, and red belongs to amounts.
     AppTheme(
-        name = "Amoled",
-        background = Color(0xFF000000), surface = Color(0xFF0B0B0B), card = Color(0xFF141414),
-        primary = Color(0xFFEDEDED), secondary = Color(0xFF8A8A8A),
-        textPrimary = Color(0xFFEDEDED), textSecondary = Color(0xFF9A9A9A),
-        positive = Color(0xFF7FB693), negative = Color(0xFFD98A84)
+        name = "Latte",
+        background = Color(0xFFEFF1F5), surface = Color(0xFFEFF1F5), card = Color(0xFFE6E9EF),
+        primary = Color(0xFF8839EF), secondary = Color(0xFF7C7F93),
+        textPrimary = Color(0xFF4C4F69), textSecondary = Color(0xFF5C5F77),
+        positive = Color(0xFF27611A), negative = Color(0xFFBE0E34)
     ),
-    // Monsoon over the Arabian Sea: a green-grey slate ramp under a sea-glass accent. The accent
-    // leans blue so it stays clearly apart from the green used for money owed to you.
+    // Catppuccin Frappé, the softest of the dark flavours. Sapphire for the accent: mauve,
+    // lavender and teal each sit on a stock swatch here, and blue is too close to Mocha's for the
+    // two to be worth offering separately.
     AppTheme(
-        name = "Ocean",
-        background = Color(0xFF12201F), surface = Color(0xFF172827), card = Color(0xFF1D302E),
-        primary = Color(0xFF5AB9D4), secondary = Color(0xFF7FA0A8),
-        textPrimary = Color(0xFFE8EFEC), textSecondary = Color(0xFF93A8A3),
-        positive = Color(0xFF5FB88A), negative = Color(0xFFD98266)
+        name = "Frappé",
+        background = Color(0xFF303446), surface = Color(0xFF303446), card = Color(0xFF292C3C),
+        primary = Color(0xFF85C1DC), secondary = Color(0xFF949CBB),
+        textPrimary = Color(0xFFC6D0F5), textSecondary = Color(0xFFA5ADCE),
+        positive = Color(0xFFA6D189), negative = Color(0xFFE78284)
     ),
-    // Dusk rather than espresso: a dusky plum-brown ramp, a dusk-rose accent, and a cool blue
-    // standing in for red on amounts you owe, because a warm red on this ground reads as part of
-    // the background rather than as a warning.
+    // Catppuccin Macchiato. Mauve, Catppuccin's own signature, is far enough from the stock
+    // purples at this depth to keep.
     AppTheme(
-        name = "Sunset",
-        background = Color(0xFF241A20), surface = Color(0xFF2E2229), card = Color(0xFF382A31),
-        primary = Color(0xFFE0899A), secondary = Color(0xFFB79AA6),
-        textPrimary = Color(0xFFF2E8EA), textSecondary = Color(0xFFB49AA3),
-        positive = Color(0xFFA8C08A), negative = Color(0xFF7FA6D9)
+        name = "Macchiato",
+        background = Color(0xFF24273A), surface = Color(0xFF24273A), card = Color(0xFF1E2030),
+        primary = Color(0xFFC6A0F6), secondary = Color(0xFF939AB7),
+        textPrimary = Color(0xFFCAD3F5), textSecondary = Color(0xFFA5ADCB),
+        positive = Color(0xFFA6DA95), negative = Color(0xFFED8796)
     ),
-    // Jamun, not lavender: a deep aubergine ramp under the magenta of the fruit's skin.
+    // Catppuccin Mocha, the darkest. Blue for the accent, because mauve sits on Material Purple
+    // 200 here. Anyone on a retired dark theme lands on this one.
     AppTheme(
-        name = "Purple",
-        background = Color(0xFF1B1220), surface = Color(0xFF241829), card = Color(0xFF2C1E33),
-        primary = Color(0xFFCE77BE), secondary = Color(0xFF9B7FA8),
-        textPrimary = Color(0xFFEFE6F0), textSecondary = Color(0xFFAE9CB5),
-        positive = Color(0xFF7FC49A), negative = Color(0xFFE07A6E)
-    ),
-    // A fresh page in a register: cool white paper rather than cream, blue-black ink, a deep
-    // ink-blue accent, and the two inks a ledger is actually kept in, bottle green and register
-    // red. The flagship, and the only light theme.
-    AppTheme(
-        name = "Paper",
-        background = Color(0xFFF4F6F8), surface = Color(0xFFFFFFFF), card = Color(0xFFE7ECF1),
-        primary = Color(0xFF1B3A6B), secondary = Color(0xFF43607F),
-        textPrimary = Color(0xFF141920), textSecondary = Color(0xFF59636E),
-        positive = Color(0xFF1B5E3F), negative = Color(0xFF9E2A2B)
+        name = "Mocha",
+        background = Color(0xFF1E1E2E), surface = Color(0xFF1E1E2E), card = Color(0xFF181825),
+        primary = Color(0xFF89B4FA), secondary = Color(0xFF9399B2),
+        textPrimary = Color(0xFFCDD6F4), textSecondary = Color(0xFFA6ADC8),
+        positive = Color(0xFFA6E3A1), negative = Color(0xFFF38BA8)
     )
 )
 
 /**
- * Themes that used to exist, pointed at whichever survivor they were closest to. Someone who
- * chose Slate gets Ocean rather than being silently reset to the default, and their stored
- * preference is only rewritten when they next pick a theme themselves.
+ * Themes that used to exist, each pointed straight at a survivor: the light ones at Latte and the
+ * dark ones at Mocha, rather than silently resetting anyone to the default. The stored preference
+ * is only rewritten when they next pick a theme themselves.
+ *
+ * One hop only. [getThemeByName] does not follow a chain, so every name here must point at a theme
+ * in [themes]: Slate used to point at Ocean, which is itself retired now.
  */
 private val RETIRED_THEMES = mapOf(
-    "Slate" to "Ocean",       // near-identical: perceptual distance of 7
-    "Charcoal" to "Sunset",
-    "Gold" to "Sunset",
-    "Cream" to "Paper",
-    "Rose" to "Purple",
-    "Vibrant" to "Purple",
-    "Neon" to "Amoled"
+    "Paper" to "Latte",
+    "Cream" to "Latte",
+    "Amoled" to "Mocha",
+    "Ocean" to "Mocha",
+    "Sunset" to "Mocha",
+    "Purple" to "Mocha",
+    "Slate" to "Mocha",
+    "Charcoal" to "Mocha",
+    "Gold" to "Mocha",
+    "Rose" to "Mocha",
+    "Vibrant" to "Mocha",
+    "Neon" to "Mocha"
 )
 
 fun getThemeByName(name: String): AppTheme {

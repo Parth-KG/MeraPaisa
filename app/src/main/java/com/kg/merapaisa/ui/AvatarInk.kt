@@ -15,11 +15,12 @@ import kotlin.math.pow
  * out the same green. [AVATAR_HUES] replaces those with eight inks that are not stock and are far
  * enough apart to tell two people apart at a glance.
  *
- * The second: **no single colour can be legible on both Paper and Amoled.** A mid green that reads
- * on `#F4F6F8` disappears on `#000000`, and one that reads on black glares on paper. The stored
- * colour is a *choice of hue*, not a choice of luminance, so [avatarInk] keeps the hue the person
- * picked and sets the lightness the theme needs. That fixes every avatar already in the ledger,
- * including the green ones, without overriding what anyone chose: green stays green.
+ * The second: **no single colour can be legible on both a light theme and a dark one.** A mid green
+ * that reads on a near-white page disappears on a near-black one, and one that reads on the dark
+ * page glares on the light one. The stored colour is a *choice of hue*, not a choice of luminance,
+ * so [avatarInk] keeps the hue the person picked and sets the lightness the theme needs. That
+ * fixes every avatar already in the ledger, including the green ones, without overriding what
+ * anyone chose: green stays green.
  *
  * `pfpColor` itself lives in `data/Person.kt`, which is frozen, so the stored default cannot be
  * changed. This is the presentation-side answer to it.

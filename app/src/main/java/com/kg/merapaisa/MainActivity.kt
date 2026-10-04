@@ -46,8 +46,8 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         // Bar styling is applied from the chosen theme once it is known, in the effect below.
         // A bare enableEdgeToEdge() here would take SystemBarStyle.auto, which reads the phone's
-        // dark mode rather than the app's theme: Paper on a phone set to dark drew white icons
-        // on white paper, and Midnight on a phone set to light drew dark icons on near black.
+        // dark mode rather than the app's theme: a light theme on a phone set to dark drew white
+        // icons on a white page, and Midnight on a phone set to light drew dark icons on near black.
         enableEdgeToEdge()
 
         // Only on a fresh start. A rotation, a theme or a locale change recreates the activity

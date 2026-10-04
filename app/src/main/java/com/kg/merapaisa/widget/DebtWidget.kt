@@ -84,7 +84,7 @@ data class WidgetPalette(val day: AppTheme, val night: AppTheme) {
 private fun paletteFor(themeName: String): WidgetPalette {
     val selected = getThemeByName(themeName)
     return if (selected.isDark) {
-        WidgetPalette(day = getThemeByName("Paper"), night = selected)
+        WidgetPalette(day = getThemeByName("Latte"), night = selected)
     } else {
         WidgetPalette(day = selected, night = getThemeByName("Midnight"))
     }
