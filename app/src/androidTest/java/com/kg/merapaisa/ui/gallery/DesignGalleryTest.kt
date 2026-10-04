@@ -121,7 +121,7 @@ class DesignGalleryTest {
             (bg.red * 255).toInt(), (bg.green * 255).toInt(), (bg.blue * 255).toInt()
         )
         // Every third pixel, not a coarse grid. A 24 by 24 grid reported the Settled empty state
-        // as blank in all six themes: its two short centred lines are thin enough that 576 sample
+        // as blank in every theme: its two short centred lines are thin enough that 576 sample
         // points all landed between the glyphs. The image was fine; the sampler was not.
         var x = 0
         while (x < bitmap.width) {

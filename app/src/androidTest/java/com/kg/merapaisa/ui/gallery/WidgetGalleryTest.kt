@@ -17,6 +17,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kg.merapaisa.data.netTotalsByCurrency
 import com.kg.merapaisa.getThemeByName
+import com.kg.merapaisa.themes
 import com.kg.merapaisa.widget.LockedWidgetContent
 import com.kg.merapaisa.widget.WidgetContent
 import com.kg.merapaisa.widget.WidgetPalette
@@ -85,10 +86,13 @@ class WidgetGalleryTest {
     @Test
     fun captureTheWidget() {
         val written = mutableListOf<String>()
-        listOf("Paper", "Midnight", "Amoled", "Ocean", "Sunset", "Purple").forEach { name ->
-            val palette = paletteLike(getThemeByName(name))
+        // Straight from the list the app offers, so a theme added or retired is drawn or dropped
+        // here without anyone remembering to. Named themes once outlived their removal and were
+        // quietly drawn as whatever their old name resolved to.
+        themes.forEach { theme ->
+            val palette = paletteLike(theme)
             sizes.forEach { (sizeName, size) ->
-                written += shoot("${name.lowercase()}-widget-$sizeName-$mode", size) {
+                written += shoot("${theme.name.lowercase()}-widget-$sizeName-$mode", size) {
                     WidgetContent(persons = people, totals = totals, palette = palette)
                 }
             }
@@ -96,15 +100,15 @@ class WidgetGalleryTest {
 
         // The locked state shows nothing of the ledger, which is the whole point of it, so it is
         // worth a picture of its own to confirm it really shows nothing.
-        written += shoot("paper-widget-locked-$mode", sizes.getValue("tall")) {
-            LockedWidgetContent(paletteLike(getThemeByName("Paper")))
+        written += shoot("latte-widget-locked-$mode", sizes.getValue("tall")) {
+            LockedWidgetContent(paletteLike(getThemeByName("Latte")))
         }
 
         check(written.isNotEmpty()) { "no widget images were written" }
     }
 
     /**
-     * The widget at double type, in Paper, Amoled and Ocean.
+     * The widget at double type, in Latte, Midnight and Mocha.
      *
      * The launcher inflates the widget with the phone's own font scale, so the scale goes on the
      * context the RemoteViews are composed and inflated with. A row that only fits at 1.0 clips
@@ -116,7 +120,7 @@ class WidgetGalleryTest {
             android.content.res.Configuration(context.resources.configuration).apply { fontScale = 2f }
         )
         val written = mutableListOf<String>()
-        listOf("Paper", "Amoled", "Ocean").forEach { name ->
+        listOf("Latte", "Midnight", "Mocha").forEach { name ->
             val palette = paletteLike(getThemeByName(name))
             sizes.forEach { (sizeName, size) ->
                 written += shoot("${name.lowercase()}-widget-$sizeName-$mode-fs2", size, large) {
@@ -130,12 +134,12 @@ class WidgetGalleryTest {
     /**
      * The pairing DebtWidget builds for a chosen theme.
      *
-     * A dark choice keeps Paper for the launcher's light mode; a light choice keeps Midnight for
+     * A dark choice keeps Latte for the launcher's light mode; a light choice keeps Midnight for
      * its dark mode. Mirrored here because the widget's own helper is private, and because a
      * capture that invented its own pairing would not be showing what ships.
      */
     private fun paletteLike(selected: com.kg.merapaisa.AppTheme) =
-        if (selected.isDark) WidgetPalette(day = getThemeByName("Paper"), night = selected)
+        if (selected.isDark) WidgetPalette(day = getThemeByName("Latte"), night = selected)
         else WidgetPalette(day = selected, night = getThemeByName("Midnight"))
 
     /** Composes Glance content to a RemoteViews, inflates it, and draws it to a PNG. */

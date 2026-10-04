@@ -578,22 +578,22 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
 
 // -- Android Studio previews ---------------------------------------------------------------
 
-@Preview(name = "People rows, Paper", heightDp = 620)
+@Preview(name = "People rows, Latte", heightDp = 620)
 @Composable
-private fun PreviewPeoplePaper() = GalleryFrame(themes.first { it.name == "Paper" }) { PeopleRowsCase() }
+private fun PreviewPeopleLatte() = GalleryFrame(themes.first { it.name == "Latte" }) { PeopleRowsCase() }
 
 @Preview(name = "People rows, Midnight", heightDp = 620)
 @Composable
 private fun PreviewPeopleMidnight() = GalleryFrame(themes.first { it.name == "Midnight" }) { PeopleRowsCase() }
 
-@Preview(name = "Net position, Paper")
+@Preview(name = "Net position, Latte")
 @Composable
-private fun PreviewNetTotalPaper() = GalleryFrame(themes.first { it.name == "Paper" }) { NetTotalMultiCase() }
+private fun PreviewNetTotalLatte() = GalleryFrame(themes.first { it.name == "Latte" }) { NetTotalMultiCase() }
 
-@Preview(name = "Group detail, Amoled", heightDp = 800)
+@Preview(name = "Group detail, Mocha", heightDp = 800)
 @Composable
-private fun PreviewGroupAmoled() = GalleryFrame(themes.first { it.name == "Amoled" }) { GroupDetailCase() }
+private fun PreviewGroupMocha() = GalleryFrame(themes.first { it.name == "Mocha" }) { GroupDetailCase() }
 
-@Preview(name = "Numpad, Ocean", heightDp = 620)
+@Preview(name = "Numpad, Frappé", heightDp = 620)
 @Composable
-private fun PreviewNumPadOcean() = GalleryFrame(themes.first { it.name == "Ocean" }) { NumPadCase() }
+private fun PreviewNumPadFrappe() = GalleryFrame(themes.first { it.name == "Frappé" }) { NumPadCase() }

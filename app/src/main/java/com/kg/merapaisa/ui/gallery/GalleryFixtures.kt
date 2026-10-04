@@ -337,7 +337,7 @@ object Fixtures {
         downloadUrl = "https://github.com/Parth-KG/MeraPaisa/releases/download/v2.6.0/app-release.apk",
         sizeBytes = 7_812_000,
         notes = "Every screen has been redrawn. Amounts are set in Anek Latin, lakh figures are " +
-            "grouped the Indian way, and each of the six themes has colours of its own.\n\n" +
+            "grouped the Indian way, and every theme has colours of its own.\n\n" +
             "Deleting a group now asks first, and says what goes with it.\n\n" +
             "Settle up offers the payments the group is set to, instead of always the fewest.\n\n" +
             "Settings, backup, update links and this screen are full screens now, with their " +
