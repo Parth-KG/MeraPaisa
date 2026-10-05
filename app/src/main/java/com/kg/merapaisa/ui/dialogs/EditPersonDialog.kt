@@ -235,7 +235,12 @@ fun EditPersonDialog(
                 modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.primary,
-                    contentColor = theme.onAccent
+                    contentColor = theme.onAccent,
+                    // While a conversion runs the button is held, not unavailable: the spinner and
+                    // "Converting" are the only sign of the work, so they keep the button's colours
+                    // instead of fading to a disabled grey nobody can read.
+                    disabledContainerColor = if (converting) theme.primary else ButtonDefaults.buttonColors().disabledContainerColor,
+                    disabledContentColor = if (converting) theme.onAccent else ButtonDefaults.buttonColors().disabledContentColor
                 )
             ) {
                 if (converting) {

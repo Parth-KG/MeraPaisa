@@ -194,7 +194,7 @@ private fun SplitPickerRow(
             modifier = Modifier.size(24.dp),
             colors = CheckboxDefaults.colors(
                 checkedColor = theme.primary,
-                checkmarkColor = theme.background,
+                checkmarkColor = theme.onAccent,
                 uncheckedColor = theme.textSecondary
             )
         )
