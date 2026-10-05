@@ -177,24 +177,72 @@ class ThemeInkContrastTest {
     }
 
     /**
-     * Midnight is the app's own theme, kept exactly as drawn when the others were replaced by
-     * Catppuccin's flavours. It stays first, because that is where the default and every name the
-     * app no longer knows land.
+     * Diya is the default for a new install and where any name the app does not know lands, so it
+     * is first, and the picker lists the dark themes before the light ones.
      */
     @Test
-    fun midnightIsKeptExactly() {
-        val drawn = AppTheme(
-            name = "Midnight",
-            background = Color(0xFF171C24), surface = Color(0xFF1E242E), card = Color(0xFF242B36),
-            primary = Color(0xFFE8A33D), secondary = Color(0xFFB9A98C),
-            textPrimary = Color(0xFFF2EFE9), textSecondary = Color(0xFFA2AAB6),
-            positive = Color(0xFF6FBF8B), negative = Color(0xFFE8736A)
+    fun diyaComesFirstAndDarkThemesBeforeLight() {
+        assertEquals("Diya", themes.first().name)
+        val firstLight = themes.indexOfFirst { !it.isDark }
+        assertTrue(
+            "a dark theme comes after a light one: ${themes.map { it.name }}",
+            themes.drop(firstLight).none { it.isDark }
         )
-        assertEquals(drawn, themes.first())
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // Readability, past the floor
+    // -----------------------------------------------------------------------------------------
+
+    /**
+     * Amounts and grey text at 7:1, on the page and on a highlighted row.
+     *
+     * Friends found some themes hard to read at the 4.5:1 floor, so the two things read most,
+     * which way money goes and the words under each name, are held to the enhanced level wherever
+     * they actually sit: on the page, and on a highlighted row or key.
+     */
+    @Test
+    fun amountsAndGreyTextReachSevenToOne() {
+        val failures = themes.flatMap { theme ->
+            listOf("positive" to theme.positive, "negative" to theme.negative, "textSecondary" to theme.textSecondary)
+                .flatMap { (inkName, ink) ->
+                    listOf("background" to theme.background, "highlight" to theme.highlight).map { (onName, on) ->
+                        "${theme.name}: $inkName on $onName" to contrastRatio(ink, on)
+                    }
+                }
+        }.filter { (_, ratio) -> ratio < MIN_ENHANCED_RATIO }
+
+        assertTrue(
+            "these fall below $MIN_ENHANCED_RATIO:1\n" +
+                failures.joinToString("\n") { (label, ratio) -> "  %s = %.2f:1".format(label, ratio) },
+            failures.isEmpty()
+        )
+    }
+
+    /**
+     * A divider separates rows without competing with them; a border marks something you can press,
+     * so it is the firmer of the two.
+     */
+    @Test
+    fun dividersAreQuietAndBordersFirm() {
+        val failures = themes.flatMap { theme ->
+            val divider = contrastRatio(theme.divider, theme.background)
+            val border = contrastRatio(theme.border, theme.background)
+            listOfNotNull(
+                if (divider < MIN_DIVIDER) "${theme.name}: divider %.2f:1, needs %.2f".format(divider, MIN_DIVIDER) else null,
+                if (border < MIN_BORDER || border <= divider)
+                    "${theme.name}: border %.2f:1, needs %.2f and more than the divider".format(border, MIN_BORDER) else null
+            )
+        }
+
+        assertTrue("these lines do not read as intended\n  " + failures.joinToString("\n  "), failures.isEmpty())
     }
 
     private companion object {
         const val MIN_RATIO = 4.5
+        const val MIN_ENHANCED_RATIO = 7.0
+        const val MIN_DIVIDER = 1.2
+        const val MIN_BORDER = 2.0
 
         /** Below this two colours read as the same colour on a phone, whatever the hex says. */
         const val MIN_ROLE_DISTANCE = 15.0

@@ -25,20 +25,17 @@ data class AppTheme(
     val textSecondary: Color,
     val positive: Color,
     val negative: Color,
-    /**
-     * Keys, the amount field, chips, and a highlighted or pressed row. It used to be worked out as
-     * the card blended toward the text, which left no theme able to say how firm its keys are.
-     */
-    val highlight: Color = lerp(card, textPrimary, 0.10f),
+    /** Keys, the amount field, chips, and a highlighted or pressed row. */
+    val highlight: Color,
     /** The hairline between rows, and the other quiet lines: progress tracks, the widget's rules. */
-    val divider: Color = lerp(card, textPrimary, 0.18f),
+    val divider: Color,
     /**
      * The edge of an outlined button or field, of a swatch, and the sheet's handle: firmer than a
      * divider, because it marks something you can press.
      */
-    val border: Color = lerp(card, textPrimary, 0.18f),
+    val border: Color,
     /** Text and icons on the accent: filled buttons and a switch's thumb. */
-    val onAccent: Color = background
+    val onAccent: Color
 ) {
     val isDark: Boolean get() = background.luminance() < 0.4f
 
@@ -47,94 +44,173 @@ data class AppTheme(
 }
 
 /**
- * Midnight, the app's own theme, and Catppuccin's four flavours.
+ * Ten themes, dark then light, chosen by a vote for v3.2.0 and named for things at home: Diya,
+ * Jamun, Monsoon, Kaapi and Kamal, then Tulsi, Khadi, Gulab, Kansa and Neel.
  *
- * Catppuccin (github.com/catppuccin/palette, v1.8.0, MIT) is one palette at four depths, from
- * Latte by day to Mocha at night, so unlike the themes it replaced, its flavours are meant to look
- * related. The page and the sheets are each flavour's base, and rows, keys and menus sit on its
- * mantle. Catppuccin's own guide raises them on surface0 instead, but there avatars fall under
- * 4.5:1 in Frappé and Macchiato, and so do Frappé's secondary text and red. Where a flavour
- * departs from Catppuccin, the comment on it says what moved and why.
+ * Every theme sets all its colours, the four that used to be worked out included: a highlight
+ * for keys and highlighted rows that stands clear of the page and the card, a quiet divider and a
+ * firmer border (1.3 and 2.3 against the page, the weights Neel was specified with), and the text
+ * that sits on its accent.
  *
- * Every theme has its own accent for actions and its own pair of inks for amounts, and the accent
- * is never an amount colour.
- *
- * Contrast is not guesswork: ThemeInkContrastTest holds every one of these to 4.5:1 for text and
- * for both amount inks, on background, surface and card, and checks the label on an accent button.
- * Do not adjust a value here by eye.
+ * Friends found some themes hard to read, so amounts and grey text are held to 7:1 against both
+ * the page and the highlight, well past the 4.5:1 everything else meets. Where a colour fell short
+ * it was lightened (dark themes) or darkened (light themes) at the same hue until it got there;
+ * colours that already passed were left alone. ThemeInkContrastTest holds all of this, and the
+ * accent is never an amount colour. Do not adjust a value here by eye.
  */
 val themes = listOf(
-    // A desk lamp at night. Deep blue-grey, lifted off black so surfaces can step up, warm
-    // off-white text, and a marigold accent that stays rare enough to mean something.
+    // A desk lamp at night, and the app's own: deep blue-grey, warm off-white text, a marigold
+    // accent. Called Midnight until v3.2.0. The default, so it stays first.
     AppTheme(
-        name = "Midnight",
+        name = "Diya",
         background = Color(0xFF171C24), surface = Color(0xFF1E242E), card = Color(0xFF242B36),
         primary = Color(0xFFE8A33D), secondary = Color(0xFFB9A98C),
-        textPrimary = Color(0xFFF2EFE9), textSecondary = Color(0xFFA2AAB6),
-        positive = Color(0xFF6FBF8B), negative = Color(0xFFE8736A)
+        textPrimary = Color(0xFFF2EFE9), textSecondary = Color(0xFFC5CEDA),
+        positive = Color(0xFF8EDFA9), negative = Color(0xFFFFBDB6),
+        highlight = Color(0xFF353C46), divider = Color(0xFF2C323A),
+        border = Color(0xFF4F565F), onAccent = Color(0xFF171C24)
     ),
-    // Catppuccin Latte, the light flavour. Subtext1 for secondary text, because subtext0 is 4.06:1
-    // on mantle. Green and red are darkened with their hue kept: Catppuccin's green is 2.96:1 on
-    // the page, and its red is 4.46:1 on mantle and sits close to Material Red 800. Of Latte's
-    // colours only mauve and red carry a button label at 4.5:1, and red belongs to amounts.
+    // Butter-yellow text on plum-black under an orchid accent, from Pastelón de Amarillos
+    // (Richard Martinez, MIT). Called Pastelón Dark in the vote.
     AppTheme(
-        name = "Latte",
-        background = Color(0xFFEFF1F5), surface = Color(0xFFEFF1F5), card = Color(0xFFE6E9EF),
-        primary = Color(0xFF8839EF), secondary = Color(0xFF7C7F93),
-        textPrimary = Color(0xFF4C4F69), textSecondary = Color(0xFF5C5F77),
-        positive = Color(0xFF27611A), negative = Color(0xFFBE0E34)
+        name = "Jamun",
+        background = Color(0xFF180D18), surface = Color(0xFF2A1424), card = Color(0xFF2A1424),
+        primary = Color(0xFFB765B0), secondary = Color(0xFFA0747C),
+        textPrimary = Color(0xFFFFE0A3), textSecondary = Color(0xFFD8AF9D),
+        positive = Color(0xFF5CCC91), negative = Color(0xFFFE9DA0),
+        highlight = Color(0xFF3C2530), divider = Color(0xFF35252D),
+        border = Color(0xFF604949), onAccent = Color(0xFF180D18)
     ),
-    // Catppuccin Frappé, the softest of the dark flavours. Sapphire for the accent: mauve,
-    // lavender and teal each sit on a stock swatch here, and blue is too close to Mocha's for the
-    // two to be worth offering separately.
+    // Catppuccin Mocha (github.com/catppuccin/palette, MIT): a periwinkle accent on a deep
+    // grey-violet page.
     AppTheme(
-        name = "Frappé",
-        background = Color(0xFF303446), surface = Color(0xFF303446), card = Color(0xFF292C3C),
-        primary = Color(0xFF85C1DC), secondary = Color(0xFF949CBB),
-        textPrimary = Color(0xFFC6D0F5), textSecondary = Color(0xFFA5ADCE),
-        positive = Color(0xFFA6D189), negative = Color(0xFFE78284)
-    ),
-    // Catppuccin Macchiato. Mauve, Catppuccin's own signature, is far enough from the stock
-    // purples at this depth to keep.
-    AppTheme(
-        name = "Macchiato",
-        background = Color(0xFF24273A), surface = Color(0xFF24273A), card = Color(0xFF1E2030),
-        primary = Color(0xFFC6A0F6), secondary = Color(0xFF939AB7),
-        textPrimary = Color(0xFFCAD3F5), textSecondary = Color(0xFFA5ADCB),
-        positive = Color(0xFFA6DA95), negative = Color(0xFFED8796)
-    ),
-    // Catppuccin Mocha, the darkest. Blue for the accent, because mauve sits on Material Purple
-    // 200 here. Anyone on a retired dark theme lands on this one.
-    AppTheme(
-        name = "Mocha",
+        name = "Monsoon",
         background = Color(0xFF1E1E2E), surface = Color(0xFF1E1E2E), card = Color(0xFF181825),
         primary = Color(0xFF89B4FA), secondary = Color(0xFF9399B2),
-        textPrimary = Color(0xFFCDD6F4), textSecondary = Color(0xFFA6ADC8),
-        positive = Color(0xFFA6E3A1), negative = Color(0xFFF38BA8)
+        textPrimary = Color(0xFFCDD6F4), textSecondary = Color(0xFFB6BED9),
+        positive = Color(0xFFA6E3A1), negative = Color(0xFFFEA5BD),
+        highlight = Color(0xFF2F3040), divider = Color(0xFF313344),
+        border = Color(0xFF54576B), onAccent = Color(0xFF181825)
+    ),
+    // Filter coffee: a dark-roast page, cream text and a turquoise accent. Drawn for the app.
+    // Called Espresso in the vote.
+    AppTheme(
+        name = "Kaapi",
+        background = Color(0xFF1F150D), surface = Color(0xFF23180F), card = Color(0xFF2C1E14),
+        primary = Color(0xFF33DBD6), secondary = Color(0xFF8FB3B0),
+        textPrimary = Color(0xFFF6EBDD), textSecondary = Color(0xFFCDBDAC),
+        positive = Color(0xFFA3D17C), negative = Color(0xFFFEA9AD),
+        highlight = Color(0xFF3E2F25), divider = Color(0xFF372C22),
+        border = Color(0xFF5C5044), onAccent = Color(0xFF1F150D)
+    ),
+    // A pine-green page under a lotus-pink accent. The page comes from a Pinterest palette, the
+    // rest was drawn for the app. Its keys and keypad sit darker than the page, as its card does.
+    // Called Pine & Rose Quartz in the vote.
+    AppTheme(
+        name = "Kamal",
+        background = Color(0xFF2B4D3A), surface = Color(0xFF2B4D3A), card = Color(0xFF113321),
+        primary = Color(0xFFF7A1C4), secondary = Color(0xFFB79DA0),
+        textPrimary = Color(0xFFE6EDE8), textSecondary = Color(0xFFCFE3D6),
+        positive = Color(0xFF9EF0B9), negative = Color(0xFFFED5CF),
+        highlight = Color(0xFF1E3D2C), divider = Color(0xFF3F5E4C),
+        border = Color(0xFF698473), onAccent = Color(0xFF113321)
+    ),
+    // Pale green account-book paper, ink-black text and sepia-ink buttons. Drawn for the app.
+    // Called Ledger in the vote.
+    AppTheme(
+        name = "Tulsi",
+        background = Color(0xFFE6EEDF), surface = Color(0xFFE6EEDF), card = Color(0xFFDCE6D3),
+        primary = Color(0xFF4A3220), secondary = Color(0xFF5E6B66),
+        textPrimary = Color(0xFF1F2A24), textSecondary = Color(0xFF313F37),
+        positive = Color(0xFF024620), negative = Color(0xFF7D0120),
+        highlight = Color(0xFFC7D1BF), divider = Color(0xFFC8D2C4),
+        border = Color(0xFF93A094), onAccent = Color(0xFFFFFFFF)
+    ),
+    // Ink on warm, undyed paper with a deep teal accent: Flexoki's light scheme (Steph Ango, MIT),
+    // using its darker published steps where a test asks. Called Flexoki Light in the vote.
+    AppTheme(
+        name = "Khadi",
+        background = Color(0xFFFFFCF0), surface = Color(0xFFFFFCF0), card = Color(0xFFF2F0E5),
+        primary = Color(0xFF1C6C66), secondary = Color(0xFF6F6E69),
+        textPrimary = Color(0xFF100F0F), textSecondary = Color(0xFF42413E),
+        positive = Color(0xFF374603), negative = Color(0xFF821412),
+        highlight = Color(0xFFD8D6CC), divider = Color(0xFFE0DED4),
+        border = Color(0xFFABA9A1), onAccent = Color(0xFFFFFFFF)
+    ),
+    // A cherry-blossom page with grape-plum buttons, from the Japanese traditional colours.
+    // Called Sakura in the vote.
+    AppTheme(
+        name = "Gulab",
+        background = Color(0xFFFEDFE1), surface = Color(0xFFFEDFE1), card = Color(0xFFF8DADC),
+        primary = Color(0xFF6D2E5B), secondary = Color(0xFF72636E),
+        textPrimary = Color(0xFF3F2B36), textSecondary = Color(0xFF433843),
+        positive = Color(0xFF014528), negative = Color(0xFF7C0513),
+        highlight = Color(0xFFE4C7CA), divider = Color(0xFFDFC4C7),
+        border = Color(0xFFA8939B), onAccent = Color(0xFFFFFFFF)
+    ),
+    // Bell metal on lilac: a near-white lavender page with bronze buttons. Called Lavender Bronze
+    // in the vote.
+    AppTheme(
+        name = "Kansa",
+        background = Color(0xFFF8F7FF), surface = Color(0xFFF8F7FF), card = Color(0xFFE7E2F4),
+        primary = Color(0xFF78552B), secondary = Color(0xFF947A6D),
+        textPrimary = Color(0xFF211D2E), textSecondary = Color(0xFF41365D),
+        positive = Color(0xFF024629), negative = Color(0xFF7D0714),
+        highlight = Color(0xFFD1CCDE), divider = Color(0xFFDBD8E6),
+        border = Color(0xFFA7A3BB), onAccent = Color(0xFFFFFFFF)
+    ),
+    // Navy on cool white, new in v3.2.0, with the dividers, borders and white button text it
+    // was specified with.
+    AppTheme(
+        name = "Neel",
+        background = Color(0xFFF5F7FA), surface = Color(0xFFF5F7FA), card = Color(0xFFF1F3F7),
+        primary = Color(0xFF1B2C55), secondary = Color(0xFF5E6A84),
+        textPrimary = Color(0xFF0E1A33), textSecondary = Color(0xFF3F4B63),
+        positive = Color(0xFF0A5631), negative = Color(0xFF931B15),
+        highlight = Color(0xFFE2E7EF), divider = Color(0xFFD3DAE5),
+        border = Color(0xFF9AA6BA), onAccent = Color(0xFFFFFFFF)
     )
 )
 
 /**
- * Themes that used to exist, each pointed straight at a survivor: the light ones at Latte and the
- * dark ones at Mocha, rather than silently resetting anyone to the default. The stored preference
- * is only rewritten when they next pick a theme themselves.
+ * Names the app no longer has, each pointed straight at a theme that exists, so nobody is reset to
+ * the default. The stored preference is a name, and it is only rewritten when they next pick a
+ * theme themselves; until then it resolves here every time it is read, which also covers a
+ * preference brought back by Android's own backup.
  *
  * One hop only. [getThemeByName] does not follow a chain, so every name here must point at a theme
- * in [themes]: Slate used to point at Ocean, which is itself retired now.
+ * in [themes].
  */
 private val RETIRED_THEMES = mapOf(
-    "Paper" to "Latte",
-    "Cream" to "Latte",
-    "Amoled" to "Mocha",
-    "Ocean" to "Mocha",
-    "Sunset" to "Mocha",
-    "Purple" to "Mocha",
-    "Slate" to "Mocha",
-    "Charcoal" to "Mocha",
-    "Gold" to "Mocha",
-    "Rose" to "Mocha",
-    "Vibrant" to "Mocha",
-    "Neon" to "Mocha"
+    // Renamed in v3.2.0: the same theme under its new name.
+    "Midnight" to "Diya",
+    "Pastelón Dark" to "Jamun",
+    "Mocha" to "Monsoon",
+    "Espresso" to "Kaapi",
+    "Pine & Rose Quartz" to "Kamal",
+    "Ledger" to "Tulsi",
+    "Flexoki Light" to "Khadi",
+    "Sakura" to "Gulab",
+    "Lavender Bronze" to "Kansa",
+    // Tried during the vote and dropped.
+    "Latte" to "Neel",
+    "Ultraviolet & Sand" to "Jamun",
+    "Turquoise & Burgundy" to "Jamun",
+    "Frappé" to "Monsoon",
+    "Macchiato" to "Monsoon",
+    // Released before v3.2.0, each to the theme closest to it.
+    "Paper" to "Neel",
+    "Cream" to "Neel",
+    "Purple" to "Jamun",
+    "Amoled" to "Monsoon",
+    "Ocean" to "Monsoon",
+    "Sunset" to "Monsoon",
+    "Slate" to "Monsoon",
+    "Charcoal" to "Monsoon",
+    "Gold" to "Monsoon",
+    "Rose" to "Monsoon",
+    "Vibrant" to "Monsoon",
+    "Neon" to "Monsoon"
 )
 
 fun getThemeByName(name: String): AppTheme {

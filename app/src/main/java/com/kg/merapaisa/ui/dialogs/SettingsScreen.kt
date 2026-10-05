@@ -87,7 +87,7 @@ import com.kg.merapaisa.ui.theme.Motion
  * at the foot.
  *
  * The theme list shows each theme rather than naming it. A name tells you nothing about what
- * Macchiato does to your ledger, so every row carries a small piece of that theme drawn in its own
+ * Kansa does to your ledger, so every row carries a small piece of that theme drawn in its own
  * background, its own text ink and its own accent, which is what changing it will actually look
  * like. It stays folded into one row until asked for, because most visits are not about the theme.
  */
@@ -409,7 +409,7 @@ private fun ActionRow(
 
 /**
  * The theme in use, folded: its name, a swatch of it, and a chevron that turns as the list opens.
- * The whole row toggles, and TalkBack hears one button, "Theme, Midnight", that says whether the
+ * The whole row toggles, and TalkBack hears one button, "Theme, Diya", that says whether the
  * list is open.
  */
 @Composable

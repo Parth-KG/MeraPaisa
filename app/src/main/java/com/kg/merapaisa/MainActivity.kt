@@ -47,7 +47,7 @@ class MainActivity : FragmentActivity() {
         // Bar styling is applied from the chosen theme once it is known, in the effect below.
         // A bare enableEdgeToEdge() here would take SystemBarStyle.auto, which reads the phone's
         // dark mode rather than the app's theme: a light theme on a phone set to dark drew white
-        // icons on a white page, and Midnight on a phone set to light drew dark icons on near black.
+        // icons on a white page, and a dark one on a phone set to light drew dark icons on near black.
         enableEdgeToEdge()
 
         // Only on a fresh start. A rotation, a theme or a locale change recreates the activity
@@ -72,7 +72,7 @@ class MainActivity : FragmentActivity() {
             // null until DataStore answers. Starting from a default drew one theme for a moment
             // and then switched to the chosen one, a flash on every launch.
             val themeName by ThemeStore.getTheme(context).collectAsState(initial = null)
-            val currentTheme = getThemeByName(themeName ?: "Midnight")
+            val currentTheme = getThemeByName(themeName ?: "Diya")
             // null while DataStore is still answering. Neither enabled nor disabled yet.
             val lockEnabled by SecurityStore.isAppLockEnabled(context).collectAsState(initial = null)
             val known = lockEnabled != null

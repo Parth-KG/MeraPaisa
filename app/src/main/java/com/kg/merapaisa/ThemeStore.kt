@@ -10,7 +10,7 @@ object ThemeStore {
     private val THEME_KEY = stringPreferencesKey("selected_theme")
 
     fun getTheme(context: Context): Flow<String> =
-        context.dataStore.data.map { it[THEME_KEY] ?: "Midnight" }
+        context.dataStore.data.map { it[THEME_KEY] ?: "Diya" }
 
     suspend fun setTheme(context: Context, theme: String) {
         context.dataStore.edit { it[THEME_KEY] = theme }

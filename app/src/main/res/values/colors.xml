@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Matches the Midnight theme background, which is the app default. -->
+    <!-- Matches the Diya theme background, which is the app default. -->
     <color name="splash_background">#171C24</color>
 </resources>

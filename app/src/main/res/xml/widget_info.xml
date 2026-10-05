@@ -7,7 +7,7 @@
   minWidth and minHeight are what Android 11 and below place it at, targetCellWidth and
   targetCellHeight what Android 12 and above use, which is why both are set.
 
-  previewImage is the widget itself, in Midnight at night, captured on a phone by
+  previewImage is the widget itself, in Midnight (now Diya) at night, captured on a phone by
   WidgetGalleryTest and rounded at the corners the way a launcher draws it.
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"

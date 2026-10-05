@@ -67,7 +67,7 @@ class ThemeContrastTest {
 
     @Test
     fun allThemesAreNamedAndDistinct() {
-        assertTrue("expected 5 themes, found ${themes.size}", themes.size == 5)
+        assertTrue("expected 10 themes, found ${themes.size}", themes.size == 10)
         assertTrue("theme names must be unique", themes.map { it.name }.toSet().size == themes.size)
     }
 
@@ -90,14 +90,18 @@ class ThemeContrastTest {
 
     @Test
     fun everyRetiredThemeResolvesToASurvivor() {
-        // Anyone still on a removed theme should land somewhere deliberate, not the default. The
-        // light ones go to Latte and the dark ones to Mocha, each in one hop: a name that pointed
-        // at another retired name would fall through to the default.
+        // Anyone on a renamed or removed theme should land somewhere deliberate, not the default,
+        // and in one hop: a name that pointed at another old name would fall through.
         mapOf(
-            "Paper" to "Latte", "Cream" to "Latte",
-            "Amoled" to "Mocha", "Ocean" to "Mocha", "Sunset" to "Mocha", "Purple" to "Mocha",
-            "Slate" to "Mocha", "Charcoal" to "Mocha", "Gold" to "Mocha", "Rose" to "Mocha",
-            "Vibrant" to "Mocha", "Neon" to "Mocha"
+            "Midnight" to "Diya", "Pastelón Dark" to "Jamun", "Mocha" to "Monsoon",
+            "Espresso" to "Kaapi", "Pine & Rose Quartz" to "Kamal", "Ledger" to "Tulsi",
+            "Flexoki Light" to "Khadi", "Sakura" to "Gulab", "Lavender Bronze" to "Kansa",
+            "Latte" to "Neel", "Ultraviolet & Sand" to "Jamun", "Turquoise & Burgundy" to "Jamun",
+            "Frappé" to "Monsoon", "Macchiato" to "Monsoon",
+            "Paper" to "Neel", "Cream" to "Neel", "Purple" to "Jamun",
+            "Amoled" to "Monsoon", "Ocean" to "Monsoon", "Sunset" to "Monsoon", "Slate" to "Monsoon",
+            "Charcoal" to "Monsoon", "Gold" to "Monsoon", "Rose" to "Monsoon", "Vibrant" to "Monsoon",
+            "Neon" to "Monsoon"
         ).forEach { (retired, expected) ->
             assertTrue(
                 "$retired should resolve to $expected, got ${getThemeByName(retired).name}",

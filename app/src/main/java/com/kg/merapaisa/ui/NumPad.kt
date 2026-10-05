@@ -229,8 +229,8 @@ private fun Key(key: String, onKey: (String) -> Unit, modifier: Modifier = Modif
  * amount inks, kept for amounts, so both buttons wear the same neutral tile.
  *
  * [hint] names the other way the same thing happens, so a loan and a repayment each have a
- * button that says them. It is quieter by size and weight rather than colour, because the
- * secondary ink is not held to 4.5:1 on this tile, and falls under it in Latte.
+ * button that says them. It is quieter by size and weight rather than by a fainter colour, so it
+ * stays as readable as the label above it.
  */
 @Composable
 private fun DirectionButton(
