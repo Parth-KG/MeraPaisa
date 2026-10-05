@@ -21,7 +21,7 @@ import com.kg.merapaisa.ui.theme.Spacing
 fun RowDivider(start: Dp = Spacing.xxl + Spacing.xl) {
     val theme = LocalAppTheme.current
     HorizontalDivider(
-        color = theme.outline,
+        color = theme.divider,
         modifier = Modifier.padding(start = start, end = Spacing.lg)
     )
 }

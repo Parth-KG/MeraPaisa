@@ -55,7 +55,7 @@ internal fun SheetFrame(
         shape = Shapes.sheet,
         containerColor = theme.surface,
         contentColor = theme.textPrimary,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = theme.outline) },
+        dragHandle = { BottomSheetDefaults.DragHandle(color = theme.border) },
         contentWindowInsets = { WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom) }
     ) {
         Column(modifier = Modifier.fillMaxWidth().nestedScroll(keepStill), content = content)

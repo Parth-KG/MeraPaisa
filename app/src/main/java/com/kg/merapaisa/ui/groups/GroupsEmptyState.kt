@@ -40,7 +40,7 @@ fun GroupsEmptyState(modifier: Modifier = Modifier, onCreateGroup: () -> Unit = 
             modifier = Modifier.heightIn(min = 48.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = theme.primary,
-                contentColor = theme.background
+                contentColor = theme.onAccent
             )
         ) {
             Text("New group", style = MeraPaisaType.action)

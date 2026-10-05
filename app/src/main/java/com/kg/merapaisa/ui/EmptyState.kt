@@ -50,7 +50,7 @@ fun EmptyState(tab: Tab, modifier: Modifier = Modifier, onAddPerson: () -> Unit 
                     modifier = Modifier.heightIn(min = 48.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = theme.primary,
-                        contentColor = theme.background
+                        contentColor = theme.onAccent
                     )
                 ) {
                     Text("Add a person", style = MeraPaisaType.action)

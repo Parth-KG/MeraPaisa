@@ -59,7 +59,7 @@ fun LockedScreen(onUnlock: () -> Unit) {
             modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = theme.primary,
-                contentColor = theme.background
+                contentColor = theme.onAccent
             )
         ) {
             // The system prompt's own title, so the tap and the prompt it opens say the same thing.

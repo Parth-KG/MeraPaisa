@@ -143,7 +143,7 @@ internal fun RowScope.PrimaryAction(label: String, enabled: Boolean, onClick: ()
         contentPadding = FootButtonPadding,
         colors = ButtonDefaults.buttonColors(
             containerColor = theme.primary,
-            contentColor = theme.background
+            contentColor = theme.onAccent
         )
     ) {
         Text(label, style = MeraPaisaType.action)
@@ -160,7 +160,7 @@ internal fun RowScope.SecondaryAction(label: String, enabled: Boolean, onClick: 
         shape = Shapes.small,
         modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
         contentPadding = FootButtonPadding,
-        border = BorderStroke(1.dp, theme.outline),
+        border = BorderStroke(1.dp, theme.border),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
     ) {
         Text(label, style = MeraPaisaType.action)

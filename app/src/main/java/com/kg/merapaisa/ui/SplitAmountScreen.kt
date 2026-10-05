@@ -110,7 +110,7 @@ fun SplitAmountScreen(
                     label = { Text(code, style = MeraPaisaType.action) },
                     colors = FilterChipDefaults.filterChipColors(
                         labelColor = theme.textSecondary,
-                        selectedContainerColor = theme.fillStrong,
+                        selectedContainerColor = theme.highlight,
                         selectedLabelColor = theme.textPrimary
                     )
                 )
@@ -202,7 +202,7 @@ private fun SplitKey(key: String, modifier: Modifier = Modifier, onClick: () -> 
         shape = Shapes.small,
         contentPadding = PaddingValues(0.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = theme.fillStrong,
+            containerColor = theme.highlight,
             contentColor = if (isBackspace) theme.textSecondary else theme.textPrimary
         )
     ) {
@@ -298,8 +298,8 @@ internal fun SplitPrimaryButton(label: String, enabled: Boolean, onClick: () -> 
             .heightIn(min = 56.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = theme.primary,
-            contentColor = theme.background,
-            disabledContainerColor = theme.fillStrong,
+            contentColor = theme.onAccent,
+            disabledContainerColor = theme.highlight,
             disabledContentColor = theme.textSecondary
         )
     ) {

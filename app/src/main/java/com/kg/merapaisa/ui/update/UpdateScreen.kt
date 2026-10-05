@@ -126,14 +126,14 @@ fun UpdateScreen(
                             progress = { state.percent / 100f },
                             modifier = Modifier.fillMaxWidth(),
                             color = theme.primary,
-                            trackColor = theme.outline
+                            trackColor = theme.divider
                         )
                         Text("${state.percent}%", style = MeraPaisaType.label, color = theme.textSecondary)
                     } else {
                         LinearProgressIndicator(
                             modifier = Modifier.fillMaxWidth(),
                             color = theme.primary,
-                            trackColor = theme.outline
+                            trackColor = theme.divider
                         )
                     }
                 }
@@ -258,7 +258,7 @@ private fun Working(text: String) {
         CircularProgressIndicator(
             modifier = Modifier.size(20.dp),
             color = theme.primary,
-            trackColor = theme.outline
+            trackColor = theme.divider
         )
         Text(text, style = MeraPaisaType.body, color = theme.textSecondary)
     }

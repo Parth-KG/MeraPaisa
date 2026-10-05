@@ -307,7 +307,7 @@ private fun ReviewScreen(
                         .fillMaxWidth()
                         .padding(horizontal = Spacing.lg)
                         .clip(Shapes.medium)
-                        .background(theme.fillStrong)
+                        .background(theme.highlight)
                         .padding(Spacing.md),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs)
                 ) {

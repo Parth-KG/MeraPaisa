@@ -411,7 +411,7 @@ private fun ClaimedSender(payload: SharePayload) {
         Box(
             modifier = Modifier
                 .clip(Shapes.small)
-                .background(theme.fillStrong)
+                .background(theme.highlight)
                 .padding(horizontal = Spacing.md, vertical = Spacing.sm)
         ) {
             Text(

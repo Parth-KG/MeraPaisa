@@ -370,7 +370,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = theme.primary,
-                        contentColor = theme.background
+                        contentColor = theme.onAccent
                     )
                 ) {
                     Text(
@@ -384,7 +384,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         onClick = { viewModel.startSplit() },
                         shape = Shapes.small,
                         modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                        border = BorderStroke(1.dp, theme.outline),
+                        border = BorderStroke(1.dp, theme.border),
                         colors = ButtonDefaults.outlinedButtonColors(
                             // Filled with the background so a row scrolled beneath it does not
                             // show through the outline.

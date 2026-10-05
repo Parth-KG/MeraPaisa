@@ -119,7 +119,7 @@ fun MoveDebtDialog(
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.lg)
                     .clip(Shapes.medium)
-                    .background(theme.fillStrong)
+                    .background(theme.highlight)
                     .padding(horizontal = Spacing.md, vertical = Spacing.sm),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
@@ -203,7 +203,7 @@ fun MoveDebtDialog(
                         .fillMaxWidth()
                         .padding(horizontal = Spacing.lg)
                         .clip(Shapes.medium)
-                        .background(theme.fillStrong)
+                        .background(theme.highlight)
                         .padding(Spacing.md)
                 ) {
                     Text(problem, style = MeraPaisaType.body, color = theme.negative)
@@ -222,7 +222,7 @@ fun MoveDebtDialog(
                 onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
                 shape = Shapes.small,
                 modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                border = BorderStroke(1.dp, theme.outline),
+                border = BorderStroke(1.dp, theme.border),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
             ) {
                 Text("Don't move", style = MeraPaisaType.action)
@@ -237,7 +237,7 @@ fun MoveDebtDialog(
                 modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.primary,
-                    contentColor = theme.background
+                    contentColor = theme.onAccent
                 )
             ) {
                 Text("Move the debt", style = MeraPaisaType.action)
@@ -345,9 +345,9 @@ private fun Key(key: String, onKey: (String) -> Unit, modifier: Modifier = Modif
         shape = Shapes.small,
         contentPadding = PaddingValues(0.dp),
         colors = ButtonDefaults.buttonColors(
-            // fillStrong, not fill: fill is defined as card, which on a sheet sits too close to
+            // highlight, not fill: fill is defined as card, which on a sheet sits too close to
             // the surface behind it, and the keys rendered as bare text with no visible shape.
-            containerColor = theme.fillStrong,
+            containerColor = theme.highlight,
             contentColor = if (isBackspace) theme.textSecondary else theme.textPrimary
         )
     ) {

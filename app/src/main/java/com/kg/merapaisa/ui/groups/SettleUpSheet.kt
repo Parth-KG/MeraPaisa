@@ -133,7 +133,7 @@ fun SettleUpSheet(
         OutlinedButton(
             onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
             shape = Shapes.small,
-            border = BorderStroke(1.dp, theme.outline),
+            border = BorderStroke(1.dp, theme.border),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary),
             modifier = Modifier
                 .fillMaxWidth()

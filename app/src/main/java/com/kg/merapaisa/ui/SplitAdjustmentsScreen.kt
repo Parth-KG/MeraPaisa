@@ -516,7 +516,7 @@ private fun SplitShareRow(
             modifier = Modifier
                 .clip(Shapes.small)
                 .then(
-                    if (locked) Modifier.border(1.dp, theme.outline, Shapes.small)
+                    if (locked) Modifier.border(1.dp, theme.border, Shapes.small)
                     else Modifier.background(theme.fill)
                 )
                 .heightIn(min = 48.dp)

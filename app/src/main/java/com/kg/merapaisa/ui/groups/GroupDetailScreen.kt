@@ -283,7 +283,7 @@ fun GroupDetailScreen(
                 modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.primary,
-                    contentColor = theme.background
+                    contentColor = theme.onAccent
                 )
             ) {
                 Text("Add an expense", style = MeraPaisaType.action)
@@ -293,7 +293,7 @@ fun GroupDetailScreen(
                 enabled = !everyoneEven,
                 shape = Shapes.small,
                 modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                border = BorderStroke(1.dp, theme.outline),
+                border = BorderStroke(1.dp, theme.border),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
             ) {
                 Text("Settle up", style = MeraPaisaType.action)
@@ -397,7 +397,7 @@ private fun EntryRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(if (showMenu) theme.fillStrong else Color.Transparent)
+                .background(if (showMenu) theme.highlight else Color.Transparent)
                 // A tap opens the menu too. It did nothing, so TalkBack offered a tap that went
                 // nowhere, and deleting an expense could only be reached by a long press.
                 .combinedClickable(

@@ -301,7 +301,7 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = theme.primary,
-                        contentColor = theme.background
+                        contentColor = theme.onAccent
                     )
                 ) {
                     Text("Use this theme", style = MeraPaisaType.action)
@@ -485,7 +485,7 @@ private fun ThemeRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (selected) theme.fillStrong else Color.Transparent)
+            .background(if (selected) theme.highlight else Color.Transparent)
             .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
             .heightIn(min = 48.dp)
             .padding(horizontal = Spacing.lg, vertical = Spacing.md),
@@ -521,7 +521,7 @@ private fun ThemeSwatch(preview: AppTheme) {
             .size(width = 44.dp, height = 36.dp)
             .clip(Shapes.small)
             .background(preview.background)
-            .border(1.dp, theme.outline, Shapes.small)
+            .border(1.dp, theme.border, Shapes.small)
             .padding(Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs)
     ) {

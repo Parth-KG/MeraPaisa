@@ -178,7 +178,7 @@ private fun SplitPickerRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (selected) theme.fillStrong else Color.Transparent)
+            .background(if (selected) theme.highlight else Color.Transparent)
             .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onToggle() })
             .heightIn(min = 48.dp)
             .padding(horizontal = Spacing.lg, vertical = Spacing.md)

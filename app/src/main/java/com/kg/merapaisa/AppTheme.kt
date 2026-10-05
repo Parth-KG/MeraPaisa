@@ -24,18 +24,26 @@ data class AppTheme(
     val textPrimary: Color,
     val textSecondary: Color,
     val positive: Color,
-    val negative: Color
+    val negative: Color,
+    /**
+     * Keys, the amount field, chips, and a highlighted or pressed row. It used to be worked out as
+     * the card blended toward the text, which left no theme able to say how firm its keys are.
+     */
+    val highlight: Color = lerp(card, textPrimary, 0.10f),
+    /** The hairline between rows, and the other quiet lines: progress tracks, the widget's rules. */
+    val divider: Color = lerp(card, textPrimary, 0.18f),
+    /**
+     * The edge of an outlined button or field, of a swatch, and the sheet's handle: firmer than a
+     * divider, because it marks something you can press.
+     */
+    val border: Color = lerp(card, textPrimary, 0.18f),
+    /** Text and icons on the accent: filled buttons and a switch's thumb. */
+    val onAccent: Color = background
 ) {
     val isDark: Boolean get() = background.luminance() < 0.4f
 
     /** Fill for rows, numpad keys and chips: a step away from the background, not white on white. */
     val fill: Color get() = card
-
-    /** The same fill one step stronger, for selected and pressed states. */
-    val fillStrong: Color get() = lerp(card, textPrimary, 0.10f)
-
-    /** Hairline borders and dividers. */
-    val outline: Color get() = lerp(card, textPrimary, 0.18f)
 }
 
 /**
@@ -141,8 +149,8 @@ fun getThemeByName(name: String): AppTheme {
 fun AppTheme.toColorScheme(): ColorScheme = if (isDark) {
     darkColorScheme(
         primary = primary,
-        onPrimary = background,
-        primaryContainer = fillStrong,
+        onPrimary = onAccent,
+        primaryContainer = highlight,
         onPrimaryContainer = textPrimary,
         inversePrimary = background,
         secondary = secondary,
@@ -150,8 +158,8 @@ fun AppTheme.toColorScheme(): ColorScheme = if (isDark) {
         secondaryContainer = lerp(card, primary, 0.22f),
         onSecondaryContainer = primary,
         tertiary = primary,
-        onTertiary = background,
-        tertiaryContainer = fillStrong,
+        onTertiary = onAccent,
+        tertiaryContainer = highlight,
         onTertiaryContainer = textPrimary,
         background = background,
         onBackground = textPrimary,
@@ -166,22 +174,22 @@ fun AppTheme.toColorScheme(): ColorScheme = if (isDark) {
         onError = background,
         errorContainer = lerp(card, negative, 0.25f),
         onErrorContainer = negative,
-        outline = outline,
-        outlineVariant = lerp(card, textPrimary, 0.10f),
+        outline = border,
+        outlineVariant = divider,
         scrim = Color.Black,
-        surfaceBright = fillStrong,
+        surfaceBright = highlight,
         surfaceDim = background,
         surfaceContainer = card,
         surfaceContainerHigh = card,
-        surfaceContainerHighest = fillStrong,
+        surfaceContainerHighest = highlight,
         surfaceContainerLow = surface,
         surfaceContainerLowest = background
     )
 } else {
     lightColorScheme(
         primary = primary,
-        onPrimary = background,
-        primaryContainer = fillStrong,
+        onPrimary = onAccent,
+        primaryContainer = highlight,
         onPrimaryContainer = textPrimary,
         inversePrimary = background,
         secondary = secondary,
@@ -189,8 +197,8 @@ fun AppTheme.toColorScheme(): ColorScheme = if (isDark) {
         secondaryContainer = lerp(card, primary, 0.22f),
         onSecondaryContainer = primary,
         tertiary = primary,
-        onTertiary = background,
-        tertiaryContainer = fillStrong,
+        onTertiary = onAccent,
+        tertiaryContainer = highlight,
         onTertiaryContainer = textPrimary,
         background = background,
         onBackground = textPrimary,
@@ -205,14 +213,14 @@ fun AppTheme.toColorScheme(): ColorScheme = if (isDark) {
         onError = background,
         errorContainer = lerp(card, negative, 0.25f),
         onErrorContainer = negative,
-        outline = outline,
-        outlineVariant = lerp(card, textPrimary, 0.10f),
+        outline = border,
+        outlineVariant = divider,
         scrim = Color.Black,
         surfaceBright = background,
-        surfaceDim = fillStrong,
+        surfaceDim = highlight,
         surfaceContainer = card,
         surfaceContainerHigh = card,
-        surfaceContainerHighest = fillStrong,
+        surfaceContainerHighest = highlight,
         surfaceContainerLow = surface,
         surfaceContainerLowest = background
     )

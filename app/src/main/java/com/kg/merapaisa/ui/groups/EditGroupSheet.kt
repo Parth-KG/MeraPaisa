@@ -161,7 +161,7 @@ fun EditGroupSheet(
                 onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
                 shape = Shapes.small,
                 modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                border = BorderStroke(1.dp, theme.outline),
+                border = BorderStroke(1.dp, theme.border),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
             ) {
                 Text("Keep it as it was", style = MeraPaisaType.action)
@@ -177,7 +177,7 @@ fun EditGroupSheet(
                 modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.primary,
-                    contentColor = theme.background
+                    contentColor = theme.onAccent
                 )
             ) {
                 Text("Save group", style = MeraPaisaType.action)

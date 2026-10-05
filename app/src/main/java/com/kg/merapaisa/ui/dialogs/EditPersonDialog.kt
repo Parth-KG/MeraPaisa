@@ -215,7 +215,7 @@ fun EditPersonDialog(
                 enabled = !converting,
                 shape = Shapes.small,
                 modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                border = BorderStroke(1.dp, theme.outline),
+                border = BorderStroke(1.dp, theme.border),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
             ) {
                 Text("Keep as it was", style = MeraPaisaType.action)
@@ -235,7 +235,7 @@ fun EditPersonDialog(
                 modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.primary,
-                    contentColor = theme.background
+                    contentColor = theme.onAccent
                 )
             ) {
                 if (converting) {
@@ -244,7 +244,7 @@ fun EditPersonDialog(
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
-                        color = theme.background
+                        color = theme.onAccent
                     )
                     Spacer(Modifier.width(Spacing.sm))
                     Text("Converting", style = MeraPaisaType.action)
@@ -329,7 +329,7 @@ internal fun ConvertCurrencyDialog(
                 modifier = Modifier.heightIn(min = 48.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.primary,
-                    contentColor = theme.background
+                    contentColor = theme.onAccent
                 )
             ) {
                 Text("Convert the entries", style = MeraPaisaType.action)
@@ -342,7 +342,7 @@ internal fun ConvertCurrencyDialog(
                 shape = Shapes.small,
                 modifier = Modifier.heightIn(min = 48.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = theme.fillStrong,
+                    containerColor = theme.highlight,
                     contentColor = theme.textPrimary
                 )
             ) {

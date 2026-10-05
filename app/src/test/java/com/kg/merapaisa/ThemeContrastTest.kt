@@ -51,8 +51,8 @@ class ThemeContrastTest {
             listOf(
                 "${theme.name}: fill on background" to
                     Pair(contrastRatio(theme.fill, theme.background), MIN_SURFACE_SEPARATION),
-                "${theme.name}: fillStrong on fill" to
-                    Pair(contrastRatio(theme.fillStrong, theme.fill), MIN_SELECTED_SEPARATION)
+                "${theme.name}: highlight on fill" to
+                    Pair(contrastRatio(theme.highlight, theme.fill), MIN_SELECTED_SEPARATION)
             )
         }.filter { (_, measured) -> measured.first < measured.second }
 

@@ -76,7 +76,7 @@ fun PersonRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (isSelected) theme.fillStrong else Color.Transparent)
+            .background(if (isSelected) theme.highlight else Color.Transparent)
             // Named, so TalkBack says what a long press does.
             .combinedClickable(onClick = onClick, onLongClickLabel = "More options", onLongClick = { showMenu = true })
             .padding(horizontal = Spacing.lg, vertical = Spacing.md)

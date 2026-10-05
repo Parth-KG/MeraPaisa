@@ -382,7 +382,7 @@ private fun DoubleRule(palette: WidgetPalette) {
 @Composable
 private fun RowHairline(palette: WidgetPalette) {
     Box(modifier = GlanceModifier.fillMaxWidth().padding(start = AvatarSize + Spacing.md)) {
-        Hairline(palette) { it.outline }
+        Hairline(palette) { it.divider }
     }
 }
 

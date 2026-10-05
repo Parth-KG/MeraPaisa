@@ -89,7 +89,7 @@ fun NumPad(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(Shapes.medium)
-                .background(theme.fillStrong)
+                .background(theme.highlight)
                 .padding(horizontal = Spacing.md, vertical = Spacing.sm),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically
@@ -207,7 +207,7 @@ private fun Key(key: String, onKey: (String) -> Unit, modifier: Modifier = Modif
         shape = Shapes.small,
         contentPadding = PaddingZero,
         colors = ButtonDefaults.buttonColors(
-            containerColor = theme.fillStrong,
+            containerColor = theme.highlight,
             contentColor = if (isBackspace) theme.textSecondary else theme.textPrimary
         )
     ) {
@@ -253,9 +253,9 @@ private fun DirectionButton(
             horizontal = Spacing.sm, vertical = Spacing.sm
         ),
         colors = ButtonDefaults.buttonColors(
-            containerColor = theme.fillStrong,
+            containerColor = theme.highlight,
             contentColor = ink,
-            disabledContainerColor = theme.fillStrong.copy(alpha = 0.5f),
+            disabledContainerColor = theme.highlight.copy(alpha = 0.5f),
             disabledContentColor = ink.copy(alpha = 0.4f)
         )
     ) {

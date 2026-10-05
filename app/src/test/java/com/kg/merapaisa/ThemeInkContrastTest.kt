@@ -61,14 +61,14 @@ class ThemeInkContrastTest {
     /**
      * The label on a primary button.
      *
-     * `toColorScheme` sets `onPrimary = background`, so this is the theme's own background sitting
-     * on its own accent. Get the accent's lightness wrong and every primary button in the app
+     * Every filled button draws its label in the theme's `onAccent`, and `toColorScheme` passes it
+     * on as `onPrimary` for switches. Get the pair wrong and every primary button in the app
      * becomes unreadable at once, which no screenshot of a single screen would catch.
      */
     @Test
     fun anAccentButtonLabelIsLegible() {
         val failures = themes
-            .map { it.name to contrastRatio(it.background, it.primary) }
+            .map { it.name to contrastRatio(it.onAccent, it.primary) }
             .filter { (_, ratio) -> ratio < MIN_RATIO }
 
         assertTrue(
@@ -81,14 +81,14 @@ class ThemeInkContrastTest {
     /**
      * Words on a key.
      *
-     * The keypad's keys and its two direction buttons are `fillStrong`, and the digits, the button
+     * The keypad's keys and its two direction buttons are the `highlight`, and the digits, the button
      * labels and the hint under each label are textPrimary on it. Nothing above measures that
      * tile, and the hint is small, so it gets the body-text floor too.
      */
     @Test
     fun wordsOnAKeyAreLegible() {
         val failures = themes
-            .map { it.name to contrastRatio(it.textPrimary, it.fillStrong) }
+            .map { it.name to contrastRatio(it.textPrimary, it.highlight) }
             .filter { (_, ratio) -> ratio < MIN_RATIO }
 
         assertTrue(
