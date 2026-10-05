@@ -578,22 +578,22 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
 
 // -- Android Studio previews ---------------------------------------------------------------
 
-@Preview(name = "People rows, Latte", heightDp = 620)
+@Preview(name = "People rows, Neel", heightDp = 620)
 @Composable
-private fun PreviewPeopleLatte() = GalleryFrame(themes.first { it.name == "Latte" }) { PeopleRowsCase() }
+private fun PreviewPeopleNeel() = GalleryFrame(themes.first { it.name == "Neel" }) { PeopleRowsCase() }
 
-@Preview(name = "People rows, Midnight", heightDp = 620)
+@Preview(name = "People rows, Diya", heightDp = 620)
 @Composable
-private fun PreviewPeopleMidnight() = GalleryFrame(themes.first { it.name == "Midnight" }) { PeopleRowsCase() }
+private fun PreviewPeopleDiya() = GalleryFrame(themes.first { it.name == "Diya" }) { PeopleRowsCase() }
 
-@Preview(name = "Net position, Latte")
+@Preview(name = "Net position, Gulab")
 @Composable
-private fun PreviewNetTotalLatte() = GalleryFrame(themes.first { it.name == "Latte" }) { NetTotalMultiCase() }
+private fun PreviewNetTotalGulab() = GalleryFrame(themes.first { it.name == "Gulab" }) { NetTotalMultiCase() }
 
-@Preview(name = "Group detail, Mocha", heightDp = 800)
+@Preview(name = "Group detail, Monsoon", heightDp = 800)
 @Composable
-private fun PreviewGroupMocha() = GalleryFrame(themes.first { it.name == "Mocha" }) { GroupDetailCase() }
+private fun PreviewGroupMonsoon() = GalleryFrame(themes.first { it.name == "Monsoon" }) { GroupDetailCase() }
 
-@Preview(name = "Numpad, Frappé", heightDp = 620)
+@Preview(name = "Numpad, Kamal", heightDp = 620)
 @Composable
-private fun PreviewNumPadFrappe() = GalleryFrame(themes.first { it.name == "Frappé" }) { NumPadCase() }
+private fun PreviewNumPadKamal() = GalleryFrame(themes.first { it.name == "Kamal" }) { NumPadCase() }

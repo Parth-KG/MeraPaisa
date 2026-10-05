@@ -100,15 +100,15 @@ class WidgetGalleryTest {
 
         // The locked state shows nothing of the ledger, which is the whole point of it, so it is
         // worth a picture of its own to confirm it really shows nothing.
-        written += shoot("latte-widget-locked-$mode", sizes.getValue("tall")) {
-            LockedWidgetContent(paletteLike(getThemeByName("Latte")))
+        written += shoot("neel-widget-locked-$mode", sizes.getValue("tall")) {
+            LockedWidgetContent(paletteLike(getThemeByName("Neel")))
         }
 
         check(written.isNotEmpty()) { "no widget images were written" }
     }
 
     /**
-     * The widget at double type, in Latte, Midnight and Mocha.
+     * The widget at double type, in Neel, Diya and Monsoon.
      *
      * The launcher inflates the widget with the phone's own font scale, so the scale goes on the
      * context the RemoteViews are composed and inflated with. A row that only fits at 1.0 clips
@@ -120,7 +120,7 @@ class WidgetGalleryTest {
             android.content.res.Configuration(context.resources.configuration).apply { fontScale = 2f }
         )
         val written = mutableListOf<String>()
-        listOf("Latte", "Midnight", "Mocha").forEach { name ->
+        listOf("Neel", "Diya", "Monsoon").forEach { name ->
             val palette = paletteLike(getThemeByName(name))
             sizes.forEach { (sizeName, size) ->
                 written += shoot("${name.lowercase()}-widget-$sizeName-$mode-fs2", size, large) {
@@ -134,13 +134,13 @@ class WidgetGalleryTest {
     /**
      * The pairing DebtWidget builds for a chosen theme.
      *
-     * A dark choice keeps Latte for the launcher's light mode; a light choice keeps Midnight for
+     * A dark choice keeps Neel for the launcher's light mode; a light choice keeps Diya for
      * its dark mode. Mirrored here because the widget's own helper is private, and because a
      * capture that invented its own pairing would not be showing what ships.
      */
     private fun paletteLike(selected: com.kg.merapaisa.AppTheme) =
-        if (selected.isDark) WidgetPalette(day = getThemeByName("Latte"), night = selected)
-        else WidgetPalette(day = selected, night = getThemeByName("Midnight"))
+        if (selected.isDark) WidgetPalette(day = getThemeByName("Neel"), night = selected)
+        else WidgetPalette(day = selected, night = getThemeByName("Diya"))
 
     /** Composes Glance content to a RemoteViews, inflates it, and draws it to a PNG. */
     private fun shoot(
