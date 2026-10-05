@@ -442,15 +442,15 @@ private fun overallLabel(persons: List<PersonWithBalance>, totals: List<Currency
 /**
  * The person's own colour, washed back so the initials stay legible over it.
  *
- * A colour the ledger cannot parse falls back to the theme's accent, which is what PfpView does
- * on screen. Picked per mode rather than once, so the day and night palettes each get their own.
+ * A colour the ledger cannot parse becomes a neutral ink, as PfpView draws it on screen. Picked
+ * per mode rather than once, so the day and night palettes each get their own.
  */
 private fun avatarTint(person: PersonWithBalance, palette: WidgetPalette) =
     // Through avatarInk, exactly as the app does it. Reading the stored hex straight gave every
     // avatar the same Material green on a home screen while the ledger behind it had already
     // re-lit them per theme, so the widget looked like a different app's.
     palette.of { theme ->
-        avatarInk(person.person.pfpColor, theme.isDark).copy(alpha = AVATAR_WASH * 2.5f)
+        avatarInk(person.person.pfpColor, theme).copy(alpha = AVATAR_WASH * 2.5f)
     }
 
 /**

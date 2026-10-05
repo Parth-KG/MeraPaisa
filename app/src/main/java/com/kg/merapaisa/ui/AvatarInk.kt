@@ -1,6 +1,7 @@
 package com.kg.merapaisa.ui
 
 import androidx.compose.ui.graphics.Color
+import com.kg.merapaisa.AppTheme
 import kotlin.math.abs
 import kotlin.math.pow
 
@@ -22,8 +23,8 @@ import kotlin.math.pow
  * fixes every avatar already in the ledger, including the green ones, without overriding what
  * anyone chose: green stays green.
  *
- * `pfpColor` itself lives in `data/Person.kt`, which is frozen, so the stored default cannot be
- * changed. This is the presentation-side answer to it.
+ * `pfpColor` itself lives in `data/Person.kt`, and every stored value keeps working. This is the
+ * presentation-side answer to it.
  */
 
 /**
@@ -63,14 +64,55 @@ const val AVATAR_WASH = 0.12f
  * two numbers only make sense chosen together. At the old 0.20 wash no target cleared 4.5:1 without
  * making the avatars glare.
  */
-fun avatarInk(stored: String, isDarkTheme: Boolean): Color {
+fun avatarInk(stored: String, isDarkTheme: Boolean): Color =
+    inkAt(stored, if (isDarkTheme) DARK_TARGET else LIGHT_TARGET)
+
+/**
+ * The stored colour, re-lit for one theme in particular, so the initials clear 4.5:1 on their own
+ * wash on every ground an avatar sits on there: the page, a highlighted row, a card and a sheet.
+ *
+ * It starts from the lightness every dark or light theme shares and moves further from the
+ * ground only where a theme needs it. A shared target could not see the theme it was drawn on:
+ * Kamal's mid-green page held the dark-theme ink to 3.5:1, and on the light themes' highlighted
+ * rows the initials sat under 4:1.
+ */
+fun avatarInk(stored: String, theme: AppTheme): Color {
+    val grounds = listOf(theme.background, theme.highlight, theme.card, theme.surface)
+    var target = if (theme.isDark) DARK_TARGET else LIGHT_TARGET
+    repeat(60) {
+        val ink = inkAt(stored, target)
+        if (grounds.all { contrast(ink, washed(ink, it)) >= MIN_INITIALS_CONTRAST }) return ink
+        target = if (theme.isDark) minOf(target + 0.01f, 1f) else maxOf(target - 0.002f, 0f)
+    }
+    return inkAt(stored, target)
+}
+
+private const val DARK_TARGET = 0.42f
+private const val LIGHT_TARGET = 0.10f
+
+/** A little over 4.5, so rounding the result to eight bits per channel cannot drop it under. */
+private const val MIN_INITIALS_CONTRAST = 4.6f
+
+/** The avatar tile: the ink at [AVATAR_WASH] over [ground], mixed as the screen mixes it. */
+private fun washed(ink: Color, ground: Color) = Color(
+    ink.red * AVATAR_WASH + ground.red * (1 - AVATAR_WASH),
+    ink.green * AVATAR_WASH + ground.green * (1 - AVATAR_WASH),
+    ink.blue * AVATAR_WASH + ground.blue * (1 - AVATAR_WASH)
+)
+
+private fun contrast(a: Color, b: Color): Float {
+    val la = relativeLuminance(a)
+    val lb = relativeLuminance(b)
+    return (maxOf(la, lb) + 0.05f) / (minOf(la, lb) + 0.05f)
+}
+
+private fun inkAt(stored: String, target: Float): Color {
     // Something that is not a colour becomes a neutral ink, lit exactly like a real one: no hue,
     // no saturation, and the same target luminance. Two hand-picked fallback hexes would have been
     // the one pair of avatar colours in the app that nothing measured.
     val parsed = parseHex(stored)?.let(::toHsl)
     val h = parsed?.first ?: 0f
     val saturation = parsed?.second?.coerceIn(0.28f, 0.62f) ?: 0f
-    val target = if (isDarkTheme) 0.42f else 0.10f
 
     // Lightness is monotonic in luminance at fixed hue and saturation, so a bisection converges.
     var low = 0f

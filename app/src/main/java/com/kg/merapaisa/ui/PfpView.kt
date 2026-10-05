@@ -28,7 +28,7 @@ fun PfpView(person: Person, size: Int) {
     // The stored colour is a choice of hue, not of luminance: no single value can be legible on
     // both a light theme and a dark one. avatarInk keeps the hue somebody picked and gives it the
     // lightness this theme needs, which also rescues every avatar already in the ledger.
-    val color = remember(person.pfpColor, theme.isDark) { avatarInk(person.pfpColor, theme.isDark) }
+    val color = remember(person.pfpColor, theme) { avatarInk(person.pfpColor, theme) }
     // A circle, which is the one shape the design reserves for avatars. It was a square rounded
     // at 32 percent of its size: the same soft-tile family as everything else the redesign moved
     // away from, and so a face in the list was shaped like a button beside it.
@@ -54,6 +54,9 @@ fun PfpView(person: Person, size: Int) {
             person.pfpType == "emoji" -> Text(
                 com.kg.merapaisa.data.firstCharacter(person.pfpValue),
                 style = avatarEmojiStyle(size),
+                // An emoji draws in its own colours, but a letter or a symbol takes this one: left
+                // unset it was black, and invisible on every dark theme.
+                color = theme.textPrimary,
                 textAlign = TextAlign.Center
             )
             else -> Text(

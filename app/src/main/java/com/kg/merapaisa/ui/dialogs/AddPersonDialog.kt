@@ -336,7 +336,7 @@ internal fun AvatarPicker(
 @Composable
 private fun ColourSwatch(hue: String, selected: Boolean, onSelect: () -> Unit) {
     val theme = LocalAppTheme.current
-    val ink = remember(hue, theme.isDark) { avatarInk(hue, theme.isDark) }
+    val ink = remember(hue, theme) { avatarInk(hue, theme) }
     val name = AVATAR_HUE_NAMES[hue] ?: "Avatar colour"
 
     Box(

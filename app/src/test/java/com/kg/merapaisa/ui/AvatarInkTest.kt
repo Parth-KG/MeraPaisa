@@ -14,15 +14,25 @@ import kotlin.math.pow
  */
 class AvatarInkTest {
 
-    /** Initials are drawn in the ink over a wash of the same ink, so they must clear AA. */
+    /**
+     * Initials are drawn in the ink over a wash of the same ink, so they must clear AA on every
+     * ground an avatar sits on: the page in the list, a highlighted row, a card, a sheet.
+     *
+     * This once measured the card alone, which is not where the list draws them, and so missed
+     * Kamal's page at 3.5:1 and the light themes' highlighted rows under 4:1.
+     */
     @Test
     fun everyHueIsLegibleOnEveryTheme() {
         val failures = themes.flatMap { theme ->
-            AVATAR_HUES.map { hue ->
-                val ink = avatarInk(hue, theme.isDark)
-                // The tile behind the initials is the ink at AVATAR_WASH over the theme's card.
-                val behind = blend(ink, theme.card, AVATAR_WASH)
-                "${theme.name} / $hue" to contrast(ink, behind)
+            val grounds = listOf(
+                "page" to theme.background, "highlighted row" to theme.highlight,
+                "card" to theme.card, "sheet" to theme.surface
+            )
+            AVATAR_HUES.flatMap { hue ->
+                val ink = avatarInk(hue, theme)
+                grounds.map { (groundName, ground) ->
+                    "${theme.name} / $hue on its $groundName" to contrast(ink, blend(ink, ground, AVATAR_WASH))
+                }
             }
         }.filter { (_, ratio) -> ratio < 4.5 }
 
