@@ -64,7 +64,7 @@ Mera Paisa keeps all of that on your phone.
 | **App lock** | Your fingerprint, face or screen lock before the ledger opens, and nothing on the widget or in screenshots while it is locked |
 | **In-app updates** | Checks GitHub for a newer release and installs it only if it is signed with the same key |
 | **Accessible** | TalkBack reads every figure with its direction in words, and every screen works at large text and on a phone turned sideways |
-| **Five themes** | Midnight, and Catppuccin's Latte, Frappé, Macchiato and Mocha, each one tested for contrast |
+| **Ten themes** | Diya, Jamun, Monsoon, Kaapi and Kamal by night, Tulsi, Khadi, Gulab, Kansa and Neel by day, with amounts and grey text at 7:1 in every one |
 | **Backup** | Everything in one file, saved when you like or every week to a folder you pick, with a preview before any restore. Android's own backup also copies your ledger and settings to your Google account |
 
 ## Worth a closer look
@@ -145,7 +145,9 @@ Long-press a name and choose **Send a reminder**. An editable message appears wi
 
 ### Themes
 
-Five: **Midnight**, drawn for this app, and the four flavours of [Catppuccin](https://github.com/catppuccin/catppuccin), **Latte**, **Frappé**, **Macchiato** and **Mocha**, from its palette v1.8.0 under the MIT licence. Text, secondary text and both amount colours clear the WCAG AA contrast ratio of 4.5:1 against the background, the surface and the card in every one, enforced by tests rather than by eye, which is why Latte's green and red are a shade darker than Catppuccin's own. Direction is written as well as coloured: what you owe carries a real minus sign, what you are owed carries none, and the words beside each figure say which way it runs, so telling green from red is never the only way to read a balance.
+Ten, dark then light: **Diya**, **Jamun**, **Monsoon**, **Kaapi** and **Kamal**, then **Tulsi**, **Khadi**, **Gulab**, **Kansa** and **Neel**. Each sets every colour it uses, down to its key colour, its dividers, its button edges and the text on its buttons. Amounts and grey text reach 7:1 against the page and against a highlighted row, past the WCAG AAA line, and everything else clears 4.5:1; tests enforce it rather than an eye. Direction is written as well as coloured: what you owe carries a real minus sign, what you are owed carries none, and the words beside each figure say which way it runs, so telling green from red is never the only way to read a balance.
+
+Some start from palettes other people made, all under the MIT licence: Monsoon is [Catppuccin](https://github.com/catppuccin/catppuccin) Mocha, Khadi is [Flexoki](https://stephango.com/flexoki)'s light scheme by Steph Ango, and Jamun is [Pastelón de Amarillos](https://github.com/sonofmartinus/pastelon-de-amarillos-tinted-theme) by Richard Martinez. Gulab takes its colours from the [traditional colours of Japan](https://nipponcolors.com/). Where a theme departs from its source, it is to reach those contrast figures.
 
 ### Backup and restore
 
@@ -177,4 +179,4 @@ Working and in daily use. Built for me and a few friends, so the roadmap is what
 
 ## License
 
-MIT. See [LICENSE](LICENSE). The fonts (SIL Open Font License) and the Catppuccin palette (MIT) keep their own licences, in [third_party](third_party).
+MIT. See [LICENSE](LICENSE). The fonts (SIL Open Font License) and the Catppuccin, Flexoki and Pastelón de Amarillos palettes (MIT) keep their own licences, in [third_party](third_party).

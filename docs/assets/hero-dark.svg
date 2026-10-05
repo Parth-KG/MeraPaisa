@@ -17,10 +17,10 @@
       @keyframes fadein  { from { opacity:0; } }
     }
   </style>
-  <rect x="0.75" y="0.75" width="1198.5" height="358.5" rx="20" fill="#171C24" stroke="#2B3340" stroke-width="1.5"/>
+  <rect x="0.75" y="0.75" width="1198.5" height="358.5" rx="20" fill="#171C24" stroke="#2C323A" stroke-width="1.5"/>
   <text x="64" y="52" class="eyebrow" fill="#7C8595">Android, Kotlin, Jetpack Compose</text>
   <text x="64" y="146" class="wordmark" fill="#F2EFE9">Mera Paisa</text>
-  <text x="64" y="188" class="tag" fill="#A2AAB6">Who owes whom, in everyone’s own currency.</text>
+  <text x="64" y="188" class="tag" fill="#C5CEDA">Who owes whom, in everyone’s own currency.</text>
   <text x="64" y="224" class="hook" fill="#E8A33D">No account. No server. No analytics.</text>
   <text x="64" y="286" class="cur" fill="#E8A33D" opacity="0.90">₹</text>
   <text x="108" y="286" class="cur" fill="#E8A33D" opacity="0.77">$</text>
@@ -28,25 +28,25 @@
   <text x="196" y="286" class="cur" fill="#E8A33D" opacity="0.51">£</text>
   <text x="240" y="286" class="cur" fill="#E8A33D" opacity="0.38">¥</text>
   <text x="680.0" y="141.0" class="micro" fill="#7C8595">Total</text>
-  <rect x="680.0" y="154.0" width="140.0" height="54.0" rx="12" fill="#242B36" stroke="#2B3340"/>
+  <rect x="680.0" y="154.0" width="140.0" height="54.0" rx="12" fill="#242B36" stroke="#2C323A"/>
   <text x="750.0" y="190.0" class="total" text-anchor="middle" fill="#F2EFE9">₹2,400</text>
-  <path d="M834.0 181.0 H862.0 M862.0 97.0 V265.0" stroke="#2B3340" stroke-width="1.5" fill="none"/>
-  <path d="M862.0 97.0 H896.0" stroke="#2B3340" stroke-width="1.5"/>
+  <path d="M834.0 181.0 H862.0 M862.0 97.0 V265.0" stroke="#2C323A" stroke-width="1.5" fill="none"/>
+  <path d="M862.0 97.0 H896.0" stroke="#2C323A" stroke-width="1.5"/>
   <rect x="900.0" y="76.0" width="244.0" height="42.0" rx="11" fill="#1E242E" stroke="#E8A33D" stroke-width="1.6"/>
-  <text x="918.0" y="102.0" class="nm" fill="#A2AAB6">Asha</text>
+  <text x="918.0" y="102.0" class="nm" fill="#C5CEDA">Asha</text>
   <text x="1104.0" y="103.0" class="amt" text-anchor="end" fill="#E8A33D">₹800</text>
   <g stroke="#E8A33D" fill="none" stroke-width="1.6" stroke-linecap="round"><path d="M1118.5 92.5 v-2.2 a3.5 3.5 0 0 1 7 0 v2.2"/></g><rect x="1116.0" y="92.5" width="12" height="8.5" rx="2" fill="#E8A33D"/>
-  <path d="M862.0 153.0 H896.0" stroke="#2B3340" stroke-width="1.5"/>
-  <rect x="900.0" y="132.0" width="244.0" height="42.0" rx="11" fill="#1E242E" stroke="#2B3340" stroke-width="1"/>
-  <text x="918.0" y="158.0" class="nm" fill="#A2AAB6">Bilal</text>
+  <path d="M862.0 153.0 H896.0" stroke="#2C323A" stroke-width="1.5"/>
+  <rect x="900.0" y="132.0" width="244.0" height="42.0" rx="11" fill="#1E242E" stroke="#2C323A" stroke-width="1"/>
+  <text x="918.0" y="158.0" class="nm" fill="#C5CEDA">Bilal</text>
   <text x="1126.0" y="159.0" class="amt" text-anchor="end" fill="#F2EFE9">₹534</text>
-  <path d="M862.0 209.0 H896.0" stroke="#2B3340" stroke-width="1.5"/>
-  <rect x="900.0" y="188.0" width="244.0" height="42.0" rx="11" fill="#1E242E" stroke="#2B3340" stroke-width="1"/>
-  <text x="918.0" y="214.0" class="nm" fill="#A2AAB6">Chaitanya</text>
+  <path d="M862.0 209.0 H896.0" stroke="#2C323A" stroke-width="1.5"/>
+  <rect x="900.0" y="188.0" width="244.0" height="42.0" rx="11" fill="#1E242E" stroke="#2C323A" stroke-width="1"/>
+  <text x="918.0" y="214.0" class="nm" fill="#C5CEDA">Chaitanya</text>
   <text x="1126.0" y="215.0" class="amt" text-anchor="end" fill="#F2EFE9">₹533</text>
-  <path d="M862.0 265.0 H896.0" stroke="#2B3340" stroke-width="1.5"/>
-  <rect x="900.0" y="244.0" width="244.0" height="42.0" rx="11" fill="#1E242E" stroke="#2B3340" stroke-width="1"/>
-  <text x="918.0" y="270.0" class="nm" fill="#A2AAB6">Dev</text>
+  <path d="M862.0 265.0 H896.0" stroke="#2C323A" stroke-width="1.5"/>
+  <rect x="900.0" y="244.0" width="244.0" height="42.0" rx="11" fill="#1E242E" stroke="#2C323A" stroke-width="1"/>
+  <text x="918.0" y="270.0" class="nm" fill="#C5CEDA">Dev</text>
   <text x="1126.0" y="271.0" class="amt" text-anchor="end" fill="#F2EFE9">₹533</text>
-  <text x="1144.0" y="336" class="cap" text-anchor="end" fill="#A2AAB6">edit one share, the rest redistribute</text>
+  <text x="1144.0" y="336" class="cap" text-anchor="end" fill="#C5CEDA">edit one share, the rest redistribute</text>
 </svg>

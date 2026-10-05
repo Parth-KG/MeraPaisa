@@ -17,36 +17,36 @@
       @keyframes fadein  { from { opacity:0; } }
     }
   </style>
-  <rect x="0.75" y="0.75" width="1198.5" height="358.5" rx="20" fill="#EFF1F5" stroke="#CCD0DA" stroke-width="1.5"/>
-  <text x="64" y="52" class="eyebrow" fill="#5C5F77">Android, Kotlin, Jetpack Compose</text>
-  <text x="64" y="146" class="wordmark" fill="#4C4F69">Mera Paisa</text>
-  <text x="64" y="188" class="tag" fill="#5C5F77">Who owes whom, in everyone’s own currency.</text>
-  <text x="64" y="224" class="hook" fill="#8839EF">No account. No server. No analytics.</text>
-  <text x="64" y="286" class="cur" fill="#8839EF" opacity="0.90">₹</text>
-  <text x="108" y="286" class="cur" fill="#8839EF" opacity="0.77">$</text>
-  <text x="152" y="286" class="cur" fill="#8839EF" opacity="0.64">€</text>
-  <text x="196" y="286" class="cur" fill="#8839EF" opacity="0.51">£</text>
-  <text x="240" y="286" class="cur" fill="#8839EF" opacity="0.38">¥</text>
-  <text x="680.0" y="141.0" class="micro" fill="#5C5F77">Total</text>
-  <rect x="680.0" y="154.0" width="140.0" height="54.0" rx="12" fill="#E6E9EF" stroke="#CCD0DA"/>
-  <text x="750.0" y="190.0" class="total" text-anchor="middle" fill="#4C4F69">₹2,400</text>
-  <path d="M834.0 181.0 H862.0 M862.0 97.0 V265.0" stroke="#CCD0DA" stroke-width="1.5" fill="none"/>
-  <path d="M862.0 97.0 H896.0" stroke="#CCD0DA" stroke-width="1.5"/>
-  <rect x="900.0" y="76.0" width="244.0" height="42.0" rx="11" fill="#EFF1F5" stroke="#8839EF" stroke-width="1.6"/>
-  <text x="918.0" y="102.0" class="nm" fill="#5C5F77">Asha</text>
-  <text x="1104.0" y="103.0" class="amt" text-anchor="end" fill="#8839EF">₹800</text>
-  <g stroke="#8839EF" fill="none" stroke-width="1.6" stroke-linecap="round"><path d="M1118.5 92.5 v-2.2 a3.5 3.5 0 0 1 7 0 v2.2"/></g><rect x="1116.0" y="92.5" width="12" height="8.5" rx="2" fill="#8839EF"/>
-  <path d="M862.0 153.0 H896.0" stroke="#CCD0DA" stroke-width="1.5"/>
-  <rect x="900.0" y="132.0" width="244.0" height="42.0" rx="11" fill="#EFF1F5" stroke="#CCD0DA" stroke-width="1"/>
-  <text x="918.0" y="158.0" class="nm" fill="#5C5F77">Bilal</text>
-  <text x="1126.0" y="159.0" class="amt" text-anchor="end" fill="#4C4F69">₹534</text>
-  <path d="M862.0 209.0 H896.0" stroke="#CCD0DA" stroke-width="1.5"/>
-  <rect x="900.0" y="188.0" width="244.0" height="42.0" rx="11" fill="#EFF1F5" stroke="#CCD0DA" stroke-width="1"/>
-  <text x="918.0" y="214.0" class="nm" fill="#5C5F77">Chaitanya</text>
-  <text x="1126.0" y="215.0" class="amt" text-anchor="end" fill="#4C4F69">₹533</text>
-  <path d="M862.0 265.0 H896.0" stroke="#CCD0DA" stroke-width="1.5"/>
-  <rect x="900.0" y="244.0" width="244.0" height="42.0" rx="11" fill="#EFF1F5" stroke="#CCD0DA" stroke-width="1"/>
-  <text x="918.0" y="270.0" class="nm" fill="#5C5F77">Dev</text>
-  <text x="1126.0" y="271.0" class="amt" text-anchor="end" fill="#4C4F69">₹533</text>
-  <text x="1144.0" y="336" class="cap" text-anchor="end" fill="#5C5F77">edit one share, the rest redistribute</text>
+  <rect x="0.75" y="0.75" width="1198.5" height="358.5" rx="20" fill="#F5F7FA" stroke="#D3DAE5" stroke-width="1.5"/>
+  <text x="64" y="52" class="eyebrow" fill="#3F4B63">Android, Kotlin, Jetpack Compose</text>
+  <text x="64" y="146" class="wordmark" fill="#0E1A33">Mera Paisa</text>
+  <text x="64" y="188" class="tag" fill="#3F4B63">Who owes whom, in everyone’s own currency.</text>
+  <text x="64" y="224" class="hook" fill="#1B2C55">No account. No server. No analytics.</text>
+  <text x="64" y="286" class="cur" fill="#1B2C55" opacity="0.90">₹</text>
+  <text x="108" y="286" class="cur" fill="#1B2C55" opacity="0.77">$</text>
+  <text x="152" y="286" class="cur" fill="#1B2C55" opacity="0.64">€</text>
+  <text x="196" y="286" class="cur" fill="#1B2C55" opacity="0.51">£</text>
+  <text x="240" y="286" class="cur" fill="#1B2C55" opacity="0.38">¥</text>
+  <text x="680.0" y="141.0" class="micro" fill="#3F4B63">Total</text>
+  <rect x="680.0" y="154.0" width="140.0" height="54.0" rx="12" fill="#E2E7EF" stroke="#D3DAE5"/>
+  <text x="750.0" y="190.0" class="total" text-anchor="middle" fill="#0E1A33">₹2,400</text>
+  <path d="M834.0 181.0 H862.0 M862.0 97.0 V265.0" stroke="#D3DAE5" stroke-width="1.5" fill="none"/>
+  <path d="M862.0 97.0 H896.0" stroke="#D3DAE5" stroke-width="1.5"/>
+  <rect x="900.0" y="76.0" width="244.0" height="42.0" rx="11" fill="#F5F7FA" stroke="#1B2C55" stroke-width="1.6"/>
+  <text x="918.0" y="102.0" class="nm" fill="#3F4B63">Asha</text>
+  <text x="1104.0" y="103.0" class="amt" text-anchor="end" fill="#1B2C55">₹800</text>
+  <g stroke="#1B2C55" fill="none" stroke-width="1.6" stroke-linecap="round"><path d="M1118.5 92.5 v-2.2 a3.5 3.5 0 0 1 7 0 v2.2"/></g><rect x="1116.0" y="92.5" width="12" height="8.5" rx="2" fill="#1B2C55"/>
+  <path d="M862.0 153.0 H896.0" stroke="#D3DAE5" stroke-width="1.5"/>
+  <rect x="900.0" y="132.0" width="244.0" height="42.0" rx="11" fill="#F5F7FA" stroke="#D3DAE5" stroke-width="1"/>
+  <text x="918.0" y="158.0" class="nm" fill="#3F4B63">Bilal</text>
+  <text x="1126.0" y="159.0" class="amt" text-anchor="end" fill="#0E1A33">₹534</text>
+  <path d="M862.0 209.0 H896.0" stroke="#D3DAE5" stroke-width="1.5"/>
+  <rect x="900.0" y="188.0" width="244.0" height="42.0" rx="11" fill="#F5F7FA" stroke="#D3DAE5" stroke-width="1"/>
+  <text x="918.0" y="214.0" class="nm" fill="#3F4B63">Chaitanya</text>
+  <text x="1126.0" y="215.0" class="amt" text-anchor="end" fill="#0E1A33">₹533</text>
+  <path d="M862.0 265.0 H896.0" stroke="#D3DAE5" stroke-width="1.5"/>
+  <rect x="900.0" y="244.0" width="244.0" height="42.0" rx="11" fill="#F5F7FA" stroke="#D3DAE5" stroke-width="1"/>
+  <text x="918.0" y="270.0" class="nm" fill="#3F4B63">Dev</text>
+  <text x="1126.0" y="271.0" class="amt" text-anchor="end" fill="#0E1A33">₹533</text>
+  <text x="1144.0" y="336" class="cap" text-anchor="end" fill="#3F4B63">edit one share, the rest redistribute</text>
 </svg>
