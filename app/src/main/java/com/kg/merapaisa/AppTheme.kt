@@ -71,11 +71,12 @@ val themes = listOf(
         border = Color(0xFF4F565F), onAccent = Color(0xFF171C24)
     ),
     // Butter-yellow text on plum-black under an orchid accent, from Pastelón de Amarillos
-    // (Richard Martinez, MIT). Called Pastelón Dark in the vote.
+    // (Richard Martinez, MIT), the orchid lifted a step so text in it clears 5:1 on its sheets.
+    // Called Pastelón Dark in the vote.
     AppTheme(
         name = "Jamun",
         background = Color(0xFF180D18), surface = Color(0xFF2A1424), card = Color(0xFF2A1424),
-        primary = Color(0xFFB765B0), secondary = Color(0xFFA0747C),
+        primary = Color(0xFFC471BD), secondary = Color(0xFFA0747C),
         textPrimary = Color(0xFFFFE0A3), textSecondary = Color(0xFFD8AF9D),
         positive = Color(0xFF5CCC91), negative = Color(0xFFFE9DA0),
         highlight = Color(0xFF3C2530), divider = Color(0xFF35252D),
@@ -231,8 +232,8 @@ fun AppTheme.toColorScheme(): ColorScheme = if (isDark) {
         inversePrimary = background,
         secondary = secondary,
         onSecondary = background,
-        secondaryContainer = lerp(card, primary, 0.22f),
-        onSecondaryContainer = primary,
+        secondaryContainer = highlight,
+        onSecondaryContainer = textPrimary,
         tertiary = primary,
         onTertiary = onAccent,
         tertiaryContainer = highlight,
@@ -270,8 +271,8 @@ fun AppTheme.toColorScheme(): ColorScheme = if (isDark) {
         inversePrimary = background,
         secondary = secondary,
         onSecondary = background,
-        secondaryContainer = lerp(card, primary, 0.22f),
-        onSecondaryContainer = primary,
+        secondaryContainer = highlight,
+        onSecondaryContainer = textPrimary,
         tertiary = primary,
         onTertiary = onAccent,
         tertiaryContainer = highlight,
