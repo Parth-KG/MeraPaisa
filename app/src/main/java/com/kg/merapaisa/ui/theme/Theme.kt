@@ -7,7 +7,8 @@ import com.kg.merapaisa.toColorScheme
 
 /**
  * Drives Material from the user's chosen palette. There is no dynamic colour and no template
- * purple scheme any more, so an unstyled AlertDialog, Switch or FilterChip already looks right.
+ * purple scheme any more, so an unstyled AlertDialog or Switch already looks right. A FilterChip
+ * takes choiceChipColors and choiceChipBorder, because Material gives a chosen chip no edge.
  */
 @Composable
 fun MeraPaisaTheme(

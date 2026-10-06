@@ -38,6 +38,8 @@ import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.SUPPORTED_CURRENCIES
 import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.ui.RowDivider
+import com.kg.merapaisa.ui.choiceChipBorder
+import com.kg.merapaisa.ui.choiceChipColors
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
@@ -140,7 +142,9 @@ fun CreateGroupDialog(
                         onClick = { currency = code },
                         shape = Shapes.small,
                         modifier = Modifier.heightIn(min = 48.dp),
-                        label = { Text(currencySymbol(code), style = MeraPaisaType.body) }
+                        label = { Text(currencySymbol(code), style = MeraPaisaType.body) },
+                        colors = choiceChipColors(),
+                        border = choiceChipBorder(currency == code)
                     )
                 }
             }

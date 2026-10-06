@@ -509,6 +509,8 @@ private fun SplitShareRow(
             }
         }
 
+        // A share waiting to be typed sits on the highlight, like the keys and the amount field. On
+        // the card it all but vanished in the light themes, where a card is a shade off the page.
         // A locked share loses the fill that makes a box look typeable and keeps only a rule
         // around it, so it reads as a figure held rather than a field waiting. It is still
         // editable: locking a share should not cost you a tap to change it.
@@ -517,7 +519,7 @@ private fun SplitShareRow(
                 .clip(Shapes.small)
                 .then(
                     if (locked) Modifier.border(1.dp, theme.border, Shapes.small)
-                    else Modifier.background(theme.fill)
+                    else Modifier.background(theme.highlight)
                 )
                 .heightIn(min = 48.dp)
                 .padding(horizontal = Spacing.md),

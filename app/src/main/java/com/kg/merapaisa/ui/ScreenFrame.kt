@@ -26,9 +26,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -165,6 +167,35 @@ internal fun RowScope.SecondaryAction(label: String, enabled: Boolean, onClick: 
     ) {
         Text(label, style = MeraPaisaType.action)
     }
+}
+
+/**
+ * A row of chips choosing one of a few. The others are outlined like any button you can press, and
+ * the chosen one sits on the highlight, edged in the accent. Material's own chips gave the chosen
+ * one no edge and the rest only a divider's, so in every theme a choice was a faint fill beside
+ * faint outlines, and the chosen chip read as the disabled one.
+ */
+@Composable
+internal fun choiceChipColors(): SelectableChipColors {
+    val theme = LocalAppTheme.current
+    return FilterChipDefaults.filterChipColors(
+        labelColor = theme.textSecondary,
+        selectedContainerColor = theme.highlight,
+        selectedLabelColor = theme.textPrimary
+    )
+}
+
+/** The edge that goes with [choiceChipColors]. */
+@Composable
+internal fun choiceChipBorder(selected: Boolean, enabled: Boolean = true): BorderStroke {
+    val theme = LocalAppTheme.current
+    return FilterChipDefaults.filterChipBorder(
+        enabled = enabled,
+        selected = selected,
+        borderColor = theme.border,
+        selectedBorderColor = theme.primary,
+        selectedBorderWidth = 1.5.dp
+    )
 }
 
 /** A heading inside the list. Sentence case, quiet, with air above it and little below. */

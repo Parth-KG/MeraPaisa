@@ -53,6 +53,8 @@ import com.kg.merapaisa.deleteProfilePhoto
 import com.kg.merapaisa.saveProfilePhoto
 import com.kg.merapaisa.ui.AVATAR_HUES
 import com.kg.merapaisa.ui.avatarInk
+import com.kg.merapaisa.ui.choiceChipBorder
+import com.kg.merapaisa.ui.choiceChipColors
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
@@ -273,7 +275,9 @@ internal fun AvatarPicker(
                 },
                 shape = Shapes.small,
                 modifier = Modifier.heightIn(min = 48.dp),
-                label = { Text(label, style = MeraPaisaType.action) }
+                label = { Text(label, style = MeraPaisaType.action) },
+                colors = choiceChipColors(),
+                border = choiceChipBorder(pfpType == type)
             )
         }
     }
@@ -374,7 +378,9 @@ internal fun CurrencyChips(selected: String, enabled: Boolean = true, onSelect: 
                 onClick = { onSelect(code) },
                 shape = Shapes.small,
                 modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = code },
-                label = { Text(currencySymbol(code), style = MeraPaisaType.body) }
+                label = { Text(currencySymbol(code), style = MeraPaisaType.body) },
+                colors = choiceChipColors(),
+                border = choiceChipBorder(selected == code, enabled)
             )
         }
     }

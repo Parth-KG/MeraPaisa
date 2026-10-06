@@ -28,7 +28,6 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -108,11 +107,8 @@ fun SplitAmountScreen(
                     },
                     shape = Shapes.small,
                     label = { Text(code, style = MeraPaisaType.action) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        labelColor = theme.textSecondary,
-                        selectedContainerColor = theme.highlight,
-                        selectedLabelColor = theme.textPrimary
-                    )
+                    colors = choiceChipColors(),
+                    border = choiceChipBorder(currency == code)
                 )
             }
         }
@@ -296,11 +292,11 @@ internal fun SplitPrimaryButton(label: String, enabled: Boolean, onClick: () -> 
             )
             .padding(horizontal = Spacing.lg, vertical = Spacing.md)
             .heightIn(min = 56.dp),
+        // Disabled, it looks like every other button that can't be pressed yet. It was the
+        // highlight under grey text, which since grey text reached 7:1 read as a button you could.
         colors = ButtonDefaults.buttonColors(
             containerColor = theme.primary,
-            contentColor = theme.onAccent,
-            disabledContainerColor = theme.highlight,
-            disabledContentColor = theme.textSecondary
+            contentColor = theme.onAccent
         )
     ) {
         Text(label, style = MeraPaisaType.action)
