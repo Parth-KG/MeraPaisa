@@ -43,6 +43,11 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.unit.Constraints
+import kotlin.math.roundToInt
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -210,7 +215,10 @@ private fun ThemeChip(t: AppTheme, tried: Boolean, inUse: Boolean, onTry: () -> 
 
 /**
  * The top of the Balances screen in [tried]: the tabs, the total and the first people, drawn by
- * the parts that draw the real screen, so what you see here is what you will get.
+ * the parts that draw the real screen, so what you see here is what you will get. It is laid out
+ * at the width of the window and drawn smaller to fit, a miniature rather than a narrower copy:
+ * laid out in the sheet's own width, a row that fits on the real screen wrapped its amount onto a
+ * second line here.
  *
  * It is a picture, not a second ledger. Taps stop at it, keyboard focus passes over it, and
  * TalkBack hears it as one line naming the theme, rather than a set of rows that do nothing.
@@ -218,6 +226,7 @@ private fun ThemeChip(t: AppTheme, tried: Boolean, inUse: Boolean, onTry: () -> 
 @Composable
 private fun LedgerPreview(tried: AppTheme, people: List<PersonWithBalance>, modifier: Modifier = Modifier) {
     val edge = LocalAppTheme.current.border
+    val windowWidth = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.roundToPx() }
     // One person at large type, where two filled the screen and pushed every theme below it.
     val peopleShown = if (LocalDensity.current.fontScale >= 1.5f) 1 else 2
     Box(
@@ -233,7 +242,7 @@ private fun LedgerPreview(tried: AppTheme, people: List<PersonWithBalance>, modi
             CompositionLocalProvider(LocalAppTheme provides tried) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .miniatureOf(windowWidth)
                         .background(tried.background)
                         .padding(bottom = Spacing.sm)
                 ) {
@@ -266,6 +275,20 @@ private fun LedgerPreview(tried: AppTheme, people: List<PersonWithBalance>, modi
                 }
             }
         )
+    }
+}
+
+/** Measures the content [fullWidth] wide, then draws it scaled down to the width it is given. */
+private fun Modifier.miniatureOf(fullWidth: Int): Modifier = layout { measurable, constraints ->
+    val width = constraints.maxWidth
+    val placeable = measurable.measure(Constraints.fixedWidth(maxOf(fullWidth, width)))
+    val scale = width.toFloat() / placeable.width
+    layout(width, (placeable.height * scale).roundToInt()) {
+        placeable.placeWithLayer(0, 0) {
+            scaleX = scale
+            scaleY = scale
+            transformOrigin = TransformOrigin(0f, 0f)
+        }
     }
 }
 
