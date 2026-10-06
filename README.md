@@ -19,9 +19,9 @@
 
 <table>
 <tr>
-<td align="center" width="33%"><img src="docs/screenshots/balances.jpeg" width="235" alt="Balances screen in the Paper theme. Overall, owed to you ₹13,505.50 and $1,050.25 on separate lines above a double rule, then four people: Asha owes you ₹1,200, you owe Bilal ₹40, Chaitanya owes you ₹12,345.50, Diego owes you $1,050.25. Add a person and Split an expense sit at the foot"><br><sub><b>Balances</b><br>one figure per currency, never summed</sub></td>
-<td align="center" width="33%"><img src="docs/screenshots/split.jpeg" width="235" alt="Adjust the shares screen in the Midnight theme, splitting ₹2,400 for dinner at Trishna four ways. Asha is locked at ₹800 and Bilal at ₹533.33; you take ₹533.34 and Chaitanya ₹533.33, and the shares add up to ₹2,400"><br><sub><b>Split</b><br>edit one share, the rest redistribute</sub></td>
-<td align="center" width="33%"><img src="docs/screenshots/groups.jpeg" width="235" alt="Group screen for Goa, October in the Amoled theme: four members and three expenses. Who pays whom lists three payments to you, from Bilal, Asha and Chaitanya, with fewest payments on, above where everyone stands"><br><sub><b>Groups</b><br>a trip, kept apart from your balances</sub></td>
+<td align="center" width="33%"><img src="docs/screenshots/balances.jpeg" width="235" alt="Balances screen in the Neel theme, navy on cool white. Overall, owed to you ₹13,505.50 and $1,050.25 on separate lines above a double rule, then four people: Asha owes you ₹1,200, you owe Bilal ₹40, Chaitanya owes you ₹12,345.50, Diego owes you $1,050.25. Add a person and Split an expense sit at the foot"><br><sub><b>Balances</b><br>one figure per currency, never summed</sub></td>
+<td align="center" width="33%"><img src="docs/screenshots/split.jpeg" width="235" alt="Adjust the shares screen in the Diya theme, marigold on blue-grey, splitting ₹2,400 for dinner at Trishna four ways. Asha is locked at ₹800 and Bilal at ₹533.33; you take ₹533.34 and Chaitanya ₹533.33, and the shares add up to ₹2,400"><br><sub><b>Split</b><br>edit one share, the rest redistribute</sub></td>
+<td align="center" width="33%"><img src="docs/screenshots/groups.jpeg" width="235" alt="Group screen for Goa, October in the Kamal theme, pine green with a lotus-pink accent: four members and three expenses. Who pays whom lists three payments to you of ₹4,500 each, from Asha, Bilal and Chaitanya, with fewest payments on. Where everyone stands shows you owed ₹13,500 and each of the other three owing ₹4,500"><br><sub><b>Groups</b><br>a trip, kept apart from your balances</sub></td>
 </tr>
 </table>
 
@@ -161,7 +161,7 @@ Kotlin and Jetpack Compose with Material 3. Room for storage, with exported sche
 
 Type is Anek Latin by Ek Type for amounts and titles and Figtree for everything else, shipped as static subset instances because API 24 and 25 ignore variable font axes.
 
-412 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec and theme contrast, and 158 instrumentation tests covering every migration, the full migration chain, and the settle, reopen, rollback, edit, delete, reconcile and move-debt paths against a real database.
+421 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec and theme contrast, and 184 instrumentation tests covering every migration, the full migration chain, and the settle, reopen, rollback, edit, delete, reconcile and move-debt paths against a real database.
 
 ## Build from source
 
