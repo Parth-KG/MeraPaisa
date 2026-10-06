@@ -221,13 +221,14 @@ class ThemeInkContrastTest {
 
     /**
      * A divider separates rows without competing with them; a border marks something you can press,
-     * so it is the firmer of the two.
+     * so it is the firmer of the two, and at 3:1 on every ground a field or a switch sits on: the
+     * page, a sheet and a card. At 2.3 on the page, every theme's fields and off switches were faint.
      */
     @Test
     fun dividersAreQuietAndBordersFirm() {
         val failures = themes.flatMap { theme ->
             val divider = contrastRatio(theme.divider, theme.background)
-            val border = contrastRatio(theme.border, theme.background)
+            val border = listOf(theme.background, theme.surface, theme.card).minOf { contrastRatio(theme.border, it) }
             listOfNotNull(
                 if (divider < MIN_DIVIDER) "${theme.name}: divider %.2f:1, needs %.2f".format(divider, MIN_DIVIDER) else null,
                 if (border < MIN_BORDER || border <= divider)
@@ -242,7 +243,7 @@ class ThemeInkContrastTest {
         const val MIN_RATIO = 4.5
         const val MIN_ENHANCED_RATIO = 7.0
         const val MIN_DIVIDER = 1.2
-        const val MIN_BORDER = 2.0
+        const val MIN_BORDER = 3.0
 
         /** Below this two colours read as the same colour on a phone, whatever the hex says. */
         const val MIN_ROLE_DISTANCE = 15.0

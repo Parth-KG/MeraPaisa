@@ -48,9 +48,11 @@ data class AppTheme(
  * Jamun, Monsoon, Kaapi and Kamal, then Tulsi, Khadi, Gulab, Kansa and Neel.
  *
  * Every theme sets all its colours, the four that used to be worked out included: a highlight
- * for keys and highlighted rows that stands clear of the page and the card, a quiet divider and a
- * firmer border (1.3 and 2.3 against the page, the weights Neel was specified with), and the text
- * that sits on its accent.
+ * for keys and highlighted rows that stands clear of the page and the card, a quiet divider (1.3
+ * against the page, the weight Neel was specified with), a border at 3:1 on the page, the sheet and
+ * the card, the least the edge of a field, a button or a switch should have, and the text that sits
+ * on its accent. Borders were 2.3 to start with, Neel's weight, and every theme's review found its
+ * fields and off switches faint, so each was darkened (light) or lightened (dark) at its own hue.
  *
  * Friends found some themes hard to read, so amounts and grey text are held to 7:1 against both
  * the page and the highlight, well past the 4.5:1 everything else meets. Where a colour fell short
@@ -68,7 +70,7 @@ val themes = listOf(
         textPrimary = Color(0xFFF2EFE9), textSecondary = Color(0xFFC5CEDA),
         positive = Color(0xFF8EDFA9), negative = Color(0xFFFFBDB6),
         highlight = Color(0xFF353C46), divider = Color(0xFF2C323A),
-        border = Color(0xFF4F565F), onAccent = Color(0xFF171C24)
+        border = Color(0xFF6C747D), onAccent = Color(0xFF171C24)
     ),
     // Butter-yellow text on plum-black under an orchid accent, from Pastelón de Amarillos
     // (Richard Martinez, MIT), the orchid lifted a step so text in it clears 5:1 on its sheets.
@@ -80,7 +82,7 @@ val themes = listOf(
         textPrimary = Color(0xFFFFE0A3), textSecondary = Color(0xFFD8AF9D),
         positive = Color(0xFF5CCC91), negative = Color(0xFFFE9DA0),
         highlight = Color(0xFF3C2530), divider = Color(0xFF35252D),
-        border = Color(0xFF604949), onAccent = Color(0xFF180D18)
+        border = Color(0xFF796160), onAccent = Color(0xFF180D18)
     ),
     // Catppuccin Mocha (github.com/catppuccin/palette, MIT): a periwinkle accent on a deep
     // grey-violet page.
@@ -91,7 +93,7 @@ val themes = listOf(
         textPrimary = Color(0xFFCDD6F4), textSecondary = Color(0xFFB6BED9),
         positive = Color(0xFFA6E3A1), negative = Color(0xFFFEA5BD),
         highlight = Color(0xFF2F3040), divider = Color(0xFF313344),
-        border = Color(0xFF54576B), onAccent = Color(0xFF181825)
+        border = Color(0xFF65697D), onAccent = Color(0xFF181825)
     ),
     // Filter coffee: a dark-roast page, cream text and a turquoise accent. Drawn for the app.
     // Called Espresso in the vote.
@@ -102,7 +104,7 @@ val themes = listOf(
         textPrimary = Color(0xFFF6EBDD), textSecondary = Color(0xFFCDBDAC),
         positive = Color(0xFFA3D17C), negative = Color(0xFFFEA9AD),
         highlight = Color(0xFF3E2F25), divider = Color(0xFF372C22),
-        border = Color(0xFF5C5044), onAccent = Color(0xFF1F150D)
+        border = Color(0xFF75695C), onAccent = Color(0xFF1F150D)
     ),
     // A pine-green page under a lotus-pink accent. The page comes from a Pinterest palette, the
     // rest was drawn for the app. Its keys and keypad sit darker than the page, as its card does.
@@ -114,7 +116,7 @@ val themes = listOf(
         textPrimary = Color(0xFFE6EDE8), textSecondary = Color(0xFFCFE3D6),
         positive = Color(0xFF9EF0B9), negative = Color(0xFFFED5CF),
         highlight = Color(0xFF1E3D2C), divider = Color(0xFF3F5E4C),
-        border = Color(0xFF698473), onAccent = Color(0xFF113321)
+        border = Color(0xFF7C9886), onAccent = Color(0xFF113321)
     ),
     // Pale green account-book paper, ink-black text and sepia-ink buttons. Drawn for the app.
     // Called Ledger in the vote.
@@ -125,7 +127,7 @@ val themes = listOf(
         textPrimary = Color(0xFF1F2A24), textSecondary = Color(0xFF313F37),
         positive = Color(0xFF024620), negative = Color(0xFF7D0120),
         highlight = Color(0xFFC7D1BF), divider = Color(0xFFC8D2C4),
-        border = Color(0xFF93A094), onAccent = Color(0xFFFFFFFF)
+        border = Color(0xFF788579), onAccent = Color(0xFFFFFFFF)
     ),
     // Ink on warm, undyed paper with a deep teal accent: Flexoki's light scheme (Steph Ango, MIT),
     // using its darker published steps where a test asks. Called Flexoki Light in the vote.
@@ -136,7 +138,7 @@ val themes = listOf(
         textPrimary = Color(0xFF100F0F), textSecondary = Color(0xFF42413E),
         positive = Color(0xFF374603), negative = Color(0xFF821412),
         highlight = Color(0xFFD8D6CC), divider = Color(0xFFE0DED4),
-        border = Color(0xFFABA9A1), onAccent = Color(0xFFFFFFFF)
+        border = Color(0xFF8C8A83), onAccent = Color(0xFFFFFFFF)
     ),
     // A cherry-blossom page with grape-plum buttons, from the Japanese traditional colours.
     // Called Sakura in the vote.
@@ -147,7 +149,7 @@ val themes = listOf(
         textPrimary = Color(0xFF3F2B36), textSecondary = Color(0xFF433843),
         positive = Color(0xFF014528), negative = Color(0xFF7C0513),
         highlight = Color(0xFFE4C7CA), divider = Color(0xFFDFC4C7),
-        border = Color(0xFFA8939B), onAccent = Color(0xFFFFFFFF)
+        border = Color(0xFF907B83), onAccent = Color(0xFFFFFFFF)
     ),
     // Bell metal on lilac: a near-white lavender page with bronze buttons. Called Lavender Bronze
     // in the vote.
@@ -158,10 +160,10 @@ val themes = listOf(
         textPrimary = Color(0xFF211D2E), textSecondary = Color(0xFF41365D),
         positive = Color(0xFF024629), negative = Color(0xFF7D0714),
         highlight = Color(0xFFD1CCDE), divider = Color(0xFFDBD8E6),
-        border = Color(0xFFA7A3BB), onAccent = Color(0xFFFFFFFF)
+        border = Color(0xFF848097), onAccent = Color(0xFFFFFFFF)
     ),
-    // Navy on cool white, new in v3.2.0, with the dividers, borders and white button text it
-    // was specified with.
+    // Navy on cool white, new in v3.2.0, with the dividers and white button text it was specified
+    // with. Its border is the specified #9AA6BA darkened at the same hue to 3:1.
     AppTheme(
         name = "Neel",
         background = Color(0xFFF5F7FA), surface = Color(0xFFF5F7FA), card = Color(0xFFF1F3F7),
@@ -169,7 +171,7 @@ val themes = listOf(
         textPrimary = Color(0xFF0E1A33), textSecondary = Color(0xFF3F4B63),
         positive = Color(0xFF0A5631), negative = Color(0xFF931B15),
         highlight = Color(0xFFE2E7EF), divider = Color(0xFFD3DAE5),
-        border = Color(0xFF9AA6BA), onAccent = Color(0xFFFFFFFF)
+        border = Color(0xFF828DA1), onAccent = Color(0xFFFFFFFF)
     )
 )
 
