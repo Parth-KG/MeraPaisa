@@ -29,6 +29,7 @@ import com.kg.merapaisa.ui.SplitPickerScreen
 import com.kg.merapaisa.ui.Tab
 import com.kg.merapaisa.ui.UpdateFlowState
 import com.kg.merapaisa.ui.backup.BackupDialog
+import com.kg.merapaisa.ui.dialogs.ThemeSheet
 import com.kg.merapaisa.ui.dialogs.AddPersonDialog
 import com.kg.merapaisa.ui.dialogs.ConvertCurrencyDialog
 import com.kg.merapaisa.ui.dialogs.CreateGroupDialog
@@ -309,13 +310,10 @@ fun HistoryEmptyCase() = EntryHistoryContent(
     onBack = {}, onEdit = {}, onDelete = {}, onReverse = {}, onClear = {}
 )
 
-/**
- * Settings as it opens, with the themes folded into one row, and with them open: the picker has to
- * show every theme's own colours, whichever theme it is drawn in.
- */
+/** Settings as it opens, the theme one row among the others. */
 @Composable
-fun SettingsCase(themesOpen: Boolean = false) = SettingsScreen(
-    currentThemeName = LocalAppTheme.current.name,
+fun SettingsCase() = SettingsScreen(
+    people = Fixtures.mixedPeople,
     appLockEnabled = true,
     appLockAvailable = true,
     onAppLockChange = {},
@@ -326,8 +324,7 @@ fun SettingsCase(themesOpen: Boolean = false) = SettingsScreen(
     onCheckUpdates = {},
     appVersion = "2.6.0",
     onDismiss = {},
-    onApply = {},
-    startWithThemesOpen = themesOpen
+    onApply = {}
 )
 
 @Composable
@@ -415,7 +412,6 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "history" to { HistoryCase() },
     "history-empty" to { HistoryEmptyCase() },
     "settings" to { SettingsCase() },
-    "settings-themes-open" to { SettingsCase(themesOpen = true) },
     "backup-menu" to { BackupMenuCase() },
     "backup-review" to { BackupReviewCase() },
     "backup-done" to { BackupDoneCase() },
@@ -572,6 +568,21 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
             onConvert = {},
             onRelabel = {},
             onDismiss = {}
+        )
+    },
+    // The theme picker as it opens, and trying the theme five along, across the line between dark
+    // and light, so every theme is seen as the sheet and as the picture inside one.
+    "sheet-theme" to {
+        ThemeSheet(inUse = LocalAppTheme.current, people = Fixtures.mixedPeople, onDismiss = {}, onUse = {})
+    },
+    "sheet-theme-trying" to {
+        val inUse = LocalAppTheme.current
+        ThemeSheet(
+            inUse = inUse,
+            people = Fixtures.mixedPeople,
+            onDismiss = {},
+            onUse = {},
+            startWith = themes[(themes.indexOf(inUse) + themes.size / 2) % themes.size].name
         )
     }
 )

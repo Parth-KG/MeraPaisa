@@ -98,6 +98,23 @@ class ThemeInkContrastTest {
         )
     }
 
+    /**
+     * A theme's name in the picker, which is written in its own accent on its own page so the chip
+     * is a sample of the theme. Whichever theme the picker is drawn in, every name has to be read.
+     */
+    @Test
+    fun aThemeNamesItselfInItsAccent() {
+        val failures = themes
+            .map { it.name to contrastRatio(it.primary, it.background) }
+            .filter { (_, ratio) -> ratio < MIN_RATIO }
+
+        assertTrue(
+            "a theme's name falls below $MIN_RATIO:1 on its own page: " +
+                failures.joinToString { (name, ratio) -> "%s (%.2f:1)".format(name, ratio) },
+            failures.isEmpty()
+        )
+    }
+
     // -----------------------------------------------------------------------------------------
     // Meaning
     // -----------------------------------------------------------------------------------------

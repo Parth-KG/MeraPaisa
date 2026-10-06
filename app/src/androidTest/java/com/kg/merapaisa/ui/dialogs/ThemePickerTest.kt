@@ -3,8 +3,7 @@ package com.kg.merapaisa.ui.dialogs
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
@@ -14,22 +13,27 @@ import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.kg.merapaisa.LocalAppTheme
+import com.kg.merapaisa.data.Person
+import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.themes
 import com.kg.merapaisa.ui.theme.MeraPaisaTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The theme picker in Settings, folded until asked for.
+ * The theme picker: one row in Settings, and a sheet where a theme is tried on your own ledger
+ * before it is used.
  *
- * Settings listed every theme on every visit, under a "Use this theme" button that was dead unless
- * you had picked one. Now the themes fold into one row, the button exists only while they are
- * open, and closing drops a pick nobody applied, so nothing waits out of sight.
+ * Settings used to unfold every theme as a list under a button that was dead until you picked one.
+ * Now nothing changes until "Use" is pressed, the only button offered before a pick is the way out,
+ * and the picture of your ledger is one thing to TalkBack, not rows that do nothing.
  */
 @RunWith(AndroidJUnit4::class)
 class ThemePickerTest {
@@ -40,12 +44,16 @@ class ThemePickerTest {
     private val inUse = themes.first()
     private val other = themes[2]
     private var applied: String? = null
+    private val asha = PersonWithBalance(
+        person = Person(id = 1, name = "Asha", currency = "INR"),
+        balanceMinor = 1_200_00
+    )
 
     private val settings = @Composable {
         MeraPaisaTheme(inUse) {
             CompositionLocalProvider(LocalAppTheme provides inUse) {
                 SettingsScreen(
-                    currentThemeName = inUse.name,
+                    people = listOf(asha),
                     appLockEnabled = false,
                     appLockAvailable = true,
                     onAppLockChange = {},
@@ -54,7 +62,7 @@ class ThemePickerTest {
                     onExportCsv = {},
                     canExport = true,
                     onCheckUpdates = {},
-                    appVersion = "3.1.0",
+                    appVersion = "3.2.0",
                     onDismiss = {},
                     onApply = { applied = it }
                 )
@@ -62,74 +70,101 @@ class ThemePickerTest {
         }
     }
 
-    private fun summary(): SemanticsNodeInteraction {
-        compose.onNode(hasScrollAction()).performScrollToNode(hasContentDescription("Theme, ${inUse.name}"))
-        return compose.onNode(hasContentDescription("Theme, ${inUse.name}"))
+    private fun themeRow(): SemanticsNodeInteraction {
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Theme"))
+        return compose.onNodeWithText("Theme")
     }
 
-    private fun themeRow(name: String) = compose.onNode(hasText(name) and isSelectable())
+    private fun chip(name: String) = compose.onNode(hasContentDescription(name, substring = true) and isSelectable())
 
-    private fun shownThemeRow(name: String): SemanticsNodeInteraction {
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(name) and isSelectable())
-        return themeRow(name)
+    private fun tryTheme(name: String) {
+        chip(name).performScrollTo().performClick()
+        compose.waitForIdle()
     }
-
-    private val useButton get() = compose.onNodeWithText("Use this theme")
 
     @Test
-    fun opensFoldedAndNamesTheThemeInUse() {
+    fun settingsNamesTheThemeInUseAndListsNoThemes() {
         compose.setContent(settings)
 
-        summary().assertExists()
-        themes.forEach { themeRow(it.name).assertDoesNotExist() }
-        useButton.assertDoesNotExist()
+        themeRow().assertExists()
+        compose.onNodeWithText(inUse.name).assertExists()
+        themes.forEach { chip(it.name).assertDoesNotExist() }
     }
 
     @Test
-    fun openingShowsEveryThemeAndAButtonThatWaitsForAPick() {
+    fun theSheetOpensOnTheThemeInUseWithOnlyAWayOut() {
         compose.setContent(settings)
-        summary().performClick()
+        themeRow().performClick()
+        compose.waitForIdle()
 
-        themes.forEach { shownThemeRow(it.name).assertExists() }
-        useButton.assertIsNotEnabled()
+        themes.forEach { chip(it.name).assertExists() }
+        chip("${inUse.name}, in use").assertIsSelected()
+        compose.onNodeWithText("Keep ${inUse.name}").assertExists()
+        compose.onNode(hasText("Use ", substring = true)).assertDoesNotExist()
     }
 
     @Test
-    fun closingDropsAnUnappliedPick() {
+    fun tryingAThemeRedrawsThePictureAndOffersToUseIt() {
         compose.setContent(settings)
-        summary().performClick()
-        shownThemeRow(other.name).performClick()
-        useButton.assertIsEnabled()
+        themeRow().performClick()
+        compose.waitForIdle()
+        tryTheme(other.name)
 
-        summary().performClick()
-        themes.forEach { themeRow(it.name).assertDoesNotExist() }
-        useButton.assertDoesNotExist()
-
-        summary().performClick()
-        shownThemeRow(inUse.name).assertIsSelected()
-        useButton.assertIsNotEnabled()
+        chip(other.name).assertIsSelected()
+        chip("${inUse.name}, in use").assertIsNotSelected()
+        compose.onNode(hasContentDescription("Your ledger in ${other.name}")).assertExists()
+        compose.onNodeWithText("Use ${other.name}").assertExists()
+        assertNull("trying applies nothing", applied)
     }
 
     @Test
-    fun theOpenListAndAPickSurviveRecreation() {
-        val restoration = StateRestorationTester(compose)
-        restoration.setContent(settings)
-        summary().performClick()
-        shownThemeRow(other.name).performClick()
-
-        restoration.emulateSavedInstanceStateRestore()
-
-        shownThemeRow(other.name).assertIsSelected()
-        useButton.assertIsEnabled()
-    }
-
-    @Test
-    fun applyingSendsThePick() {
+    fun thePictureIsOneThingToTalkBack() {
         compose.setContent(settings)
-        summary().performClick()
-        shownThemeRow(other.name).performClick()
-        useButton.performClick()
+        themeRow().performClick()
+        compose.waitForIdle()
+
+        compose.onNode(hasContentDescription("Your ledger in ${inUse.name}")).assertExists()
+        compose.onNodeWithText("Asha").assertDoesNotExist()
+    }
+
+    @Test
+    fun usingSendsTheTriedTheme() {
+        compose.setContent(settings)
+        themeRow().performClick()
+        compose.waitForIdle()
+        tryTheme(other.name)
+        compose.onNodeWithText("Use ${other.name}").performClick()
+        compose.waitForIdle()
 
         assertEquals(other.name, applied)
+        chip(other.name).assertDoesNotExist()
+    }
+
+    @Test
+    fun keepingSendsNothing() {
+        compose.setContent(settings)
+        themeRow().performClick()
+        compose.waitForIdle()
+        tryTheme(other.name)
+        compose.onNodeWithText("Keep ${inUse.name}").performClick()
+        compose.waitForIdle()
+
+        assertNull(applied)
+        chip(other.name).assertDoesNotExist()
+    }
+
+    @Test
+    fun theSheetAndTheTriedThemeSurviveRecreation() {
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent(settings)
+        themeRow().performClick()
+        compose.waitForIdle()
+        tryTheme(other.name)
+
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+
+        chip(other.name).assertIsSelected()
+        compose.onNodeWithText("Use ${other.name}").assertExists()
     }
 }

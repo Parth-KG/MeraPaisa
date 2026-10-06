@@ -459,7 +459,7 @@ fun MainScreen(viewModel: MainViewModel) {
             val settingsCovered = ui.backup != null || ui.import != null || ui.update != null
             Box(Modifier.fillMaxSize().then(if (settingsCovered) Modifier.clearAndSetSemantics { } else Modifier)) {
             SettingsScreen(
-                currentThemeName = theme.name,
+                people = activePersons,
                 appLockEnabled = appLockEnabled,
                 appLockAvailable = remember { canAuthenticate(context) },
                 onImportLink = viewModel::openPasteImport,
@@ -481,6 +481,8 @@ fun MainScreen(viewModel: MainViewModel) {
                     }
                 },
                 onDismiss = { viewModel.showSettingsDialog(false) },
+                // Settings stays open, now in the theme just chosen, so you see it at once on a
+                // screen you know and can try another without finding your way back.
                 onApply = { selectedTheme ->
                     scope.launch {
                         ThemeStore.setTheme(context, selectedTheme)
@@ -488,7 +490,6 @@ fun MainScreen(viewModel: MainViewModel) {
                         // the ledger next changed.
                         WidgetLedgerNotifier(context.applicationContext).onLedgerChanged()
                     }
-                    viewModel.showSettingsDialog(false)
                 }
             )
             }

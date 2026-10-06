@@ -60,7 +60,7 @@ class DesignGalleryTest {
      * The same again at double type. Amount columns and rows built around a fixed height are
      * where large text breaks first, and it breaks silently: nothing throws, the figure is just
      * clipped. Restricted to the screens where that matters most: Balances, the split's shares,
-     * a group, a person's history, and Settings with its themes open.
+     * a group, a person's history, and Settings.
      */
     @Test
     fun captureLargeTypeCases() = capture(
@@ -69,7 +69,7 @@ class DesignGalleryTest {
         only = setOf(
             "people-rows", "net-total-multi", "net-total-single", "net-total-multi-both-sides",
             "net-total-single-both-sides", "numpad", "group-detail",
-            "split-adjustments", "split-adjustments-locked", "history", "settings-themes-open"
+            "split-adjustments", "split-adjustments-locked", "history", "settings"
         )
     )
 

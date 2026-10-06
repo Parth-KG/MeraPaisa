@@ -56,7 +56,10 @@ class WindowGalleryTest {
     fun captureLargeTypeSheets() = capture(
         fontScale = 2f,
         label = "-fs2",
-        only = setOf("sheet-edit-entry", "dialog-delete-person", "sheet-add-person", "sheet-reminder", "sheet-settle-up")
+        only = setOf(
+            "sheet-edit-entry", "dialog-delete-person", "sheet-add-person", "sheet-reminder", "sheet-settle-up",
+            "sheet-theme-trying"
+        )
     )
 
     private fun capture(fontScale: Float, label: String, only: Set<String>? = null) {
