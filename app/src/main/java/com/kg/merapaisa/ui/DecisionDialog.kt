@@ -8,7 +8,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
@@ -32,9 +31,12 @@ import com.kg.merapaisa.ui.theme.Spacing
  *
  * [warning] is the one line that must not be skimmed, set apart in the negative ink.
  *
- * The confirm button takes the accent, as every action does. It used to take the negative ink
- * when the action destroyed something, but that ink is for amounts; the title and the button's
- * own word ("Delete") say what it does.
+ * The confirm takes the accent, as every action does, unless the decision is [destructive]:
+ * deleting a person, a group, an expense or an entry, clearing a history, replacing the ledger, or
+ * recording an update link's deletions. Then its word is in the negative ink, so "Delete" does not
+ * wear the colour of "Settle up" and stands apart from the way out beside it. The word only, never
+ * a filled button: the ink marks the one answer that takes something away, and nothing else.
+ * Settling up and reversing entries write a line rather than remove one, so they keep the accent.
  */
 @Composable
 internal fun DecisionDialog(
@@ -44,7 +46,7 @@ internal fun DecisionDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     dismissLabel: String,
-    confirmColour: Color = LocalAppTheme.current.primary,
+    destructive: Boolean = false,
     warning: String? = null
 ) {
     val theme = LocalAppTheme.current
@@ -66,7 +68,7 @@ internal fun DecisionDialog(
             DialogButtons(
                 confirm = {
                     TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = 48.dp)) {
-                        ButtonLabel(confirmLabel, color = confirmColour)
+                        ButtonLabel(confirmLabel, color = if (destructive) theme.negative else theme.primary)
                     }
                 },
                 dismiss = {

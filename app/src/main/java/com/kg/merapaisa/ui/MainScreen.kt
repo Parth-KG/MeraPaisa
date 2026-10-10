@@ -657,6 +657,7 @@ fun MainScreen(viewModel: MainViewModel) {
             body = "$lead$groupNote$sharedNote This can't be undone.",
             confirmLabel = "Delete",
             dismissLabel = "Keep ${target.name}",
+            destructive = true,
             onConfirm = {
                 viewModel.deletePerson(target.person)
                 viewModel.confirmDelete(null)
@@ -676,6 +677,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 "other there. Balances on Active and Settled don't change. This can't be undone.",
             confirmLabel = "Delete",
             dismissLabel = "Keep the group",
+            destructive = true,
             onConfirm = {
                 viewModel.deleteGroup(target.group.id)
                 viewModel.confirmDeleteGroup(null)

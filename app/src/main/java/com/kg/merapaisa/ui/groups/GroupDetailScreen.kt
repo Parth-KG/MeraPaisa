@@ -435,6 +435,7 @@ private fun EntryRow(
                 "This can't be undone.",
             confirmLabel = "Delete",
             dismissLabel = "Keep it",
+            destructive = true,
             onConfirm = { confirming = false; onDelete() },
             onDismiss = { confirming = false }
         )

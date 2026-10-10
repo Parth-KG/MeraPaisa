@@ -799,6 +799,7 @@ private fun DeleteConfirmDialog(count: Int, onConfirm: () -> Unit, onDismiss: ()
             " out of your ledger too. This can't be undone.",
         confirmLabel = "Delete and record",
         dismissLabel = "Go back",
+        destructive = true,
         onConfirm = onConfirm,
         onDismiss = onDismiss
     )

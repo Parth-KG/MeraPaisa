@@ -205,6 +205,7 @@ fun EditEntrySheet(
                 "This can't be undone.",
             confirmLabel = "Delete",
             dismissLabel = "Keep it",
+            destructive = true,
             onConfirm = {
                 confirmingDelete = false
                 scope.launch { sheetState.hide() }.invokeOnCompletion { onDelete(entry) }

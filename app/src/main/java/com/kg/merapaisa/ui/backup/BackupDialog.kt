@@ -395,6 +395,7 @@ private fun ReplaceConfirmDialog(
         warning = if (losesGroups) "A CSV export puts no groups back." else null,
         confirmLabel = "Replace my ledger",
         dismissLabel = "Keep my ledger",
+        destructive = true,
         onConfirm = onConfirm,
         onDismiss = onDismiss
     )

@@ -532,6 +532,7 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
                 "other members of those groups owe. This can't be undone.",
             confirmLabel = "Delete",
             dismissLabel = "Keep ${person.name}",
+            destructive = true,
             onConfirm = {},
             onDismiss = {}
         )
@@ -555,6 +556,7 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
                 "back by that much. This can't be undone.",
             confirmLabel = "Delete",
             dismissLabel = "Keep it",
+            destructive = true,
             onConfirm = {},
             onDismiss = {}
         )
@@ -566,6 +568,56 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
                 "members owe each other changes to match. This can't be undone.",
             confirmLabel = "Delete",
             dismissLabel = "Keep it",
+            destructive = true,
+            onConfirm = {},
+            onDismiss = {}
+        )
+    },
+    "dialog-delete-group" to {
+        DecisionDialog(
+            title = "Delete Goa, October?",
+            body = "Removes every expense and payment in it, and what its members owe each " +
+                "other there. Balances on Active and Settled don't change. This can't be undone.",
+            confirmLabel = "Delete",
+            dismissLabel = "Keep the group",
+            destructive = true,
+            onConfirm = {},
+            onDismiss = {}
+        )
+    },
+    "dialog-clear-history" to {
+        DecisionDialog(
+            title = "Clear Asha's history?",
+            body = "Deletes 14 entries. The ${amountString(1_200_00, "INR")} Asha owes you from them " +
+                "is kept as an opening balance. This can't be undone.",
+            confirmLabel = "Clear history",
+            dismissLabel = "Keep the history",
+            destructive = true,
+            onConfirm = {},
+            onDismiss = {}
+        )
+    },
+    "dialog-import-deletions" to {
+        DecisionDialog(
+            title = "Delete 2 entries here?",
+            body = "You ticked 2 entries the sender removed, so recording this takes them out of " +
+                "your ledger too. This can't be undone.",
+            confirmLabel = "Delete and record",
+            dismissLabel = "Go back",
+            destructive = true,
+            onConfirm = {},
+            onDismiss = {}
+        )
+    },
+    // Not destructive: it adds a line and removes none, so its confirm keeps the accent.
+    "dialog-reverse" to {
+        DecisionDialog(
+            title = "Reverse this entry and the newer ones?",
+            body = "Adds one entry of ${amountString(340_00, "INR")} in their favour that cancels " +
+                "this entry and the 2 newer ones, so Asha's balance goes back to what it was " +
+                "before. Nothing is deleted: the old entries stay in the history.",
+            confirmLabel = "Reverse entries",
+            dismissLabel = "Don't reverse",
             onConfirm = {},
             onDismiss = {}
         )
@@ -578,6 +630,7 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
             warning = "A CSV export puts no groups back.",
             confirmLabel = "Replace my ledger",
             dismissLabel = "Keep my ledger",
+            destructive = true,
             onConfirm = {},
             onDismiss = {}
         )

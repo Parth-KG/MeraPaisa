@@ -253,7 +253,6 @@ fun EntryHistoryContent(
             dismissLabel = "Don't reverse",
             // Not destructive: it writes a line rather than removing any, so it takes the accent
             // that every other action on the screen takes.
-            confirmColour = theme.primary,
             onConfirm = {
                 onReverse(target)
                 pendingReversal = null
@@ -287,6 +286,7 @@ fun EntryHistoryContent(
             body = body,
             confirmLabel = "Clear history",
             dismissLabel = "Keep the history",
+            destructive = true,
             onConfirm = {
                 onClear()
                 showClearConfirm = false
