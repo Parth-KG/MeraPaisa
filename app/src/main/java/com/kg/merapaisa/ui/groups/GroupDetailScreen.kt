@@ -69,6 +69,7 @@ import androidx.compose.material3.TextButton
 import com.kg.merapaisa.ui.LIST_STACK_FONT_SCALE
 import com.kg.merapaisa.ui.LabelAndAmount
 import com.kg.merapaisa.ui.listTitleMaxLines
+import com.kg.merapaisa.ui.format.columnShowsFraction
 
 /**
  * One group: where everybody stands, what has been spent, and a way to square it up.
@@ -104,6 +105,11 @@ fun GroupDetailScreen(
     // made a 500 dinner and a 500 repayment look identical.
     val purchases = expenses.filterNot { it.isSettlement }
     val settlements = expenses.filter { it.isSettlement }
+    // Each list is its own column, so each decides for itself whether whole amounts keep a slot.
+    val transfersShowFraction = columnShowsFraction(transfers.map { it.amountMinor }, group.currency)
+    val balancesShowFraction = columnShowsFraction(balances.map { it.amountMinor }, group.currency)
+    val purchasesShowFraction = columnShowsFraction(purchases.map { it.amountMinor }, group.currency)
+    val settlementsShowFraction = columnShowsFraction(settlements.map { it.amountMinor }, group.currency)
 
     val memberCount = if (members.size == 1) "1 member" else "${members.size} members"
     val expenseCount = if (purchases.size == 1) "1 expense" else "${purchases.size} expenses"
@@ -181,7 +187,8 @@ fun GroupDetailScreen(
                     TransferRow(
                         line = names.pays(t.fromPersonId, t.toPersonId),
                         amountMinor = t.amountMinor,
-                        currency = group.currency
+                        currency = group.currency,
+                        reserveFraction = transfersShowFraction
                     )
                 }
 
@@ -222,7 +229,8 @@ fun GroupDetailScreen(
                     name = names.subject(b.personId),
                     isYou = names.isYou(b.personId),
                     amountMinor = b.amountMinor,
-                    currency = group.currency
+                    currency = group.currency,
+                    reserveFraction = balancesShowFraction
                 )
             }
 
@@ -245,7 +253,8 @@ fun GroupDetailScreen(
                     amountMinor = e.amountMinor,
                     currency = group.currency,
                     deleteLabel = "Delete expense",
-                    onDelete = { onDeleteExpense(e.id) }
+                    onDelete = { onDeleteExpense(e.id) },
+                    reserveFraction = purchasesShowFraction
                 )
             }
 
@@ -263,7 +272,8 @@ fun GroupDetailScreen(
                         currency = group.currency,
                         deleteLabel = "Delete payment",
                         onDelete = { onDeleteExpense(e.id) },
-                        quiet = true
+                        quiet = true,
+                        reserveFraction = settlementsShowFraction
                     )
                 }
             }
@@ -304,7 +314,13 @@ private fun SectionHeading(text: String) {
  * whatever the number says.
  */
 @Composable
-private fun MemberBalanceRow(name: String, isYou: Boolean, amountMinor: Long, currency: String) {
+private fun MemberBalanceRow(
+    name: String,
+    isYou: Boolean,
+    amountMinor: Long,
+    currency: String,
+    reserveFraction: Boolean
+) {
     val theme = LocalAppTheme.current
     // Your own row is "You", so it takes "are owed" and "owe" rather than "is owed" and "owes".
     val standing = when {
@@ -344,7 +360,7 @@ private fun MemberBalanceRow(name: String, isYou: Boolean, amountMinor: Long, cu
                     amountMinor = amountMinor,
                     currencyCode = currency,
                     style = MeraPaisaType.amount,
-                    columnAligned = true
+                    reserveFraction = reserveFraction
                 )
             }
         }
@@ -366,7 +382,8 @@ private fun EntryRow(
     currency: String,
     deleteLabel: String,
     onDelete: () -> Unit,
-    quiet: Boolean = false
+    quiet: Boolean = false,
+    reserveFraction: Boolean
 ) {
     val theme = LocalAppTheme.current
     var showMenu by remember { mutableStateOf(false) }
@@ -415,7 +432,7 @@ private fun EntryRow(
                         style = MeraPaisaType.amount,
                         signStyle = SignStyle.None,
                         colourByDirection = false,
-                        columnAligned = true
+                        reserveFraction = reserveFraction
                     )
                 }
             }

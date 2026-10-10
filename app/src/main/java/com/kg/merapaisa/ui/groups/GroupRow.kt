@@ -28,6 +28,7 @@ import com.kg.merapaisa.ui.format.amountSpoken
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
+import com.kg.merapaisa.ui.format.columnShowsFraction
 
 /**
  * One group in the list: a row on the background, the same line a person gets.
@@ -39,7 +40,13 @@ import com.kg.merapaisa.ui.theme.Spacing
  * beside it, because that is what the rest of the app says when nothing is owed.
  */
 @Composable
-fun GroupRow(summary: GroupSummary, onClick: () -> Unit, onDelete: () -> Unit) {
+fun GroupRow(
+    summary: GroupSummary,
+    onClick: () -> Unit,
+    onDelete: () -> Unit,
+    /** Whether another group in the list shows paise. From [columnShowsFraction], by the list. */
+    reserveFraction: Boolean = false
+) {
     val theme = LocalAppTheme.current
     var showMenu by remember { mutableStateOf(false) }
     val balance = summary.yourBalanceMinor
@@ -87,7 +94,7 @@ fun GroupRow(summary: GroupSummary, onClick: () -> Unit, onDelete: () -> Unit) {
                 amountMinor = balance,
                 currencyCode = summary.group.currency,
                 style = MeraPaisaType.amount,
-                columnAligned = true
+                reserveFraction = reserveFraction
             )
             DropdownMenu(
                 expanded = showMenu,

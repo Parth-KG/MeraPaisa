@@ -67,6 +67,7 @@ import com.kg.merapaisa.ui.coversLedger
 import com.kg.merapaisa.ui.LIST_STACK_FONT_SCALE
 import com.kg.merapaisa.ui.LabelAndAmount
 import com.kg.merapaisa.ui.listTitleMaxLines
+import com.kg.merapaisa.ui.format.columnShowsFraction
 
 /**
  * Everything ever recorded with one person, newest first.
@@ -122,6 +123,10 @@ fun EntryHistoryContent(
     BackHandler(enabled = true) { onBack() }
 
     val count = if (entries.size == 1) "1 entry" else "${entries.size} entries"
+    // The whole history is one column of figures, across the days.
+    val entriesShowFraction = remember(entries) {
+        columnShowsFraction(entries.map { it.amountMinor }, person.currency)
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(theme.background).coversLedger()) {
 
@@ -210,7 +215,8 @@ fun EntryHistoryContent(
                         time = day.timeOf(t),
                         onEdit = { editingField = null; editingEntry = t },
                         onEditField = { field -> editingField = field; editingEntry = t },
-                        onReverse = { pendingReversal = t }
+                        onReverse = { pendingReversal = t },
+                        reserveFraction = entriesShowFraction
                     )
                 }
             }
@@ -387,7 +393,8 @@ private fun EntryRow(
     time: String,
     onEdit: () -> Unit,
     onEditField: (EntryField) -> Unit,
-    onReverse: () -> Unit
+    onReverse: () -> Unit,
+    reserveFraction: Boolean
 ) {
     val theme = LocalAppTheme.current
     var menuOpen by remember { mutableStateOf(false) }
@@ -472,7 +479,7 @@ private fun EntryRow(
                             amountMinor = entry.amountMinor,
                             currencyCode = person.currency,
                             style = MeraPaisaType.amount,
-                            columnAligned = true
+                            reserveFraction = reserveFraction
                         )
                     }
                 }

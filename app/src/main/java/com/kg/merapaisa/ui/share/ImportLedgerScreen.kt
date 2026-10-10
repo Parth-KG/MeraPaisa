@@ -65,6 +65,7 @@ import com.kg.merapaisa.ui.SectionHeading
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.kg.merapaisa.ui.format.columnShowsFraction
 
 /**
  * The incoming half of the two-sided ledger: what a link is about to write, and the chance to refuse.
@@ -237,6 +238,8 @@ private fun ConfirmingScreen(
     // Only people in the payload's currency: importing into another would mean inventing an
     // exchange rate the sender never agreed to, so those are not offered at all.
     val eligible = persons.filter { normaliseCurrency(it.currency) == payload.currency }
+    val eligibleShowFraction = columnShowsFraction(eligible.map { it.balanceMinor to it.currency })
+    val entriesShowFraction = columnShowsFraction(payload.entries.map { it.amountMinor }, payload.currency)
 
     // Ticked deletions take entries out of this ledger. That is the one destructive thing on the
     // screen, so it is asked as a question rather than folded into "Record it".
@@ -289,7 +292,8 @@ private fun ConfirmingScreen(
             PersonChoiceRow(
                 person = person,
                 selected = state.targetPersonId == person.id,
-                onClick = { onTargetChange(person.id) }
+                onClick = { onTargetChange(person.id) },
+                reserveFraction = eligibleShowFraction
             )
         }
 
@@ -376,7 +380,8 @@ private fun ConfirmingScreen(
                 note = entry.note,
                 timestamp = entry.timestamp,
                 amountMinor = -entry.amountMinor,
-                currency = payload.currency
+                currency = payload.currency,
+                reserveFraction = entriesShowFraction
             )
         }
 
@@ -459,7 +464,13 @@ private fun Outcome(label: String, amountMinor: Long, currency: String, owner: S
 
 /** One entry the link carries, as this phone will store it. */
 @Composable
-private fun EntryPreviewRow(note: String, timestamp: Long, amountMinor: Long, currency: String) {
+private fun EntryPreviewRow(
+    note: String,
+    timestamp: Long,
+    amountMinor: Long,
+    currency: String,
+    reserveFraction: Boolean
+) {
     val theme = LocalAppTheme.current
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md),
@@ -480,14 +491,19 @@ private fun EntryPreviewRow(note: String, timestamp: Long, amountMinor: Long, cu
             amountMinor = amountMinor,
             currencyCode = currency,
             style = MeraPaisaType.amount,
-            columnAligned = true
+            reserveFraction = reserveFraction
         )
     }
 }
 
 /** One person the update could be filed against, with where they stand now. */
 @Composable
-private fun PersonChoiceRow(person: PersonWithBalance, selected: Boolean, onClick: () -> Unit) {
+private fun PersonChoiceRow(
+    person: PersonWithBalance,
+    selected: Boolean,
+    onClick: () -> Unit,
+    reserveFraction: Boolean
+) {
     val theme = LocalAppTheme.current
     ChoiceRow(selected = selected, onClick = onClick) {
         Text(
@@ -505,7 +521,7 @@ private fun PersonChoiceRow(person: PersonWithBalance, selected: Boolean, onClic
                 amountMinor = person.balanceMinor,
                 currencyCode = person.currency,
                 style = MeraPaisaType.amountSmall,
-                columnAligned = true
+                reserveFraction = reserveFraction
             )
         }
     }
@@ -548,6 +564,13 @@ private fun LazyListScope.differences(
     currency: String,
     onToggleItem: (String) -> Unit
 ) {
+    // One column down the whole comparison, so every figure in it decides together.
+    val reserve = columnShowsFraction(
+        plan.theirOpenings.map { it.amountMinor } + plan.deletedHere.map { it.amountMinor } +
+            plan.newBeforeClear.map { it.amountMinor } + plan.deletedBySender.map { it.amountMinor } +
+            plan.onlyYours.map { it.amountMinor },
+        currency
+    )
     item { SectionHeading("Compared with what you have") }
 
     if (plan.edited.isNotEmpty()) {
@@ -580,7 +603,8 @@ private fun LazyListScope.differences(
                 // the row does not admit to.
                 date = dateOf(item.theirTimestamp),
                 amountMinor = null,
-                currency = currency
+                currency = currency,
+                reserveFraction = reserve
             )
         }
     }
@@ -603,7 +627,8 @@ private fun LazyListScope.differences(
                 detail = "",
                 date = dateOf(item.timestamp),
                 amountMinor = item.amountMinor,
-                currency = currency
+                currency = currency,
+                reserveFraction = reserve
             )
         }
     }
@@ -628,7 +653,8 @@ private fun LazyListScope.differences(
                 detail = "",
                 date = dateOf(item.timestamp),
                 amountMinor = item.amountMinor,
-                currency = currency
+                currency = currency,
+                reserveFraction = reserve
             )
         }
     }
@@ -651,7 +677,8 @@ private fun LazyListScope.differences(
                 detail = "",
                 date = dateOf(item.timestamp),
                 amountMinor = item.amountMinor,
-                currency = currency
+                currency = currency,
+                reserveFraction = reserve
             )
         }
     }
@@ -676,7 +703,8 @@ private fun LazyListScope.differences(
                 detail = "",
                 date = dateOf(item.timestamp),
                 amountMinor = item.amountMinor,
-                currency = currency
+                currency = currency,
+                reserveFraction = reserve
             )
         }
     }
@@ -695,7 +723,8 @@ private fun LazyListScope.differences(
                 note = item.note,
                 timestamp = item.timestamp,
                 amountMinor = item.amountMinor,
-                currency = currency
+                currency = currency,
+                reserveFraction = reserve
             )
         }
     }
@@ -747,7 +776,8 @@ private fun DifferenceRow(
     detail: String,
     date: String,
     amountMinor: Long?,
-    currency: String
+    currency: String,
+    reserveFraction: Boolean
 ) {
     val theme = LocalAppTheme.current
     Row(
@@ -780,7 +810,7 @@ private fun DifferenceRow(
                     amountMinor = amountMinor,
                     currencyCode = currency,
                     style = MeraPaisaType.amountSmall,
-                    columnAligned = true
+                    reserveFraction = reserveFraction
                 )
             }
         }

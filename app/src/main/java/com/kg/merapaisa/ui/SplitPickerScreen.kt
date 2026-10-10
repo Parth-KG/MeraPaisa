@@ -22,6 +22,7 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,6 +37,7 @@ import com.kg.merapaisa.ui.format.AmountText
 import com.kg.merapaisa.ui.format.amountSpoken
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Spacing
+import com.kg.merapaisa.ui.format.columnShowsFraction
 
 /**
  * Step two of a split: who it is between.
@@ -63,6 +65,7 @@ fun SplitPickerScreen(
 ) {
     val theme = LocalAppTheme.current
     val list = rememberLazyListState()
+    val reserve = remember(allPersons) { columnShowsFraction(allPersons.map { it.balanceMinor to it.currency }) }
     val chosen = selectedIds.size + if (includeMe) 1 else 0
     val enoughPeople = chosen >= 2
 
@@ -96,7 +99,8 @@ fun SplitPickerScreen(
                     name = "You",
                     person = null,
                     selected = includeMe,
-                    onToggle = onToggleMe
+                    onToggle = onToggleMe,
+                    reserveFraction = false
                 )
             }
 
@@ -106,7 +110,8 @@ fun SplitPickerScreen(
                     name = person.name,
                     person = person,
                     selected = person.id in selectedIds,
-                    onToggle = { onTogglePerson(person.id) }
+                    onToggle = { onTogglePerson(person.id) },
+                    reserveFraction = reserve
                 )
             }
         }
@@ -166,7 +171,8 @@ private fun SplitPickerRow(
     name: String,
     person: PersonWithBalance?,
     selected: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    reserveFraction: Boolean
 ) {
     val theme = LocalAppTheme.current
     val direction = when {
@@ -222,7 +228,7 @@ private fun SplitPickerRow(
                 amountMinor = person.balanceMinor,
                 currencyCode = person.currency,
                 style = MeraPaisaType.amount,
-                columnAligned = true,
+                reserveFraction = reserveFraction,
                 spokenOwner = person.name
             )
         }

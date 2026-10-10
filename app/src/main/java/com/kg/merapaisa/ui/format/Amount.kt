@@ -33,6 +33,28 @@ data class AmountParts(
     val digits: String get() = integer + if (fraction.isEmpty()) "" else ".$fraction"
 }
 
+/**
+ * True when this amount draws paise: a currency with a minor unit, and something in it. A yen
+ * figure never does, though it is kept in hundredths.
+ */
+fun showsFraction(amountMinor: Long, currencyCode: String): Boolean =
+    currencyDecimals(normaliseCurrency(currencyCode)) != 0 && amountMinor % 100 != 0L
+
+/**
+ * True when some amount in a column draws paise, so the whole ones beside it keep their decimal
+ * slot open and the decimal points line up. A column of whole amounts keeps no slot: an empty
+ * ".00" on every row pushed each figure in from the edge for nothing.
+ *
+ * Worked out once by whoever owns the list and handed to every row, since a row cannot see the
+ * others.
+ */
+fun columnShowsFraction(amounts: Iterable<Pair<Long, String>>): Boolean =
+    amounts.any { (amountMinor, currencyCode) -> showsFraction(amountMinor, currencyCode) }
+
+/** The same for a column in one currency, a group's or a person's. */
+fun columnShowsFraction(amountsMinor: Iterable<Long>, currencyCode: String): Boolean =
+    amountsMinor.any { showsFraction(it, currencyCode) }
+
 /** How much of the sign to show. */
 enum class SignStyle {
     /**

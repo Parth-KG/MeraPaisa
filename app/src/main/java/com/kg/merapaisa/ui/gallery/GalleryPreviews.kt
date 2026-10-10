@@ -50,6 +50,8 @@ import com.kg.merapaisa.ui.share.ImportLedgerDialog
 import com.kg.merapaisa.ui.share.ShareLedgerSheet
 import com.kg.merapaisa.ui.theme.MeraPaisaTheme
 import com.kg.merapaisa.ui.update.UpdateScreen
+import com.kg.merapaisa.ui.format.columnShowsFraction
+import com.kg.merapaisa.data.PersonWithBalance
 
 /**
  * Every fake-data rendering, written once.
@@ -75,16 +77,25 @@ fun GalleryFrame(theme: AppTheme, content: @Composable () -> Unit) {
 
 /** One row of each shape a balance can take, stacked so the amount column has to line up. */
 @Composable
-fun PeopleRowsCase() {
+fun PeopleRowsCase() = PeopleRows(Fixtures.mixedPeople)
+
+/** Whole amounts only, in rupees and yen: a column with no paise keeps no empty decimal slot. */
+@Composable
+fun PeopleRowsWholeCase() = PeopleRows(Fixtures.wholePeople)
+
+@Composable
+private fun PeopleRows(people: List<PersonWithBalance>) {
+    val reserve = columnShowsFraction(people.map { it.balanceMinor to it.currency })
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-        Fixtures.mixedPeople.forEachIndexed { index, person ->
+        people.forEachIndexed { index, person ->
             if (index > 0) RowDivider()
             PersonRow(
                 person = person,
                 isSelected = person.id == 1L,
                 onHistoryClick = {}, onClick = {}, onSendReminder = {}, onDelete = {},
                 onEditClick = {}, onSettleToggle = {}, onShareSummary = {},
-                onShareLedger = {}, onMoveDebt = {}
+                onShareLedger = {}, onMoveDebt = {},
+                reserveFraction = reserve
             )
         }
     }
@@ -93,6 +104,7 @@ fun PeopleRowsCase() {
 /** Long enough to scroll: catches a row that only looks right in isolation. */
 @Composable
 fun PeopleListLongCase() {
+    val reserve = columnShowsFraction(Fixtures.manyPeople.map { it.balanceMinor to it.currency })
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
         Fixtures.manyPeople.forEachIndexed { index, person ->
             if (index > 0) RowDivider()
@@ -101,7 +113,8 @@ fun PeopleListLongCase() {
                 isSelected = false,
                 onHistoryClick = {}, onClick = {}, onSendReminder = {}, onDelete = {},
                 onEditClick = {}, onSettleToggle = {}, onShareSummary = {},
-                onShareLedger = {}, onMoveDebt = {}
+                onShareLedger = {}, onMoveDebt = {},
+                reserveFraction = reserve
             )
         }
     }
@@ -390,6 +403,7 @@ fun LockedCase() = LockedScreen(onUnlock = {})
  */
 val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "people-rows" to { PeopleRowsCase() },
+    "people-rows-whole" to { PeopleRowsWholeCase() },
     "people-list-long" to { PeopleListLongCase() },
     "people-settled-and-even" to { SettledPersonCase() },
     "net-total-multi" to { NetTotalMultiCase() },

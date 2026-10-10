@@ -69,6 +69,15 @@ object Fixtures {
     /** The set every row and column layout has to survive. */
     val mixedPeople = listOf(asha, bilal, chaitanya, dollarPerson, yenPerson, evenPerson, shortName)
 
+    /** Whole amounts only, so the amount column has no paise to line up with. */
+    val wholePeople = listOf(
+        asha,
+        bilal,
+        personWith(3, "Chaitanya Venkataraman", "INR", 12_34_567_00),
+        yenPerson,
+        evenPerson
+    )
+
     /** Long enough to scroll, with the awkward cases kept at the top where they are visible. */
     val manyPeople: List<PersonWithBalance> = mixedPeople + (9..27).map { i ->
         personWith(i.toLong(), "Person $i", if (i % 5 == 0) "USD" else "INR", (i * 337_00L) - 3_000_00)

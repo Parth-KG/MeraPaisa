@@ -33,8 +33,9 @@ import com.kg.merapaisa.data.currencySymbol
  *    fails anyone who cannot separate the two inks.
  *  - The symbol is set smaller and quieter than the digits, on the same baseline, so reading a
  *    column means reading figures rather than a row of rupee signs.
- *  - Figures are tabular, so a column lines up, and [columnAligned] keeps the decimal slot open
- *    on whole amounts so the decimal points line up too.
+ *  - Figures are tabular, so a column lines up, and [reserveFraction] keeps the decimal slot open
+ *    on whole amounts when another figure in the column shows paise, so the decimal points line up
+ *    too.
  *  - TalkBack is given words instead of glyphs, since it has no name for U+2212 and will either
  *    skip it or read "minus sign" in the middle of a figure.
  */
@@ -47,8 +48,11 @@ fun AmountText(
     signStyle: SignStyle = SignStyle.Always,
     /** Colour the figure by direction. Off where a row already carries the meaning some other way. */
     colourByDirection: Boolean = true,
-    /** Keep the decimal slot open on whole amounts, so a column's decimal points line up. */
-    columnAligned: Boolean = false,
+    /**
+     * Keep the decimal slot open on a whole amount, because another figure in its column shows
+     * paise. From [columnShowsFraction], worked out by the list rather than the row.
+     */
+    reserveFraction: Boolean = false,
     /** The person or member this belongs to, so TalkBack can say whose it is. */
     spokenOwner: String? = null,
     textAlign: TextAlign = TextAlign.End
@@ -72,7 +76,7 @@ fun AmountText(
             // Same width as a real fraction, drawn in nothing, so the column stays square.
             // Every currency, the yen included: a yen figure has no decimals to show, but in a column
             // beside rupees and dollars it still has to stop where their decimal points are.
-            columnAligned ->
+            reserveFraction ->
                 withStyle(amountBlankFractionSpan()) { append(".00") }
         }
     }

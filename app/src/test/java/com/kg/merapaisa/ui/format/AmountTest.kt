@@ -190,4 +190,37 @@ class AmountTest {
     fun `spoken figures keep their grouping and decimals`() {
         assertEquals("Asha owes you 12,34,567.50 rupees", amountSpoken(12_34_567_50, "INR", "Asha"))
     }
+
+    // -----------------------------------------------------------------------------------------
+    // Whether a column keeps a decimal slot
+    // -----------------------------------------------------------------------------------------
+
+    @Test
+    fun `an amount shows a fraction only when it has paise`() {
+        assertEquals(true, showsFraction(237_40, "INR"))
+        assertEquals(true, showsFraction(-40_05, "USD"))
+        assertEquals(false, showsFraction(1_200_00, "INR"))
+        assertEquals(false, showsFraction(0, "INR"))
+        assertEquals(true, showsFraction(Long.MIN_VALUE, "INR"))
+    }
+
+    @Test
+    fun `yen never shows a fraction, though it is kept in hundredths`() {
+        // A split can leave ¥33.34 in an entry; it is drawn as 33.
+        assertEquals(false, showsFraction(33_34, "JPY"))
+        assertEquals(false, showsFraction(12_000_00, "JPY"))
+    }
+
+    @Test
+    fun `a column of whole amounts keeps no slot`() {
+        assertEquals(false, columnShowsFraction(listOf(1_200_00L, -40_00L, 0L), "INR"))
+        assertEquals(false, columnShowsFraction(listOf(1_200_00L to "INR", 33_34L to "JPY")))
+        assertEquals(false, columnShowsFraction(emptyList<Long>(), "INR"))
+    }
+
+    @Test
+    fun `one amount with paise opens the slot for the whole column`() {
+        assertEquals(true, columnShowsFraction(listOf(1_200_00L, 75_50L), "INR"))
+        assertEquals(true, columnShowsFraction(listOf(-12_000_00L to "JPY", 1_050_25L to "USD")))
+    }
 }

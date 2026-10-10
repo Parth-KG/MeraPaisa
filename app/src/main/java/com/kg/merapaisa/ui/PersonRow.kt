@@ -37,6 +37,7 @@ import com.kg.merapaisa.ui.format.amountSpoken
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
+import com.kg.merapaisa.ui.format.columnShowsFraction
 
 /**
  * One person in the list: a row on the background, not a tile.
@@ -62,7 +63,9 @@ fun PersonRow(
     onSettleToggle: () -> Unit,
     onShareSummary: () -> Unit,
     onShareLedger: () -> Unit,
-    onMoveDebt: () -> Unit
+    onMoveDebt: () -> Unit,
+    /** Whether another row in this list shows paise. From [columnShowsFraction], by the list. */
+    reserveFraction: Boolean = false
 ) {
     val theme = LocalAppTheme.current
     var showMenu by remember { mutableStateOf(false) }
@@ -116,7 +119,7 @@ fun PersonRow(
                     amountMinor = person.balanceMinor,
                     currencyCode = person.currency,
                     style = MeraPaisaType.amount,
-                    columnAligned = true,
+                    reserveFraction = reserveFraction,
                     spokenOwner = person.name
                 )
             }

@@ -75,6 +75,7 @@ import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.Tab as LedgerTab
 import kotlinx.coroutines.launch
+import com.kg.merapaisa.ui.format.columnShowsFraction
 
 /**
  * Try a theme on your own ledger before you use it.
@@ -249,14 +250,17 @@ private fun LedgerPreview(tried: AppTheme, people: List<PersonWithBalance>, modi
                     if (people.isEmpty()) {
                         EmptyState(tab = LedgerTab.Active)
                     } else {
-                        people.take(peopleShown).forEachIndexed { index, person ->
+                        val shown = people.take(peopleShown)
+                        val reserve = columnShowsFraction(shown.map { it.balanceMinor to it.currency })
+                        shown.forEachIndexed { index, person ->
                             if (index > 0) RowDivider()
                             PersonRow(
                                 person = person,
                                 isSelected = false,
                                 onHistoryClick = {}, onClick = {}, onSendReminder = {}, onDelete = {},
                                 onEditClick = {}, onSettleToggle = {}, onShareSummary = {},
-                                onShareLedger = {}, onMoveDebt = {}
+                                onShareLedger = {}, onMoveDebt = {},
+                                reserveFraction = reserve
                             )
                         }
                     }

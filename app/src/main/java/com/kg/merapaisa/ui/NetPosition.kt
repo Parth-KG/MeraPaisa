@@ -32,6 +32,7 @@ import com.kg.merapaisa.ui.format.amountSpoken
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Motion
 import com.kg.merapaisa.ui.theme.Spacing
+import com.kg.merapaisa.ui.format.columnShowsFraction
 
 /**
  * Where you stand overall, set the way a ledger closes a page.
@@ -140,11 +141,13 @@ private fun Net(totals: List<CurrencyTotal>) {
 
         else -> {
             Spacer(Modifier.height(Spacing.sm))
+            val reserve = columnShowsFraction(totals.map { it.amountMinor to it.currency })
             totals.forEach { total ->
                 TotalLine(
                     words = if (total.amountMinor > 0) "owed to you" else "you owe",
                     amountMinor = total.amountMinor,
-                    currency = total.currency
+                    currency = total.currency,
+                    reserveFraction = reserve
                 )
             }
         }
@@ -155,18 +158,21 @@ private fun Net(totals: List<CurrencyTotal>) {
 @Composable
 private fun BothSides(sides: List<CurrencySides>) {
     Spacer(Modifier.height(Spacing.sm))
+    val reserve = columnShowsFraction(
+        sides.flatMap { listOf(it.owedToYouMinor to it.currency, it.youOweMinor to it.currency) }
+    )
     sides.forEach { side ->
         if (side.owedToYouMinor != 0L) {
-            TotalLine(words = "owed to you", amountMinor = side.owedToYouMinor, currency = side.currency)
+            TotalLine("owed to you", side.owedToYouMinor, side.currency, reserveFraction = reserve)
         }
         if (side.youOweMinor != 0L) {
-            TotalLine(words = "you owe", amountMinor = side.youOweMinor, currency = side.currency)
+            TotalLine("you owe", side.youOweMinor, side.currency, reserveFraction = reserve)
         }
     }
 }
 
 @Composable
-private fun TotalLine(words: String, amountMinor: Long, currency: String) {
+private fun TotalLine(words: String, amountMinor: Long, currency: String, reserveFraction: Boolean) {
     val theme = LocalAppTheme.current
     LabelAndAmount(
         modifier = Modifier
@@ -185,7 +191,7 @@ private fun TotalLine(words: String, amountMinor: Long, currency: String) {
                 amountMinor = amountMinor,
                 currencyCode = currency,
                 style = MeraPaisaType.amount,
-                columnAligned = true
+                reserveFraction = reserveFraction
             )
         }
     )
