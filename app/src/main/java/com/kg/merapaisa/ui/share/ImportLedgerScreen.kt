@@ -279,57 +279,9 @@ private fun ConfirmingScreen(
             )
         }
 
-        item {
-            // "contains" rather than "will record" once the tick boxes decide what is recorded:
-            // this list is the link's contents, not the outcome.
-            SectionHeading(
-                if (state.showsDifferences) "What the link contains" else "What this will record"
-            )
-        }
-
-        // Every entry, with the sign this phone will actually store. Showing the sender's signs
-        // would be showing the opposite of what happens.
-        //
-        // All of them, however many there are. The dialog showed eight and admitted to the rest in
-        // a footnote; a screen has the height, and a preview that stops early is a preview of the
-        // wrong link.
-        itemsIndexed(payload.entries, key = { index, _ -> "payload-$index" }) { index, entry ->
-            if (index > 0) RowDivider(TextRowInset)
-            EntryPreviewRow(
-                note = entry.note,
-                timestamp = entry.timestamp,
-                amountMinor = -entry.amountMinor,
-                currency = payload.currency
-            )
-        }
-
-        item {
-            // With a comparison in play the figure is a *change* to a balance that already exists,
-            // and "you will owe ₹12" would read as the whole of it. Naming where the person lands
-            // afterwards is the one phrasing that cannot be misread, and it is the number the user
-            // can check against the list on the way back.
-            val target = persons.firstOrNull { it.id == state.targetPersonId }
-            // For anyone already in the ledger, not only when a comparison is shown: an update link
-            // from someone who owes you ₹483 read "You will owe ₹150", which was the link's change
-            // and not where they stood.
-            val after = target?.let { it.balanceMinor + netHere }
-
-            Column(modifier = Modifier.padding(top = Spacing.xl)) {
-                Outcome(
-                    label = when {
-                        after != null && netHere == 0L -> "Nothing changes, ${target!!.name} stays at"
-                        after != null -> "${target!!.name} ends up at"
-                        netHere < 0 -> "You will owe"
-                        netHere > 0 -> "They will owe you"
-                        else -> "These cancel out"
-                    },
-                    amountMinor = after ?: netHere,
-                    currency = payload.currency,
-                    owner = if (after != null) target?.name else null
-                )
-            }
-        }
-
+        // Who it is filed against comes before what it holds. It sat under every entry, so on a long
+        // link the choice that decides where the money goes was below the fold, and the outcome
+        // above it named nobody until it was made.
         item { SectionHeading("File it against") }
 
         itemsIndexed(eligible, key = { _, person -> "person-${person.id}" }) { index, person ->
@@ -375,6 +327,57 @@ private fun ConfirmingScreen(
             item {
                 Paragraph("Nobody you track uses ${payload.currency}, so this has to go to someone new.")
             }
+        }
+
+        item {
+            // With a comparison in play the figure is a *change* to a balance that already exists,
+            // and "you will owe ₹12" would read as the whole of it. Naming where the person lands
+            // afterwards is the one phrasing that cannot be misread, and it is the number the user
+            // can check against the list on the way back.
+            val target = persons.firstOrNull { it.id == state.targetPersonId }
+            // For anyone already in the ledger, not only when a comparison is shown: an update link
+            // from someone who owes you ₹483 read "You will owe ₹150", which was the link's change
+            // and not where they stood.
+            val after = target?.let { it.balanceMinor + netHere }
+
+            Column(modifier = Modifier.padding(top = Spacing.xl)) {
+                Outcome(
+                    label = when {
+                        after != null && netHere == 0L -> "Nothing changes, ${target!!.name} stays at"
+                        after != null -> "${target!!.name} ends up at"
+                        netHere < 0 -> "You will owe"
+                        netHere > 0 -> "They will owe you"
+                        else -> "These cancel out"
+                    },
+                    amountMinor = after ?: netHere,
+                    currency = payload.currency,
+                    owner = if (after != null) target?.name else null
+                )
+            }
+        }
+
+        item {
+            // "contains" rather than "will record" once the tick boxes decide what is recorded:
+            // this list is the link's contents, not the outcome.
+            SectionHeading(
+                if (state.showsDifferences) "What the link contains" else "What this will record"
+            )
+        }
+
+        // Every entry, with the sign this phone will actually store. Showing the sender's signs
+        // would be showing the opposite of what happens.
+        //
+        // All of them, however many there are. The dialog showed eight and admitted to the rest in
+        // a footnote; a screen has the height, and a preview that stops early is a preview of the
+        // wrong link.
+        itemsIndexed(payload.entries, key = { index, _ -> "payload-$index" }) { index, entry ->
+            if (index > 0) RowDivider(TextRowInset)
+            EntryPreviewRow(
+                note = entry.note,
+                timestamp = entry.timestamp,
+                amountMinor = -entry.amountMinor,
+                currency = payload.currency
+            )
         }
 
         if (state.showsDifferences && plan != null) {
