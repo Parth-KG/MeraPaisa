@@ -1,5 +1,6 @@
 package com.kg.merapaisa.ui
 
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.layout.Column
 import com.kg.merapaisa.ui.theme.Spacing
 import androidx.compose.ui.Alignment
@@ -76,9 +77,13 @@ internal fun SheetFrame(
  *
  * Eleven sheets built this row by hand, each with Material's 24dp of padding inside the buttons,
  * which left a long label so little room that it wrapped where the shared buttons' 12dp does not.
+ *
+ * [above] is the sheet's scrolling content. While it runs on beneath the foot, [FootEdge] draws the
+ * line that says so.
  */
 @Composable
-internal fun SheetFoot(content: @Composable RowScope.() -> Unit) {
+internal fun SheetFoot(above: ScrollableState?, content: @Composable RowScope.() -> Unit) {
+    if (above != null) FootEdge(visible = above.canScrollForward)
     Row(
         modifier = Modifier.height(IntrinsicSize.Min)
             .fillMaxWidth()

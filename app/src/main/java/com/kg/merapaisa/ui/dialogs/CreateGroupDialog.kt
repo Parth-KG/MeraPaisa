@@ -75,12 +75,14 @@ fun CreateGroupDialog(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
+    val scroll = rememberScrollState()
+
     SheetFrame(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
         ) {
             Text(
                 "New group",
@@ -192,7 +194,7 @@ fun CreateGroupDialog(
             }
         }
 
-        SheetFoot {
+        SheetFoot(above = scroll) {
             SecondaryAction("Don't create", enabled = true) {
                 scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }

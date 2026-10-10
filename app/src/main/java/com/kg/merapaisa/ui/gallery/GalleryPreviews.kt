@@ -484,6 +484,15 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
             onCreate = { _, _, _, _ -> }
         )
     },
+    // Everyone in a long ledger to choose from, so the list runs on under the foot and its edge shows.
+    "sheet-create-group-long" to {
+        CreateGroupDialog(
+            people = Fixtures.manyPeople,
+            defaultCurrency = "INR",
+            onDismiss = {},
+            onCreate = { _, _, _, _ -> }
+        )
+    },
     // Three members and four people who could join, two of them ticked: the sheet as it looks once
     // someone is being added, with the count in the heading.
     "sheet-edit-group" to {

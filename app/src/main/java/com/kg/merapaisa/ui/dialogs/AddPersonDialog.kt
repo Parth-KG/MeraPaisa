@@ -117,12 +117,14 @@ fun AddPersonDialog(
         onDismiss()
     }
 
+    val scroll = rememberScrollState()
+
     SheetFrame(onDismissRequest = dismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
         ) {
             Text(
                 "New person",
@@ -168,7 +170,7 @@ fun AddPersonDialog(
             CurrencyChips(selected = selectedCurrency, onSelect = { selectedCurrency = it })
         }
 
-        SheetFoot {
+        SheetFoot(above = scroll) {
             SecondaryAction("Don't add", enabled = true) {
                 scope.launch { sheetState.hide() }.invokeOnCompletion { dismiss() }
             }

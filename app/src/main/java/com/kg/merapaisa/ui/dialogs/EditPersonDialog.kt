@@ -104,12 +104,14 @@ fun EditPersonDialog(
         onDismiss()
     }
 
+    val scroll = rememberScrollState()
+
     SheetFrame(onDismissRequest = { if (!converting) dismiss() }, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
         ) {
             Text(
                 "Edit person",
@@ -198,7 +200,7 @@ fun EditPersonDialog(
             }
         }
 
-        SheetFoot {
+        SheetFoot(above = scroll) {
             SecondaryAction("Keep as it was", enabled = !converting) {
                 scope.launch { sheetState.hide() }.invokeOnCompletion { dismiss() }
             }

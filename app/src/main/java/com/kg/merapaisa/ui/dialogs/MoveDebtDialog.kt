@@ -87,12 +87,14 @@ fun MoveDebtDialog(
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    val scroll = rememberScrollState()
+
     SheetFrame(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
         ) {
             Text(
                 if (state.youOwe) "Move what you owe" else "Move a debt",
@@ -210,7 +212,7 @@ fun MoveDebtDialog(
             }
         }
 
-        SheetFoot {
+        SheetFoot(above = scroll) {
             SecondaryAction("Don't move", enabled = true) {
                 scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
@@ -61,6 +62,7 @@ fun SplitPickerScreen(
     onNext: () -> Unit
 ) {
     val theme = LocalAppTheme.current
+    val list = rememberLazyListState()
     val chosen = selectedIds.size + if (includeMe) 1 else 0
     val enoughPeople = chosen >= 2
 
@@ -78,6 +80,7 @@ fun SplitPickerScreen(
         )
 
         LazyColumn(
+            state = list,
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(bottom = Spacing.sm)
         ) {
@@ -107,6 +110,7 @@ fun SplitPickerScreen(
                 )
             }
         }
+        FootEdge(visible = list.canScrollForward)
 
         // Said here rather than on the button, and only while it is true.
         if (!enoughPeople) {

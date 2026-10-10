@@ -5,6 +5,7 @@ import com.kg.merapaisa.ui.ButtonLabel
 import com.kg.merapaisa.ui.SecondaryAction
 import com.kg.merapaisa.ui.PrimaryAction
 import com.kg.merapaisa.ui.FootActions
+import com.kg.merapaisa.ui.FootEdge
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -92,6 +94,7 @@ fun GroupDetailScreen(
     onEdit: (() -> Unit)? = null
 ) {
     val theme = LocalAppTheme.current
+    val list = rememberLazyListState()
     val names = remember(members) { MemberNames(members) }
     val everyoneEven = balances.all { it.amountMinor == 0L }
     // Repayments are expenses in the arithmetic but not spending, and showing them in one list
@@ -154,6 +157,7 @@ fun GroupDetailScreen(
         }
 
         LazyColumn(
+            state = list,
             modifier = Modifier
                 .weight(1f)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
@@ -261,6 +265,7 @@ fun GroupDetailScreen(
                 }
             }
         }
+        FootEdge(visible = list.canScrollForward)
 
         // Both actions named, side by side, the way the people list carries its own two. Settling
         // up is the second one because it is what you reach for once, at the end of a trip.

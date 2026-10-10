@@ -97,6 +97,8 @@ fun EditEntrySheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
+    val scroll = rememberScrollState()
+
     SheetFrame(onDismissRequest = onDismiss, sheetState = sheetState) {
         // Asked from inside the sheet, which has its own window: from outside, the request ran
         // before that window had laid out the fields and found nothing to focus.
@@ -113,7 +115,7 @@ fun EditEntrySheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
         ) {
             Text(
                 "Edit entry",
@@ -180,7 +182,7 @@ fun EditEntrySheet(
             }
         }
 
-        SheetFoot {
+        SheetFoot(above = scroll) {
             SecondaryAction("Keep it as it was", enabled = true) {
                 scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }

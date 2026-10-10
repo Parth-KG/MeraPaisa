@@ -84,12 +84,14 @@ fun AddExpenseDialog(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
+    val scroll = rememberScrollState()
+
     SheetFrame(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
         ) {
             Text(
                 "Add an expense",
@@ -195,7 +197,7 @@ fun AddExpenseDialog(
             }
         }
 
-        SheetFoot {
+        SheetFoot(above = scroll) {
             SecondaryAction("Don't add", enabled = true) {
                 scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }

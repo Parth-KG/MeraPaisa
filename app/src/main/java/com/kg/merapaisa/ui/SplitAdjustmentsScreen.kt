@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -185,6 +186,7 @@ fun SplitAdjustmentsContent(
     initiallyLockedIds: Set<Long> = emptySet()
 ) {
     val theme = LocalAppTheme.current
+    val list = rememberLazyListState()
 
     // Build participant list. "You" is represented by id = -1L (won't conflict with any DB id).
     val youId = -1L
@@ -279,6 +281,7 @@ fun SplitAdjustmentsContent(
         // No dividers between these rows. Each one already carries a boxed field, and a hairline
         // inset to a name that starts at the gutter would cut across it rather than separate it.
         LazyColumn(
+            state = list,
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(bottom = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm)
@@ -316,6 +319,7 @@ fun SplitAdjustmentsContent(
                 )
             }
         }
+        FootEdge(visible = list.canScrollForward)
 
         Column(modifier = Modifier.padding(horizontal = Spacing.lg)) {
             LabelAndAmount(

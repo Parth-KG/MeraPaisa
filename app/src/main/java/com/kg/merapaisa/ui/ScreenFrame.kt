@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -68,6 +70,7 @@ internal fun ScreenFrame(
     content: LazyListScope.() -> Unit
 ) {
     val theme = LocalAppTheme.current
+    val listState = rememberLazyListState()
 
     BackHandler(enabled = true) { onBack?.invoke() }
 
@@ -110,6 +113,7 @@ internal fun ScreenFrame(
         )
 
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .weight(1f)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
@@ -117,8 +121,30 @@ internal fun ScreenFrame(
             content = content
         )
 
-        footer?.invoke()
+        if (footer != null) {
+            FootEdge(visible = listState.canScrollForward)
+            footer()
+        }
     }
+}
+
+/**
+ * The line along the top of a foot while the content above runs on beneath it.
+ *
+ * The buttons sat on the same colour as the list, so a list cut off at the foot looked finished: a
+ * row half hidden under the buttons read as the last one. The line is drawn only while there is
+ * more to scroll to, and is transparent rather than gone otherwise, so nothing moves by a pixel when
+ * it appears.
+ */
+@Composable
+internal fun FootEdge(visible: Boolean) {
+    val theme = LocalAppTheme.current
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(if (visible) theme.divider else Color.Transparent)
+    )
 }
 
 /** The actions, side by side at the foot, clear of the navigation bar. */

@@ -109,12 +109,14 @@ internal fun ThemeSheet(
         scope.launch { sheetState.hide() }.invokeOnCompletion { then() }
     }
 
+    val scroll = rememberScrollState()
+
     SheetFrame(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
         ) {
             Text(
                 "Try a theme",
@@ -142,7 +144,7 @@ internal fun ThemeSheet(
 
         // The way out always names what you keep. The way forward appears once there is something
         // to use, and names it: a button that would change nothing is not offered.
-        SheetFoot {
+        SheetFoot(above = scroll) {
             SecondaryAction("Keep ${inUse.name}", enabled = true) { close(onDismiss) }
             if (tried.name != inUse.name) {
                 PrimaryAction("Use ${tried.name}", enabled = true) { close { onUse(tried.name) } }

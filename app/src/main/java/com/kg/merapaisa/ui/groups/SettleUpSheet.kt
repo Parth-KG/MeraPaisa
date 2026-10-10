@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -71,6 +72,8 @@ fun SettleUpSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
+    val list = rememberLazyListState()
+
     SheetFrame(onDismissRequest = onDismiss, sheetState = sheetState) {
         Text(
             "Settle up",
@@ -97,7 +100,7 @@ fun SettleUpSheet(
         // tap in that gap wrote the payment twice, flipping the debt the other way. Reset whenever
         // the plan changes.
         var recorded by remember(transfers) { mutableStateOf(emptySet<String>()) }
-        LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+        LazyColumn(state = list, modifier = Modifier.weight(1f, fill = false)) {
             itemsIndexed(
                 transfers,
                 key = { _, t -> "transfer-${t.fromPersonId}-${t.toPersonId}" }
@@ -129,7 +132,7 @@ fun SettleUpSheet(
 
         // The way out, outlined and full width like the foot of every other sheet. Recording
         // happens on each line above, so there is no second button here to pair it with.
-        SheetFoot {
+        SheetFoot(above = list) {
             SecondaryAction("Back to the group", enabled = true) {
                 scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }

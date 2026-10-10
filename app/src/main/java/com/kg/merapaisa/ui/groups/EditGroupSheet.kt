@@ -74,12 +74,14 @@ fun EditGroupSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
+    val scroll = rememberScrollState()
+
     SheetFrame(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
         ) {
             Text(
                 "Edit group",
@@ -153,7 +155,7 @@ fun EditGroupSheet(
             )
         }
 
-        SheetFoot {
+        SheetFoot(above = scroll) {
             SecondaryAction("Keep it as it was", enabled = true) {
                 scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }
