@@ -18,6 +18,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.kg.merapaisa.data.netTotalsByCurrency
 import com.kg.merapaisa.getThemeByName
 import com.kg.merapaisa.themes
+import com.kg.merapaisa.widget.paletteFor
 import com.kg.merapaisa.widget.LockedWidgetContent
 import com.kg.merapaisa.widget.WidgetContent
 import com.kg.merapaisa.widget.WidgetPalette
@@ -90,7 +91,7 @@ class WidgetGalleryTest {
         // here without anyone remembering to. Named themes once outlived their removal and were
         // quietly drawn as whatever their old name resolved to.
         themes.forEach { theme ->
-            val palette = paletteLike(theme)
+            val palette = paletteFor(theme.name)
             sizes.forEach { (sizeName, size) ->
                 written += shoot("${theme.name.lowercase()}-widget-$sizeName-$mode", size) {
                     WidgetContent(persons = people, totals = totals, palette = palette)
@@ -101,14 +102,15 @@ class WidgetGalleryTest {
         // The locked state shows nothing of the ledger, which is the whole point of it, so it is
         // worth a picture of its own to confirm it really shows nothing.
         written += shoot("neel-widget-locked-$mode", sizes.getValue("tall")) {
-            LockedWidgetContent(paletteLike(getThemeByName("Neel")))
+            LockedWidgetContent(paletteFor("Neel"))
         }
 
         check(written.isNotEmpty()) { "no widget images were written" }
     }
 
     /**
-     * The widget at double type, in Neel, Diya and Monsoon.
+     * The widget at double type, for the five dark themes: with the phone by day and by night,
+     * that is every theme, since each dark one is paired with a light one.
      *
      * The launcher inflates the widget with the phone's own font scale, so the scale goes on the
      * context the RemoteViews are composed and inflated with. A row that only fits at 1.0 clips
@@ -120,8 +122,8 @@ class WidgetGalleryTest {
             android.content.res.Configuration(context.resources.configuration).apply { fontScale = 2f }
         )
         val written = mutableListOf<String>()
-        listOf("Neel", "Diya", "Monsoon").forEach { name ->
-            val palette = paletteLike(getThemeByName(name))
+        themes.filter { it.isDark }.map { it.name }.forEach { name ->
+            val palette = paletteFor(name)
             sizes.forEach { (sizeName, size) ->
                 written += shoot("${name.lowercase()}-widget-$sizeName-$mode-fs2", size, large) {
                     WidgetContent(persons = people, totals = totals, palette = palette)
@@ -130,17 +132,6 @@ class WidgetGalleryTest {
         }
         check(written.isNotEmpty()) { "no widget images were written" }
     }
-
-    /**
-     * The pairing DebtWidget builds for a chosen theme.
-     *
-     * A dark choice keeps Neel for the launcher's light mode; a light choice keeps Diya for
-     * its dark mode. Mirrored here because the widget's own helper is private, and because a
-     * capture that invented its own pairing would not be showing what ships.
-     */
-    private fun paletteLike(selected: com.kg.merapaisa.AppTheme) =
-        if (selected.isDark) WidgetPalette(day = getThemeByName("Neel"), night = selected)
-        else WidgetPalette(day = selected, night = getThemeByName("Diya"))
 
     /** Composes Glance content to a RemoteViews, inflates it, and draws it to a PNG. */
     private fun shoot(

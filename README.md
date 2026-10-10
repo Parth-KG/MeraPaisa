@@ -60,7 +60,7 @@ Mera Paisa keeps all of that on your phone.
 | **Export and summaries** | The whole ledger as CSV, or a plain-text summary of one person's balance |
 | **Update links (beta)** | Send a link that records the mirror of your entries in their app, and compares before writing |
 | **Reminders** | An editable message, optionally with the history attached |
-| **Home screen widget** | Your net position and who owes what, in your chosen theme |
+| **Home screen widget** | Your net position and who owes what, in your chosen theme, and in its partner when the phone is in the other mode: Diya and Neel, Jamun and Gulab, Monsoon and Kansa, Kaapi and Khadi, Kamal and Tulsi |
 | **App lock** | Your fingerprint, face or screen lock before the ledger opens, and again to turn the lock on or off. Nothing on the widget or in screenshots while it is locked |
 | **In-app updates** | Checks GitHub for a newer release and installs it only if it is signed with the same key |
 | **Accessible** | TalkBack reads every figure with its direction in words, and every screen works at large text and on a phone turned sideways |

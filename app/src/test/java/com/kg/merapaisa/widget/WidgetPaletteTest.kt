@@ -1,9 +1,11 @@
 package com.kg.merapaisa.widget
 
 import androidx.compose.ui.graphics.Color
+import com.kg.merapaisa.partnerOf
 import com.kg.merapaisa.themes
 import com.kg.merapaisa.ui.AVATAR_HUES
 import com.kg.merapaisa.ui.avatarColours
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.pow
@@ -42,6 +44,38 @@ class WidgetPaletteTest {
                 assertTrue("${theme.name}, \"$colour\"", avatarColours(colour, theme).tile.alpha == 1f)
             }
         }
+    }
+
+    @Test
+    fun everyThemeHasOnePartnerOfTheOtherDarkness() {
+        themes.forEach { theme ->
+            val partner = partnerOf(theme)
+            assertTrue("${theme.name} is paired with ${partner.name}", partner.isDark != theme.isDark)
+        }
+    }
+
+    @Test
+    fun thePairsGoBothWays() {
+        themes.forEach { theme ->
+            assertEquals(theme.name, partnerOf(partnerOf(theme)).name)
+        }
+    }
+
+    @Test
+    fun dayIsTheLightThemeOfThePairAndNightTheDarkOne() {
+        themes.forEach { theme ->
+            val palette = paletteFor(theme.name)
+            assertTrue(!palette.day.isDark && palette.night.isDark)
+            assertTrue(theme.name == palette.day.name || theme.name == palette.night.name)
+        }
+        assertEquals("Neel", paletteFor("Diya").day.name)
+        assertEquals("Kamal", paletteFor("Tulsi").night.name)
+    }
+
+    @Test
+    fun aRetiredNameGivesItsSurvivorsPalette() {
+        assertEquals(paletteFor("Diya"), paletteFor("Midnight"))
+        assertEquals(paletteFor("Monsoon"), paletteFor("Mocha"))
     }
 
     private companion object {

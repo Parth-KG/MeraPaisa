@@ -222,6 +222,27 @@ fun getThemeByName(name: String): AppTheme {
 }
 
 /**
+ * Each theme's partner in the other mode, dark with light, chosen by Parth (6 Oct 2026).
+ *
+ * The home-screen widget follows the launcher's day and night, not the app's theme, so a theme
+ * needs a partner to stand in for it the other half of the day. Every dark theme used to borrow
+ * Neel by day and every light one Diya by night, so Kamal's pine page turned navy at sunrise.
+ */
+private val THEME_PARTNERS = listOf(
+    "Diya" to "Neel",
+    "Jamun" to "Gulab",
+    "Monsoon" to "Kansa",
+    "Kaapi" to "Khadi",
+    "Kamal" to "Tulsi"
+).flatMap { (dark, light) -> listOf(dark to light, light to dark) }.toMap()
+
+/** The theme that stands in for [theme] in the other mode. */
+fun partnerOf(theme: AppTheme): AppTheme =
+    THEME_PARTNERS[theme.name]?.let(::getThemeByName)
+        // A theme added without a partner still gets a legible one; WidgetPaletteTest fails on it.
+        ?: getThemeByName(if (theme.isDark) "Neel" else "Diya")
+
+/**
  * Every Material component pulls its colours from here, so the app and the M3 defaults finally
  * agree and per-component `colors = ...` overrides are no longer needed to undo a purple scheme.
  */

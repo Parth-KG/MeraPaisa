@@ -51,6 +51,7 @@ import com.kg.merapaisa.data.CurrencyTotal
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.netTotalsByCurrency
 import com.kg.merapaisa.getThemeByName
+import com.kg.merapaisa.partnerOf
 import com.kg.merapaisa.repository.LedgerChangeNotifier
 import com.kg.merapaisa.repository.PersonRepository
 import com.kg.merapaisa.ui.format.SignStyle
@@ -63,8 +64,8 @@ import kotlinx.coroutines.flow.first
 
 /**
  * The widget sits on the home screen, which has its own light/dark mode independent of the
- * app. So it takes the user's chosen palette for whichever mode matches that palette, and a
- * legible counterpart for the other, instead of being dark-only.
+ * app. So it takes the user's chosen theme for whichever mode matches it, and that theme's
+ * partner ([partnerOf]) for the other, instead of being dark-only.
  */
 data class WidgetPalette(val day: AppTheme, val night: AppTheme) {
     fun of(pick: (AppTheme) -> Color) = ColorProvider(day = pick(day), night = pick(night))
@@ -80,12 +81,14 @@ data class WidgetPalette(val day: AppTheme, val night: AppTheme) {
     }
 }
 
-private fun paletteFor(themeName: String): WidgetPalette {
+/** Day is the light theme of the chosen one's pair, night the dark one. */
+internal fun paletteFor(themeName: String): WidgetPalette {
     val selected = getThemeByName(themeName)
+    val partner = partnerOf(selected)
     return if (selected.isDark) {
-        WidgetPalette(day = getThemeByName("Neel"), night = selected)
+        WidgetPalette(day = partner, night = selected)
     } else {
-        WidgetPalette(day = selected, night = getThemeByName("Diya"))
+        WidgetPalette(day = selected, night = partner)
     }
 }
 
