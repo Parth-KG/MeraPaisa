@@ -121,19 +121,21 @@ fun UpdateScreen(
                         .padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.sm, bottom = Spacing.lg),
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
+                    // The track in the border colour, at 3:1: in the divider's 1.2 the bar seemed
+                    // to start from nothing, so how far along it was could not be read.
                     if (state.percent >= 0) {
                         LinearProgressIndicator(
                             progress = { state.percent / 100f },
                             modifier = Modifier.fillMaxWidth(),
                             color = theme.primary,
-                            trackColor = theme.divider
+                            trackColor = theme.border
                         )
                         Text("${state.percent}%", style = MeraPaisaType.label, color = theme.textSecondary)
                     } else {
                         LinearProgressIndicator(
                             modifier = Modifier.fillMaxWidth(),
                             color = theme.primary,
-                            trackColor = theme.divider
+                            trackColor = theme.border
                         )
                     }
                 }
@@ -258,7 +260,7 @@ private fun Working(text: String) {
         CircularProgressIndicator(
             modifier = Modifier.size(20.dp),
             color = theme.primary,
-            trackColor = theme.divider
+            trackColor = theme.border
         )
         Text(text, style = MeraPaisaType.body, color = theme.textSecondary)
     }

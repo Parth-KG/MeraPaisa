@@ -27,11 +27,11 @@ data class AppTheme(
     val negative: Color,
     /** Keys, the amount field, chips, and a highlighted or pressed row. */
     val highlight: Color,
-    /** The hairline between rows, and the other quiet lines: progress tracks, the widget's rules. */
+    /** The hairline between rows, and the other quiet lines: a foot's edge, the widget's rules. */
     val divider: Color,
     /**
-     * The edge of an outlined button or field, of a swatch, and the sheet's handle: firmer than a
-     * divider, because it marks something you can press.
+     * The edge of an outlined button or field, of a swatch, the sheet's handle, and a progress
+     * track: firmer than a divider, because it marks something you can press or have to read.
      */
     val border: Color,
     /** Text and icons on the accent: filled buttons and a switch's thumb. */
