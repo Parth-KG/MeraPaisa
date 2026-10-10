@@ -75,12 +75,16 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kg.merapaisa.widget.WidgetLedgerNotifier
 import com.kg.merapaisa.ui.format.columnShowsFraction
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
+    // The activity's own lock: the same instance MainActivity holds.
+    val lock: AppLockViewModel = viewModel()
     val theme = LocalAppTheme.current
     val scope = rememberCoroutineScope()
     val persons by viewModel.persons.collectAsState()
@@ -452,12 +456,27 @@ fun MainScreen(viewModel: MainViewModel) {
                 onCheckUpdates = viewModel::checkForUpdatesNow,
                 appVersion = BuildConfig.VERSION_NAME,
                 onAppLockChange = { enabled ->
-                    scope.launch {
-                        SecurityStore.setAppLockEnabled(context, enabled)
-                        // The widget reads the lock too. Without this it kept showing names and
-                        // amounts on the home screen after the lock went on, until the next entry.
-                        WidgetLedgerNotifier(context.applicationContext).onLedgerChanged()
-                    }
+                    changeAppLock(
+                        enabled,
+                        ask = { title, subtitle, onConfirmed ->
+                            lock.onAskStarted()
+                            // Shown over the activity, which BiometricPrompt needs as a FragmentActivity.
+                            askForCredential(
+                                context as FragmentActivity, title, subtitle,
+                                onConfirmed = onConfirmed,
+                                onEnded = lock::onAskEnded
+                            )
+                        },
+                        store = { on ->
+                            scope.launch {
+                                SecurityStore.setAppLockEnabled(context, on)
+                                // The widget reads the lock too. Without this it kept showing names
+                                // and amounts on the home screen after the lock went on, until the
+                                // next entry.
+                                WidgetLedgerNotifier(context.applicationContext).onLedgerChanged()
+                            }
+                        }
+                    )
                 },
                 onDismiss = { viewModel.showSettingsDialog(false) },
                 // Settings stays open, now in the theme just chosen, so you see it at once on a

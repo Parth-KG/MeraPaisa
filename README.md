@@ -61,7 +61,7 @@ Mera Paisa keeps all of that on your phone.
 | **Update links (beta)** | Send a link that records the mirror of your entries in their app, and compares before writing |
 | **Reminders** | An editable message, optionally with the history attached |
 | **Home screen widget** | Your net position and who owes what, in your chosen theme |
-| **App lock** | Your fingerprint, face or screen lock before the ledger opens, and nothing on the widget or in screenshots while it is locked |
+| **App lock** | Your fingerprint, face or screen lock before the ledger opens, and again to turn the lock on or off. Nothing on the widget or in screenshots while it is locked |
 | **In-app updates** | Checks GitHub for a newer release and installs it only if it is signed with the same key |
 | **Accessible** | TalkBack reads every figure with its direction in words, and every screen works at large text and on a phone turned sideways |
 | **Ten themes** | Diya, Jamun, Monsoon, Kaapi and Kamal by night, Tulsi, Khadi, Gulab, Kansa and Neel by day, with amounts and grey text at 7:1 in every one |
