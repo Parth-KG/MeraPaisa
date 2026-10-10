@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.roundToLong
 import kotlinx.coroutines.delay
 import com.kg.merapaisa.LocalAppTheme
@@ -486,20 +487,17 @@ private fun SplitShareRow(
         else -> null
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.lg)
-            .heightIn(min = 56.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
+    // At large type the name and its status take the whole width, and the share and its lock go
+    // on a line of their own under them. Beside the field, the name had room for a letter or two.
+    val stacked = LocalDensity.current.fontScale >= LIST_STACK_FONT_SCALE
+
+    val nameAndStatus: @Composable (Modifier) -> Unit = { modifier ->
+        Column(modifier) {
             Text(
                 participant.name,
                 style = MeraPaisaType.bodyStrong,
                 color = theme.textPrimary,
-                maxLines = 1,
+                maxLines = listTitleMaxLines(),
                 overflow = TextOverflow.Ellipsis
             )
             if (supporting != null) {
@@ -512,14 +510,15 @@ private fun SplitShareRow(
                 )
             }
         }
-
+    }
+    val share: @Composable (Modifier) -> Unit = { modifier ->
         // A share waiting to be typed sits on the highlight, like the keys and the amount field. On
         // the card it all but vanished in the light themes, where a card is a shade off the page.
         // A locked share loses the fill that makes a box look typeable and keeps only a rule
         // around it, so it reads as a figure held rather than a field waiting. It is still
         // editable: locking a share should not cost you a tap to change it.
         Row(
-            modifier = Modifier
+            modifier = modifier
                 .clip(Shapes.small)
                 .then(
                     if (locked) Modifier.border(1.dp, theme.border, Shapes.small)
@@ -566,10 +565,11 @@ private fun SplitShareRow(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true,
                 cursorBrush = SolidColor(theme.primary),
-                // Sizes to its content: the floor keeps an empty field tappable, the ceiling stops
-                // a pathological amount swallowing the name.
+                // Beside the name it sizes to its content: the floor keeps an empty field tappable,
+                // the ceiling stops a pathological amount swallowing the name. On its own line it
+                // takes what the line has.
                 modifier = Modifier
-                    .widthIn(min = 56.dp, max = 140.dp)
+                    .then(if (stacked) Modifier.weight(1f) else Modifier.widthIn(min = 56.dp, max = 140.dp))
                     .onFocusChanged { state ->
                         if (state.isFocused && !editing) {
                             typed = TextFieldValue(plain, TextRange(0, plain.length))
@@ -579,7 +579,8 @@ private fun SplitShareRow(
                     }
             )
         }
-
+    }
+    val lock: @Composable () -> Unit = {
         IconButton(onClick = onToggleLock, modifier = Modifier.size(48.dp)) {
             Icon(
                 if (locked) Icons.Filled.Lock else Icons.Outlined.LockOpen,
@@ -593,6 +594,38 @@ private fun SplitShareRow(
                     },
                 tint = if (locked) theme.primary else theme.textSecondary
             )
+        }
+    }
+
+    if (stacked) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+        ) {
+            nameAndStatus(Modifier.fillMaxWidth())
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+            ) {
+                share(Modifier.weight(1f))
+                lock()
+            }
+        }
+    } else {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg)
+                .heightIn(min = 56.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+        ) {
+            nameAndStatus(Modifier.weight(1f))
+            share(Modifier)
+            lock()
         }
     }
 }

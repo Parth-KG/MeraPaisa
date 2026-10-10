@@ -15,6 +15,12 @@ import com.kg.merapaisa.ui.theme.MeraPaisaTheme
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import androidx.compose.ui.test.DeviceConfigurationOverride
+import androidx.compose.ui.test.FontScale
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.dp
+import org.junit.Assert.assertTrue
 
 /**
  * A share field keeps what is typed into it.
@@ -59,5 +65,40 @@ class SplitShareEditingTest {
         share.assertTextEquals("60")
         share.performTextReplacement("600")
         share.assertTextEquals("600")
+    }
+
+    /**
+     * At double type a share's name sits above its field rather than beside it, where it had room
+     * for a letter or two, and the field takes the line under it.
+     */
+    @Test
+    fun atDoubleTypeANameSitsAboveItsField() {
+        val theme = themes.first()
+        val people = listOf("Chaitanya Venkataraman", "Bilal").mapIndexed { i, name ->
+            PersonWithBalance(Person(id = i + 1L, name = name, currency = "INR"), 0)
+        }
+        compose.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.FontScale(2f)) {
+                MeraPaisaTheme(theme) {
+                    CompositionLocalProvider(LocalAppTheme provides theme) {
+                        SplitAdjustmentsContent(
+                            convert = { amount, _, _ -> amount },
+                            amountMinor = 1_200_00,
+                            sourceCurrency = "INR",
+                            selectedPersons = people,
+                            includeMe = false,
+                            note = "",
+                            onNoteChange = {}, onBack = {}, onCancel = {}, onConfirm = {}
+                        )
+                    }
+                }
+            }
+        }
+
+        val name = compose.onNodeWithText("Chaitanya Venkataraman", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        val field = compose.onAllNodes(hasSetTextAction())[1].getUnclippedBoundsInRoot()
+        assertTrue("the field is beside the name, not under it", field.top >= name.bottom)
+        assertTrue("the name has only ${name.right - name.left} across", name.right - name.left >= 200.dp)
     }
 }
