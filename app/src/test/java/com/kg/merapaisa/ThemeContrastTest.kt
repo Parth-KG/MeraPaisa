@@ -65,6 +65,31 @@ class ThemeContrastTest {
         )
     }
 
+    /**
+     * An open sheet stands clear of the page dimmed behind it. Material's scrim is black at 32
+     * percent, drawn over the page as the screen mixes it. Kaapi's sheet stood 1.10:1 off its
+     * dimmed page and its edge was hard to find; the floor is the weakest of the other themes.
+     */
+    @Test
+    fun anOpenSheetStandsOffTheDimmedPage() {
+        val failures = themes.map { theme ->
+            val dimmed = Color(
+                theme.background.red * (1 - SCRIM_ALPHA),
+                theme.background.green * (1 - SCRIM_ALPHA),
+                theme.background.blue * (1 - SCRIM_ALPHA)
+            )
+            theme.name to contrastRatio(theme.surface, dimmed)
+        }.filter { (_, ratio) -> ratio < MIN_SHEET_SEPARATION }
+
+        assertTrue(
+            "a sheet blends into the dimmed page on: " +
+                failures.joinToString { (name, ratio) ->
+                    "%s (%.3f:1, needs %.2f)".format(name, ratio, MIN_SHEET_SEPARATION)
+                },
+            failures.isEmpty()
+        )
+    }
+
     @Test
     fun allThemesAreNamedAndDistinct() {
         assertTrue("expected 10 themes, found ${themes.size}", themes.size == 10)
@@ -117,6 +142,8 @@ class ThemeContrastTest {
         const val MIN_SURFACE_SEPARATION = 1.03
         const val MIN_SELECTED_SEPARATION = 1.10
         const val MIN_THEME_DISTANCE = 15.0
+        const val MIN_SHEET_SEPARATION = 1.11
+        const val SCRIM_ALPHA = 0.32f
 
         /** CIE76 distance in Lab space, a rough stand-in for "tell these apart at a glance". */
         fun distance(a: Color, b: Color): Double {

@@ -99,12 +99,14 @@ val themes = listOf(
     // Called Espresso in the vote.
     AppTheme(
         name = "Kaapi",
-        background = Color(0xFF1F150D), surface = Color(0xFF23180F), card = Color(0xFF2C1E14),
+        // The sheet a step lighter than it was (v3.3.0, Parth's pick): at #23180F an open sheet
+        // stood 1.10:1 off the dimmed page and its edge was hard to find.
+        background = Color(0xFF1F150D), surface = Color(0xFF312318), card = Color(0xFF2C1E14),
         primary = Color(0xFF33DBD6), secondary = Color(0xFF8FB3B0),
         textPrimary = Color(0xFFF6EBDD), textSecondary = Color(0xFFCDBDAC),
         positive = Color(0xFFA3D17C), negative = Color(0xFFFEA9AD),
         highlight = Color(0xFF3E2F25), divider = Color(0xFF372C22),
-        border = Color(0xFF75695C), onAccent = Color(0xFF1F150D)
+        border = Color(0xFF7A6D60), onAccent = Color(0xFF1F150D)
     ),
     // A pine-green page under a lotus-pink accent. The page comes from a Pinterest palette, the
     // rest was drawn for the app. Its keys and keypad sit darker than the page, as its card does.
