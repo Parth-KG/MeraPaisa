@@ -195,17 +195,25 @@ fun amountBlankFractionSpan() = SpanStyle(color = Color.Transparent)
 /**
  * The same styles handed to Material, so an unstyled component picks up the app's type instead of
  * falling back to the platform sans. Nothing in the app reads these slots directly.
+ *
+ * Made the first time it is read, not when this file is first touched. [MeraPaisaType] reads the
+ * font families above, and touching it first, as the widget does and a test that draws a button
+ * label does, set this file up halfway through making the styles: Material's copy was built from
+ * styles that were still null, kept them for the life of the process, and the next text field drawn
+ * crashed.
  */
-val Typography = Typography(
-    displaySmall = MeraPaisaType.amountHero,
-    headlineSmall = MeraPaisaType.screenTitle,
-    titleLarge = MeraPaisaType.screenTitle,
-    titleMedium = MeraPaisaType.sectionTitle,
-    titleSmall = MeraPaisaType.sectionTitle,
-    bodyLarge = MeraPaisaType.body,
-    bodyMedium = MeraPaisaType.body,
-    bodySmall = MeraPaisaType.label,
-    labelLarge = MeraPaisaType.action,
-    labelMedium = MeraPaisaType.label,
-    labelSmall = MeraPaisaType.label
-)
+val Typography by lazy {
+    Typography(
+        displaySmall = MeraPaisaType.amountHero,
+        headlineSmall = MeraPaisaType.screenTitle,
+        titleLarge = MeraPaisaType.screenTitle,
+        titleMedium = MeraPaisaType.sectionTitle,
+        titleSmall = MeraPaisaType.sectionTitle,
+        bodyLarge = MeraPaisaType.body,
+        bodyMedium = MeraPaisaType.body,
+        bodySmall = MeraPaisaType.label,
+        labelLarge = MeraPaisaType.action,
+        labelMedium = MeraPaisaType.label,
+        labelSmall = MeraPaisaType.label
+    )
+}
