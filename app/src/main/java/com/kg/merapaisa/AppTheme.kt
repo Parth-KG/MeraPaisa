@@ -130,13 +130,15 @@ val themes = listOf(
         border = Color(0xFF788579), onAccent = Color(0xFFFFFFFF)
     ),
     // Ink on warm, undyed paper with a deep teal accent: Flexoki's light scheme (Steph Ango, MIT),
-    // using its darker published steps where a test asks. Called Flexoki Light in the vote.
+    // using its darker published steps where a test asks. Called Flexoki Light in the vote. The
+    // owed-to-you green is the app's own (v3.3.0, Parth's pick): Flexoki's olive, darkened to
+    // 7:1 on the keys, read as near-black, so it is a leaf green at the same lightness.
     AppTheme(
         name = "Khadi",
         background = Color(0xFFFFFCF0), surface = Color(0xFFFFFCF0), card = Color(0xFFF2F0E5),
         primary = Color(0xFF1C6C66), secondary = Color(0xFF6F6E69),
         textPrimary = Color(0xFF100F0F), textSecondary = Color(0xFF42413E),
-        positive = Color(0xFF374603), negative = Color(0xFF821412),
+        positive = Color(0xFF074C00), negative = Color(0xFF821412),
         highlight = Color(0xFFD8D6CC), divider = Color(0xFFE0DED4),
         border = Color(0xFF8C8A83), onAccent = Color(0xFFFFFFFF)
     ),
