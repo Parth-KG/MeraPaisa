@@ -27,7 +27,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -181,11 +180,16 @@ fun NumPad(
 
         // Settling files a person away and closes their balance; reopening brings them back.
         // Someone already at zero can still be settled, which is how you file them away.
-        TextButton(
-            onClick = onSettleToggle,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-        ) {
-            ButtonLabel(if (person.isSettled) "Reopen" else "Settle up", color = theme.textPrimary)
+        //
+        // An outlined button the width of the keypad. It was bare words under the two direction
+        // buttons, with no edge or fill, and did not read as something to press. Outlined rather
+        // than filled, because the two buttons above it are what the keypad is for.
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            SecondaryAction(
+                if (person.isSettled) "Reopen" else "Settle up",
+                enabled = true,
+                onClick = onSettleToggle
+            )
         }
     }
 }

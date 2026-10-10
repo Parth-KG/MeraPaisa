@@ -173,6 +173,18 @@ fun NumPadCase() {
     )
 }
 
+/** A settled person's keypad, where the button under the directions is Reopen. */
+@Composable
+fun NumPadSettledCase() {
+    NumPad(
+        person = Fixtures.settledPerson,
+        input = "",
+        onKey = {}, onSettleToggle = {}, onAdd = {}, onSubtract = {},
+        note = "",
+        onNoteChange = {}, showNote = false, onToggleNote = {}
+    )
+}
+
 /** Yen has no fractions, so its keypad has no point: the slot stays empty beside the 0. */
 @Composable
 fun NumPadYenCase() {
@@ -413,6 +425,7 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "net-total-even" to { NetTotalEvenCase() },
     "numpad" to { NumPadCase() },
     "numpad-yen" to { NumPadYenCase() },
+    "numpad-settled" to { NumPadSettledCase() },
     "empty-active" to { EmptyActiveCase() },
     "empty-settled" to { EmptySettledCase() },
     "empty-groups" to { EmptyGroupsCase() },
