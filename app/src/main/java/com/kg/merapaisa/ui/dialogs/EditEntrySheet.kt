@@ -83,7 +83,13 @@ fun EditEntrySheet(
     var amount by remember(entry.id) {
         mutableStateOf(TextFieldValue(initialAmount, TextRange(initialAmount.length)))
     }
-    var note by remember(entry.id) { mutableStateOf(TextFieldValue(entry.note, TextRange(entry.note.length))) }
+    // The note is one line that scrolls, so its cursor decides which end shows. At the end, a long
+    // note opened showing only its last words, as if the start had been lost. It starts at the
+    // beginning unless the sheet was opened to edit the note.
+    var note by remember(entry.id) {
+        val cursor = if (focus == EntryField.Note) entry.note.length else 0
+        mutableStateOf(TextFieldValue(entry.note, TextRange(cursor)))
+    }
     val amountFocus = remember { FocusRequester() }
     val noteFocus = remember { FocusRequester() }
 
