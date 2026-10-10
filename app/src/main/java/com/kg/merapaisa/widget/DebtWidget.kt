@@ -55,8 +55,7 @@ import com.kg.merapaisa.repository.LedgerChangeNotifier
 import com.kg.merapaisa.repository.PersonRepository
 import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.format.amountSpoken
-import com.kg.merapaisa.ui.AVATAR_WASH
-import com.kg.merapaisa.ui.avatarInk
+import com.kg.merapaisa.ui.avatarColours
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Spacing
@@ -341,7 +340,11 @@ private fun PersonWidgetRow(person: PersonWithBalance, palette: WidgetPalette) {
                     .circle(),
                 contentAlignment = Alignment.Center
             ) {
-                Text(com.kg.merapaisa.data.initialsOf(person.name), style = initialsStyle(palette), maxLines = 1)
+                Text(
+                    com.kg.merapaisa.data.initialsOf(person.name),
+                    style = initialsStyle(person, palette),
+                    maxLines = 1
+                )
             }
             Spacer(GlanceModifier.width(Spacing.md))
         }
@@ -449,9 +452,7 @@ private fun avatarTint(person: PersonWithBalance, palette: WidgetPalette) =
     // Through avatarInk, exactly as the app does it. Reading the stored hex straight gave every
     // avatar the same Material green on a home screen while the ledger behind it had already
     // re-lit them per theme, so the widget looked like a different app's.
-    palette.of { theme ->
-        avatarInk(person.person.pfpColor, theme).copy(alpha = AVATAR_WASH * 2.5f)
-    }
+    palette.of { theme -> avatarColours(person.person.pfpColor, theme).tile }
 
 /**
  * The type the widget can actually set.
@@ -481,8 +482,9 @@ private fun amountStyle(palette: WidgetPalette, amountMinor: Long) = TextStyle(
     fontFamily = FontFamily.SansSerif
 )
 
-private fun initialsStyle(palette: WidgetPalette) = TextStyle(
-    color = palette.of { it.textPrimary },
+/** The initials in the person's own ink, as PfpView sets them, not in the text colour. */
+private fun initialsStyle(person: PersonWithBalance, palette: WidgetPalette) = TextStyle(
+    color = palette.of { theme -> avatarColours(person.person.pfpColor, theme).ink },
     fontSize = MeraPaisaType.label.fontSize,
     fontWeight = FontWeight.Bold,
     fontFamily = FontFamily.SansSerif

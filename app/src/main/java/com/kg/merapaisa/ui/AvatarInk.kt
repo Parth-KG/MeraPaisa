@@ -87,6 +87,23 @@ fun avatarInk(stored: String, theme: AppTheme): Color {
     return inkAt(stored, target)
 }
 
+/** An avatar drawn without translucency: the ink for the initials, and the solid tile under them. */
+data class AvatarColours(val ink: Color, val tile: Color)
+
+/**
+ * The stored colour as two solid colours, for the home-screen widget.
+ *
+ * The widget sits on the theme's sheet colour, and a RemoteViews tile is easiest to trust when it
+ * is opaque, so the wash is mixed here rather than left to the launcher. The ink is the one
+ * [avatarInk] solves with the sheet among its grounds, so the initials clear 4.5:1 on this tile in
+ * every theme. The widget used to draw them in the text colour on a heavier wash, which nothing
+ * measured, and in Kamal they fell under 4.5:1.
+ */
+fun avatarColours(stored: String, theme: AppTheme): AvatarColours {
+    val ink = avatarInk(stored, theme)
+    return AvatarColours(ink = ink, tile = washed(ink, theme.surface))
+}
+
 private const val DARK_TARGET = 0.42f
 private const val LIGHT_TARGET = 0.10f
 
