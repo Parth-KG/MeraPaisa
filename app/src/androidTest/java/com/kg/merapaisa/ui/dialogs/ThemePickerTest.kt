@@ -75,7 +75,22 @@ class ThemePickerTest {
         return compose.onNodeWithText("Theme")
     }
 
-    private fun chip(name: String) = compose.onNode(hasContentDescription(name, substring = true) and isSelectable())
+    private fun chipMatcher(name: String) = hasContentDescription(name, substring = true) and isSelectable()
+
+    private fun chip(name: String) = compose.onNode(chipMatcher(name))
+
+    private fun chipCount(name: String) = compose.onAllNodes(chipMatcher(name)).fetchSemanticsNodes().size
+
+    /**
+     * The sheet opens and closes over a few frames. One idle frame was usually enough and sometimes
+     * not, so the tests wait for the chips to arrive, or to go, instead.
+     */
+    private fun openSheet() {
+        themeRow().performClick()
+        compose.waitUntil(5_000) { chipCount(inUse.name) > 0 }
+    }
+
+    private fun waitForSheetToClose() = compose.waitUntil(5_000) { chipCount(other.name) == 0 }
 
     private fun tryTheme(name: String) {
         chip(name).performScrollTo().performClick()
@@ -94,8 +109,7 @@ class ThemePickerTest {
     @Test
     fun theSheetOpensOnTheThemeInUseWithOnlyAWayOut() {
         compose.setContent(settings)
-        themeRow().performClick()
-        compose.waitForIdle()
+        openSheet()
 
         themes.forEach { chip(it.name).assertExists() }
         chip("${inUse.name}, in use").assertIsSelected()
@@ -106,8 +120,7 @@ class ThemePickerTest {
     @Test
     fun tryingAThemeRedrawsThePictureAndOffersToUseIt() {
         compose.setContent(settings)
-        themeRow().performClick()
-        compose.waitForIdle()
+        openSheet()
         tryTheme(other.name)
 
         chip(other.name).assertIsSelected()
@@ -120,8 +133,7 @@ class ThemePickerTest {
     @Test
     fun thePictureIsOneThingToTalkBack() {
         compose.setContent(settings)
-        themeRow().performClick()
-        compose.waitForIdle()
+        openSheet()
 
         compose.onNode(hasContentDescription("Your ledger in ${inUse.name}")).assertExists()
         compose.onNodeWithText("Asha").assertDoesNotExist()
@@ -130,11 +142,11 @@ class ThemePickerTest {
     @Test
     fun usingSendsTheTriedTheme() {
         compose.setContent(settings)
-        themeRow().performClick()
-        compose.waitForIdle()
+        openSheet()
         tryTheme(other.name)
         compose.onNodeWithText("Use ${other.name}").performClick()
-        compose.waitForIdle()
+        compose.waitUntil(5_000) { applied != null }
+        waitForSheetToClose()
 
         assertEquals(other.name, applied)
         chip(other.name).assertDoesNotExist()
@@ -143,11 +155,10 @@ class ThemePickerTest {
     @Test
     fun keepingSendsNothing() {
         compose.setContent(settings)
-        themeRow().performClick()
-        compose.waitForIdle()
+        openSheet()
         tryTheme(other.name)
         compose.onNodeWithText("Keep ${inUse.name}").performClick()
-        compose.waitForIdle()
+        waitForSheetToClose()
 
         assertNull(applied)
         chip(other.name).assertDoesNotExist()
@@ -157,8 +168,7 @@ class ThemePickerTest {
     fun theSheetAndTheTriedThemeSurviveRecreation() {
         val restoration = StateRestorationTester(compose)
         restoration.setContent(settings)
-        themeRow().performClick()
-        compose.waitForIdle()
+        openSheet()
         tryTheme(other.name)
 
         restoration.emulateSavedInstanceStateRestore()

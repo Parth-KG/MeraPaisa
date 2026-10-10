@@ -2,10 +2,12 @@ package com.kg.merapaisa.ui.dialogs
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithText
@@ -40,6 +42,13 @@ class EditEntryTest {
 
     private val lunch = Transaction(id = 7, personId = 1, amountMinor = 3334, note = "Lunch")
 
+    /**
+     * A sheet opens and closes over a few frames, and saving waits for it to close. One idle frame
+     * was usually enough and sometimes not, so these wait for what they need instead.
+     */
+    private fun waitFor(matcher: SemanticsMatcher) =
+        compose.waitUntil(5_000) { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
+
     private fun show(content: @Composable () -> Unit) {
         val theme = themes.first()
         compose.setContent {
@@ -62,9 +71,10 @@ class EditEntryTest {
             )
         }
 
+        waitFor(hasText("Lunch") and hasSetTextAction())
         compose.onNode(hasText("Lunch") and hasSetTextAction()).performTextReplacement("Lunch with Asha")
         compose.onNodeWithText("Save entry").performClick()
-        compose.waitForIdle()
+        compose.waitUntil(5_000) { saved != null }
 
         assertEquals("Lunch with Asha", saved?.note)
         assertEquals("the amount must still be ¥33.34, kept in hundredths", 3334L, saved?.amountMinor)
@@ -84,7 +94,8 @@ class EditEntryTest {
         compose.onNodeWithText("Lunch").performTouchInput { longClick() }
         compose.onNodeWithText("Edit note").assertIsDisplayed()
         compose.onNodeWithText("Edit amount").performClick()
-        compose.waitForIdle()
+        // Focus is asked for once the sheet is up, a frame or two after the field first exists.
+        waitFor(hasText("33") and hasSetTextAction() and isFocused())
 
         compose.onNode(hasText("33") and hasSetTextAction()).assertIsFocused()
     }
