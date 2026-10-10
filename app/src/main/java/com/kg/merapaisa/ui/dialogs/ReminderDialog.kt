@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
@@ -108,7 +109,10 @@ fun ReminderSheet(
             OutlinedTextField(
                 value = message,
                 onValueChange = { message = it },
-                label = { Text("Message to ${person.name}") },
+                // One word on one line. "Message to Chaitanya Venkataraman" wrapped at large type
+                // and its second line ran into the text being typed; the message itself opens
+                // with their name.
+                label = { Text("Message", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 textStyle = MeraPaisaType.body,
                 minLines = 3,
                 shape = Shapes.medium,
