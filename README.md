@@ -58,7 +58,7 @@ Mera Paisa keeps all of that on your phone.
 | **Move a debt** | Hand part of what one person owes onto someone else, converted if they keep a different currency |
 | **History** | Notes, timestamps, edit or delete any entry, reverse an entry and everything newer, or clear the history |
 | **Export and summaries** | The whole ledger as CSV, or a plain-text summary of one person's balance |
-| **Update links** | Send a link that records the mirror of your entries in their app, and compares before writing |
+| **Update links (beta)** | Send a link that records the mirror of your entries in their app, and compares before writing |
 | **Reminders** | An editable message, optionally with the history attached |
 | **Home screen widget** | Your net position and who owes what, in your chosen theme |
 | **App lock** | Your fingerprint, face or screen lock before the ledger opens, and nothing on the widget or in screenshots while it is locked |

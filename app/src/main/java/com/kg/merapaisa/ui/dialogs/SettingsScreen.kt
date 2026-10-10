@@ -134,7 +134,7 @@ fun SettingsScreen(
                 // An action rather than a setting, so it acts at once and leaves the screen. Until
                 // assetlinks.json is live at the domain root, a tapped link does not reach the
                 // app, which makes this the only way one can get in.
-                ActionRow(title = "Record an update link", onClick = onImportLink)
+                ActionRow(title = "Record an update link (beta)", onClick = onImportLink)
             }
             item { RowDivider(TextRowInset) }
             item {

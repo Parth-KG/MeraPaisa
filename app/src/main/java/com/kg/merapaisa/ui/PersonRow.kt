@@ -170,8 +170,10 @@ private fun PersonMenu(
         MenuRow("Send a reminder", theme.textPrimary) { onDismiss(); onSendReminder() }
         MenuRow("Share a summary", theme.textPrimary) { onDismiss(); onShareSummary() }
         // Distinct from a summary: that sends text a human reads, this sends a link their app
-        // records, so both ledgers end up agreeing.
-        MenuRow("Send an update link", theme.textPrimary) { onDismiss(); onShareLedger() }
+        // records, so both ledgers end up agreeing. Marked (beta) wherever it is named: a long
+        // history makes a link that chat apps cut or the other phone refuses, and a debt both
+        // people record themselves counts twice. Both are still to be solved.
+        MenuRow("Send an update link (beta)", theme.textPrimary) { onDismiss(); onShareLedger() }
         // Only when something is owed, named for which way it runs. At zero there is nothing to
         // hand on, and an always-visible item that always refuses is worse than no item.
         if (person.balanceMinor > 0) {

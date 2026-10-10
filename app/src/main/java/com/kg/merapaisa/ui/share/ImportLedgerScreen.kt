@@ -122,7 +122,7 @@ private fun PastingScreen(
 ) {
     val theme = LocalAppTheme.current
     ScreenFrame(
-        title = "Record an update link",
+        title = "Record an update link (beta)",
         onBack = onDismiss,
         footer = {
             FootActions {
@@ -245,7 +245,11 @@ private fun ConfirmingScreen(
 
     ScreenFrame(
         // A full link carries the whole ledger, which is not an update.
-        title = if (payload.scope == ShareScope.Full) "Check this ledger link" else "Check this update link",
+        title = if (payload.scope == ShareScope.Full) {
+            "Check this ledger link (beta)"
+        } else {
+            "Check this update link (beta)"
+        },
         onBack = if (state.busy) null else onDismiss,
         footer = {
             // The way out on the left and the action on the right, as on every sheet and screen.

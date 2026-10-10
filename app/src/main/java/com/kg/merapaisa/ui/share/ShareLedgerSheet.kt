@@ -69,7 +69,7 @@ fun ShareLedgerSheet(
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                "Send an update link",
+                "Send an update link (beta)",
                 style = MeraPaisaType.screenTitle,
                 color = theme.textPrimary,
                 modifier = Modifier.padding(horizontal = Spacing.lg)
