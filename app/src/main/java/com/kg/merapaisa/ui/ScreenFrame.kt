@@ -271,8 +271,18 @@ internal fun ChoiceChip(
         onClick = onClick,
         shape = Shapes.small,
         modifier = modifier.heightIn(min = 48.dp).widthIn(min = 48.dp),
+        // The label itself takes the 48dp, less the chip's own 32dp of padding, so a single symbol
+        // is centred in it. Held to a minimum on the chip alone, Material laid the label at the
+        // start and the spare width after it: "₹" sat a few dp left of centre.
         label = {
-            Text(label, style = style, maxLines = 1, softWrap = false, textAlign = TextAlign.Center)
+            Text(
+                label,
+                style = style,
+                maxLines = 1,
+                softWrap = false,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.widthIn(min = ChipLabelMinWidth)
+            )
         },
         colors = choiceChipColors(),
         border = choiceChipBorder(selected, enabled)
@@ -341,6 +351,9 @@ internal fun Paragraph(text: String, colour: Color = LocalAppTheme.current.textS
  * default "Restore from a file" and "Replace my ledger" broke onto a second line.
  */
 private val FootButtonPadding = PaddingValues(horizontal = Spacing.md, vertical = Spacing.sm)
+
+/** 48dp less a FilterChip's 8dp of padding and 8dp around its label, on each side. */
+private val ChipLabelMinWidth = 16.dp
 
 /**
  * For a full screen drawn over the ledger rather than in place of it.
