@@ -23,6 +23,7 @@ import com.kg.merapaisa.data.SUPPORTED_CURRENCIES
 import com.kg.merapaisa.themes
 import com.kg.merapaisa.ui.theme.MeraPaisaTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -53,11 +54,11 @@ class ChoiceChipsLargeTypeTest {
         }
     }
 
-    private fun lineCount(text: String): Int {
+    private fun layoutOf(text: String): TextLayoutResult {
         val results = mutableListOf<TextLayoutResult>()
         compose.onNodeWithText(text).fetchSemanticsNode()
             .config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
-        return results.single().lineCount
+        return results.single()
     }
 
     private fun assertInside(chip: DpRect, form: DpRect, name: String) {
@@ -75,7 +76,10 @@ class ChoiceChipsLargeTypeTest {
 
         val form = compose.onNodeWithTag("form").getUnclippedBoundsInRoot()
         listOf("Initials", "Emoji", "Photo").forEach { word ->
-            assertEquals("$word broke over two lines", 1, lineCount(word))
+            val layout = layoutOf(word)
+            assertEquals("$word broke over two lines", 1, layout.lineCount)
+            // A word squeezed into too narrow a chip is cut off rather than wrapped.
+            assertFalse("$word does not fit its chip", layout.hasVisualOverflow)
             assertInside(compose.onNodeWithText(word).getUnclippedBoundsInRoot(), form, word)
         }
     }

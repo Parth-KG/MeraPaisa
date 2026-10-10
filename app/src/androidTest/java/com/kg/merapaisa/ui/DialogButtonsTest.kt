@@ -8,6 +8,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.DeviceConfigurationOverride
+import androidx.compose.ui.test.FontScale
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -33,14 +35,17 @@ class DialogButtonsTest {
     @get:Rule
     val compose = createComposeRule()
 
+    // At the phone's own text size whatever that is, so widths here are the test's, not the phone's.
     private fun show(width: Dp, confirm: String, dismiss: String, equalWidths: Boolean = false) {
         compose.setContent {
-            Box(Modifier.width(width).testTag("slot")) {
-                DialogButtons(
-                    equalWidths = equalWidths,
-                    confirm = { Choice(confirm, "confirm", filled = equalWidths) },
-                    dismiss = { Choice(dismiss, "dismiss", filled = equalWidths) }
-                )
+            DeviceConfigurationOverride(DeviceConfigurationOverride.FontScale(1f)) {
+                Box(Modifier.width(width).testTag("slot")) {
+                    DialogButtons(
+                        equalWidths = equalWidths,
+                        confirm = { Choice(confirm, "confirm", filled = equalWidths) },
+                        dismiss = { Choice(dismiss, "dismiss", filled = equalWidths) }
+                    )
+                }
             }
         }
     }
