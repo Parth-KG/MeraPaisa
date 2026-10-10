@@ -256,10 +256,28 @@ class ThemeInkContrastTest {
         assertTrue("these lines do not read as intended\n  " + failures.joinToString("\n  "), failures.isEmpty())
     }
 
+    /**
+     * A divider also separates rows on a sheet, and marks a sheet's foot while its list runs on.
+     * Kaapi's sheet was lightened in v3.3.0 and took its divider to 1.12:1 against it, fainter than
+     * any other theme's; the floor is the weakest of the others.
+     */
+    @Test
+    fun dividersReadOnASheetToo() {
+        val failures = themes
+            .map { it.name to contrastRatio(it.divider, it.surface) }
+            .filter { (_, ratio) -> ratio < MIN_DIVIDER_ON_SHEET }
+        assertTrue(
+            "a divider fades into the sheet on: " +
+                failures.joinToString { (name, ratio) -> "%s (%.3f:1)".format(name, ratio) },
+            failures.isEmpty()
+        )
+    }
+
     private companion object {
         const val MIN_RATIO = 4.5
         const val MIN_ENHANCED_RATIO = 7.0
         const val MIN_DIVIDER = 1.2
+        const val MIN_DIVIDER_ON_SHEET = 1.18
         const val MIN_BORDER = 3.0
 
         /** Below this two colours read as the same colour on a phone, whatever the hex says. */

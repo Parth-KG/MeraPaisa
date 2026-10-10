@@ -100,12 +100,13 @@ val themes = listOf(
     AppTheme(
         name = "Kaapi",
         // The sheet a step lighter than it was (v3.3.0, Parth's pick): at #23180F an open sheet
-        // stood 1.10:1 off the dimmed page and its edge was hard to find.
+        // stood 1.10:1 off the dimmed page and its edge was hard to find. The divider lifted with
+        // it, or the rows and the foot's edge on a sheet all but vanished into the lighter ground.
         background = Color(0xFF1F150D), surface = Color(0xFF312318), card = Color(0xFF2C1E14),
         primary = Color(0xFF33DBD6), secondary = Color(0xFF8FB3B0),
         textPrimary = Color(0xFFF6EBDD), textSecondary = Color(0xFFCDBDAC),
         positive = Color(0xFFA3D17C), negative = Color(0xFFFEA9AD),
-        highlight = Color(0xFF3E2F25), divider = Color(0xFF372C22),
+        highlight = Color(0xFF3E2F25), divider = Color(0xFF3D3127),
         border = Color(0xFF7A6D60), onAccent = Color(0xFF1F150D)
     ),
     // A pine-green page under a lotus-pink accent. The page comes from a Pinterest palette, the
