@@ -15,6 +15,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.performSemanticsAction
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonWithBalance
@@ -73,7 +75,10 @@ class EditEntryTest {
 
         waitFor(hasText("Lunch") and hasSetTextAction())
         compose.onNode(hasText("Lunch") and hasSetTextAction()).performTextReplacement("Lunch with Asha")
-        compose.onNodeWithText("Save entry").performClick()
+        // Pressed through its click action rather than a touch. Typing brings the keyboard up and
+        // moves the sheet, and a touch aimed at where the button was could land on the keyboard:
+        // the save never came, about one run in four.
+        compose.onNodeWithText("Save entry").performSemanticsAction(SemanticsActions.OnClick)
         compose.waitUntil(5_000) { saved != null }
 
         assertEquals("Lunch with Asha", saved?.note)
