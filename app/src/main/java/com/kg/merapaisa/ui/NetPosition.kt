@@ -24,6 +24,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.heightIn
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.CurrencySides
 import com.kg.merapaisa.data.CurrencyTotal
@@ -89,17 +91,22 @@ fun NetPosition(
                 }
             )
             .padding(horizontal = Spacing.lg)
+            // The whole total is the target for turning it over, never less than a fingertip.
+            .then(if (canTurn) Modifier.heightIn(min = 48.dp) else Modifier)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Crossfade(targetState = label, animationSpec = tween(Motion.medium), label = "label", modifier = Modifier.weight(1f)) {
                 Text(it, style = MeraPaisaType.label, color = theme.textSecondary)
             }
             if (canTurn) {
+                // As tall as the label's line, so it grows with the type beside it. A fixed 16dp
+                // drew a glyph of about 13 that stayed that size while the words doubled.
+                val markSize = with(LocalDensity.current) { MeraPaisaType.label.lineHeight.toDp() }
                 Icon(
                     Icons.Outlined.SwapHoriz,
                     contentDescription = null,
                     tint = theme.textSecondary,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(markSize)
                 )
             }
         }
@@ -182,6 +189,9 @@ private fun TotalLine(words: String, amountMinor: Long, currency: String, reserv
                 contentDescription = amountSpoken(amountMinor, currency)
             },
         keepLabelOnOneLine = true,
+        // Every line stacks from the same scale as the lists, together, rather than one line at a
+        // time as each ran out of room: a long figure stacked while a short one beside it did not.
+        stackFromFontScale = LIST_STACK_FONT_SCALE,
         label = {
             Text(words, style = MeraPaisaType.body, color = theme.textSecondary)
         },
