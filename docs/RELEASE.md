@@ -91,9 +91,25 @@ The APK lands in `app/build/outputs/apk/release/`.
 
 Release builds run R8 with `isMinifyEnabled` and `isShrinkResources` on, which makes the
 release APK a fraction of the debug build's size. Shrinking can remove something that only reflection
-was keeping alive, so **install and open a release build yourself before sending it to
-anyone**: add a person, record an amount, settle them, check the widget and the CSV export.
-If something is missing, add a `-keep` rule to `app/proguard-rules.pro`.
+was keeping alive, so the shrunk code has to be opened on a phone before anyone gets it. If something
+is missing, add a `-keep` rule to `app/proguard-rules.pro`.
+
+## Checking a build on your own phone
+
+**Never install a build over the release app, `com.kg.merapaisa`, on a phone you use.** It holds a
+real ledger. A build that misbehaves, or a mistaken uninstall to get past a signing clash, takes that
+ledger with it. Two builds install beside it instead, each under its own package:
+
+- **The debug app**, `com.kg.merapaisa.debug`, from `./gradlew :app:assembleDebug`. Walk every flow
+  the release changes in it, at the largest font as well as the normal one.
+- **The check build**, `com.kg.merapaisa.check`, from `./gradlew :app:assembleCheck`. It is the
+  release build's code under the same R8 rules, signed with the debug key and named "Mera Paisa
+  check" on the launcher. Install it, open it, add a person, record an amount both ways, split
+  something, make a group, open the share sheet, write a backup, change the theme and look at the
+  widget. Then uninstall it, with its data.
+
+The check build is not the signed release APK byte for byte, only the same code shrunk the same way.
+The signed APK itself goes to friends, and nowhere near the phone the checks ran on.
 
 ## Upgrading a friend's phone
 
