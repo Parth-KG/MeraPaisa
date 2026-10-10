@@ -305,6 +305,10 @@ internal fun AvatarPicker(
  *
  * The tap target is the full 48dp square; the ink inside it is smaller, so eight of them fit two
  * to a line on a narrow phone without any of them becoming a target you have to aim at.
+ *
+ * The chosen one is ringed in the accent, apart from the swatch by a 3dp gap. The choice used to be
+ * a thicker edge drawn on the swatch itself, in the text colour, which on a dark swatch in a dark
+ * theme barely changed it.
  */
 @Composable
 private fun ColourSwatch(hue: String, selected: Boolean, onSelect: () -> Unit) {
@@ -319,16 +323,16 @@ private fun ColourSwatch(hue: String, selected: Boolean, onSelect: () -> Unit) {
             .semantics { contentDescription = name },
         contentAlignment = Alignment.Center
     ) {
+        if (selected) {
+            // 36 for the swatch, 3 of gap and 2 of ring on each side: 46, inside the 48.
+            Box(Modifier.size(46.dp).border(2.dp, theme.primary, Shapes.circle))
+        }
         Box(
             modifier = Modifier
                 .size(36.dp)
                 .clip(Shapes.circle)
                 .background(ink)
-                .border(
-                    width = if (selected) 3.dp else 1.dp,
-                    color = if (selected) theme.textPrimary else theme.border,
-                    shape = Shapes.circle
-                )
+                .border(1.dp, theme.border, Shapes.circle)
         )
     }
 }
