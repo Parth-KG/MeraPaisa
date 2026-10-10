@@ -98,7 +98,7 @@ fun PersonRow(
         // the two cannot share a line, at large type, the amount drops under the name.
         LabelAndAmount(
             modifier = Modifier.weight(1f).clearAndSetSemantics { },
-            stackFromFontScale = 1.5f,
+            stackFromFontScale = LIST_STACK_FONT_SCALE,
             label = {
                 Column {
                     Text(

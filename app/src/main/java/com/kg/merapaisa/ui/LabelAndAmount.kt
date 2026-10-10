@@ -6,6 +6,21 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.ui.theme.Spacing
+import androidx.compose.ui.platform.LocalDensity
+
+/**
+ * The font scale from which a list's rows put the figure under the words, every row alike, and a
+ * row's title gets a second line. Balances, a person's history and a group's lists share it, so
+ * they change shape together.
+ */
+const val LIST_STACK_FONT_SCALE = 1.5f
+
+/**
+ * Lines for a list row's title: one, or two from [LIST_STACK_FONT_SCALE] up, where one line holds
+ * only a word or two.
+ */
+@Composable
+fun listTitleMaxLines(): Int = if (LocalDensity.current.fontScale >= LIST_STACK_FONT_SCALE) 2 else 1
 
 /**
  * Words on the left and a figure on the right, or the figure under the words when both will not

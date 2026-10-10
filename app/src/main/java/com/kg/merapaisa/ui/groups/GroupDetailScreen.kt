@@ -66,6 +66,9 @@ import com.kg.merapaisa.ui.DecisionDialog
 import com.kg.merapaisa.ui.format.amountString
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.TextButton
+import com.kg.merapaisa.ui.LIST_STACK_FONT_SCALE
+import com.kg.merapaisa.ui.LabelAndAmount
+import com.kg.merapaisa.ui.listTitleMaxLines
 
 /**
  * One group: where everybody stands, what has been spent, and a way to square it up.
@@ -310,7 +313,8 @@ private fun MemberBalanceRow(name: String, isYou: Boolean, amountMinor: Long, cu
         else -> "even"
     }
 
-    Row(
+    // At large type the figure goes under the name, in every row alike, as on Balances.
+    LabelAndAmount(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Spacing.lg, vertical = Spacing.md)
@@ -321,28 +325,30 @@ private fun MemberBalanceRow(name: String, isYou: Boolean, amountMinor: Long, cu
                 contentDescription = if (amountMinor == 0L) "$name, even"
                 else "$name $standing ${spokenFigure(amountMinor, currency)}"
             },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                name,
-                style = MeraPaisaType.bodyStrong,
-                color = theme.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(standing, style = MeraPaisaType.label, color = theme.textSecondary)
+        stackFromFontScale = LIST_STACK_FONT_SCALE,
+        label = {
+            Column {
+                Text(
+                    name,
+                    style = MeraPaisaType.bodyStrong,
+                    color = theme.textPrimary,
+                    maxLines = listTitleMaxLines(),
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(standing, style = MeraPaisaType.label, color = theme.textSecondary)
+            }
+        },
+        amount = {
+            Box(Modifier.clearAndSetSemantics { }) {
+                AmountText(
+                    amountMinor = amountMinor,
+                    currencyCode = currency,
+                    style = MeraPaisaType.amount,
+                    columnAligned = true
+                )
+            }
         }
-        Box(Modifier.clearAndSetSemantics { }) {
-            AmountText(
-                amountMinor = amountMinor,
-                currencyCode = currency,
-                style = MeraPaisaType.amount,
-                columnAligned = true
-            )
-        }
-    }
+    )
 }
 
 /**
@@ -368,7 +374,8 @@ private fun EntryRow(
     val ink = if (quiet) theme.textSecondary else theme.textPrimary
 
     Box {
-        Row(
+        // At large type the figure goes under the words, in every row alike, as on Balances.
+        LabelAndAmount(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(if (showMenu) theme.highlight else Color.Transparent)
@@ -385,32 +392,34 @@ private fun EntryRow(
                     contentDescription = listOfNotNull(title, subtitle)
                         .joinToString(", ") + ", " + spokenFigure(amountMinor, currency)
                 },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    title,
-                    style = MeraPaisaType.bodyStrong,
-                    color = ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (subtitle != null) {
-                    Text(subtitle, style = MeraPaisaType.label, color = theme.textSecondary)
+            stackFromFontScale = LIST_STACK_FONT_SCALE,
+            label = {
+                Column {
+                    Text(
+                        title,
+                        style = MeraPaisaType.bodyStrong,
+                        color = ink,
+                        maxLines = listTitleMaxLines(),
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (subtitle != null) {
+                        Text(subtitle, style = MeraPaisaType.label, color = theme.textSecondary)
+                    }
+                }
+            },
+            amount = {
+                Box(Modifier.clearAndSetSemantics { }) {
+                    AmountText(
+                        amountMinor = amountMinor,
+                        currencyCode = currency,
+                        style = MeraPaisaType.amount,
+                        signStyle = SignStyle.None,
+                        colourByDirection = false,
+                        columnAligned = true
+                    )
                 }
             }
-            Box(Modifier.clearAndSetSemantics { }) {
-                AmountText(
-                    amountMinor = amountMinor,
-                    currencyCode = currency,
-                    style = MeraPaisaType.amount,
-                    signStyle = SignStyle.None,
-                    colourByDirection = false,
-                    columnAligned = true
-                )
-            }
-        }
+        )
         DropdownMenu(
             expanded = showMenu,
             onDismissRequest = { showMenu = false },

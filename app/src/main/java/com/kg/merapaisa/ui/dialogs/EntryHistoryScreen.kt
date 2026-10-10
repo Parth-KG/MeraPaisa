@@ -5,7 +5,6 @@ import com.kg.merapaisa.ui.ButtonLabel
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -65,6 +64,9 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import com.kg.merapaisa.ui.coversLedger
+import com.kg.merapaisa.ui.LIST_STACK_FONT_SCALE
+import com.kg.merapaisa.ui.LabelAndAmount
+import com.kg.merapaisa.ui.listTitleMaxLines
 
 /**
  * Everything ever recorded with one person, newest first.
@@ -399,7 +401,7 @@ private fun EntryRow(
         modifier = Modifier.fillMaxWidth().padding(end = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .weight(1f)
                 // A tap opens the whole entry, as it always has. Nobody found that, because a
@@ -417,47 +419,64 @@ private fun EntryRow(
                 .semantics(mergeDescendants = true) {
                     contentDescription =
                         "$title, $time, ${entrySpoken(entry.amountMinor, person.currency)}"
-                },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                }
         ) {
-            // The menu anchors to the words it is about.
-            Box(modifier = Modifier.weight(1f)) {
-                Column {
-                    Text(
-                        title,
-                        style = MeraPaisaType.bodyStrong,
-                        color = theme.textPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(time, style = MeraPaisaType.label, color = theme.textSecondary)
-                }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }, shape = Shapes.medium) {
-                    DropdownMenuItem(
-                        text = {
+            // At large type the figure goes under the words rather than squeezing the note to a
+            // letter or two, the same in every row so the amounts stay one column.
+            LabelAndAmount(
+                stackFromFontScale = LIST_STACK_FONT_SCALE,
+                label = {
+                    // The menu anchors to the words it is about.
+                    Box {
+                        Column {
                             Text(
-                                if (entry.note.isBlank()) "Add a note" else "Edit note",
-                                style = MeraPaisaType.body,
-                                color = theme.textPrimary
+                                title,
+                                style = MeraPaisaType.bodyStrong,
+                                color = theme.textPrimary,
+                                maxLines = listTitleMaxLines(),
+                                overflow = TextOverflow.Ellipsis
                             )
-                        },
-                        onClick = { menuOpen = false; onEditField(EntryField.Note) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Edit amount", style = MeraPaisaType.body, color = theme.textPrimary) },
-                        onClick = { menuOpen = false; onEditField(EntryField.Amount) }
-                    )
+                            Text(time, style = MeraPaisaType.label, color = theme.textSecondary)
+                        }
+                        DropdownMenu(
+                            expanded = menuOpen,
+                            onDismissRequest = { menuOpen = false },
+                            shape = Shapes.medium
+                        ) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (entry.note.isBlank()) "Add a note" else "Edit note",
+                                        style = MeraPaisaType.body,
+                                        color = theme.textPrimary
+                                    )
+                                },
+                                onClick = { menuOpen = false; onEditField(EntryField.Note) }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        "Edit amount",
+                                        style = MeraPaisaType.body,
+                                        color = theme.textPrimary
+                                    )
+                                },
+                                onClick = { menuOpen = false; onEditField(EntryField.Amount) }
+                            )
+                        }
+                    }
+                },
+                amount = {
+                    Box(Modifier.clearAndSetSemantics { }) {
+                        AmountText(
+                            amountMinor = entry.amountMinor,
+                            currencyCode = person.currency,
+                            style = MeraPaisaType.amount,
+                            columnAligned = true
+                        )
+                    }
                 }
-            }
-            Box(Modifier.clearAndSetSemantics { }) {
-                AmountText(
-                    amountMinor = entry.amountMinor,
-                    currencyCode = person.currency,
-                    style = MeraPaisaType.amount,
-                    columnAligned = true
-                )
-            }
+            )
         }
 
         IconButton(
