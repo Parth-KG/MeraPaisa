@@ -59,6 +59,18 @@ android {
                 "proguard-rules.pro"
             )
         }
+        // The release build's code, shrunk by the same R8 rules, under its own package and the
+        // debug key, so it installs beside the release app and can be opened on a phone that
+        // holds a real ledger without touching it. Nothing shipped is ever checked otherwise:
+        // the release APK itself is never installed there. Its updater refuses the published
+        // APK, whose certificate is not its own.
+        create("check") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".check"
+            versionNameSuffix = "-check"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

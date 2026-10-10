@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- On the launcher beside the release and debug apps, so it is never mistaken for either. -->
+    <string name="app_name">Mera Paisa check</string>
+</resources>
