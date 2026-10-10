@@ -2,6 +2,7 @@ package com.kg.merapaisa.ui.dialogs
 
 import android.net.Uri
 import com.kg.merapaisa.ui.ButtonLabel
+import com.kg.merapaisa.ui.DialogButtons
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -290,31 +291,36 @@ internal fun ConvertCurrencyDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = onConvert,
-                shape = Shapes.small,
-                modifier = Modifier.heightIn(min = 48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = theme.primary,
-                    contentColor = theme.onAccent
-                )
-            ) {
-                ButtonLabel("Convert the entries")
-            }
-        },
-        dismissButton = {
-            // The quieter way through, and the one that changes nothing you cannot change back.
-            Button(
-                onClick = onRelabel,
-                shape = Shapes.small,
-                modifier = Modifier.heightIn(min = 48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = theme.highlight,
-                    contentColor = theme.textPrimary
-                )
-            ) {
-                ButtonLabel("Keep the amounts")
-            }
+            DialogButtons(
+                equalWidths = true,
+                confirm = {
+                    Button(
+                        onClick = onConvert,
+                        shape = Shapes.small,
+                        modifier = Modifier.heightIn(min = 48.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = theme.primary,
+                            contentColor = theme.onAccent
+                        )
+                    ) {
+                        ButtonLabel("Convert the entries")
+                    }
+                },
+                // The quieter way through, and the one that changes nothing you cannot change back.
+                dismiss = {
+                    Button(
+                        onClick = onRelabel,
+                        shape = Shapes.small,
+                        modifier = Modifier.heightIn(min = 48.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = theme.highlight,
+                            contentColor = theme.textPrimary
+                        )
+                    ) {
+                        ButtonLabel("Keep the amounts")
+                    }
+                }
+            )
         }
     )
 }

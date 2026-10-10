@@ -9,6 +9,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.ui.theme.MeraPaisaType
@@ -59,15 +61,71 @@ internal fun DecisionDialog(
                 }
             }
         },
+        // Both buttons go in the one slot, laid out by DialogButtons rather than Material's row.
         confirmButton = {
-            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = 48.dp)) {
-                ButtonLabel(confirmLabel, color = confirmColour)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
-                ButtonLabel(dismissLabel, color = theme.textSecondary)
-            }
+            DialogButtons(
+                confirm = {
+                    TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = 48.dp)) {
+                        ButtonLabel(confirmLabel, color = confirmColour)
+                    }
+                },
+                dismiss = {
+                    TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
+                        ButtonLabel(dismissLabel, color = theme.textSecondary)
+                    }
+                }
+            )
         }
     )
+}
+
+/**
+ * A decision's two buttons: side by side at the end when both fit on one line, otherwise one
+ * above the other at full width, the confirm on top.
+ *
+ * Material's dialog lays its buttons in a flow row that wraps in reverse. With a long name in the
+ * way out ("Keep Chaitanya Venkataraman") the confirm dropped below it, the pair kept the row's gap
+ * between them, and the long one ran out to the dialog's edge. Measured here instead, a pair either
+ * fits whole or stacks whole.
+ *
+ * [equalWidths] gives both the wider one's width, for two filled buttons that are equally
+ * outcomes, where a narrow one beside a wide one would read as the lesser choice.
+ */
+@Composable
+internal fun DialogButtons(
+    confirm: @Composable () -> Unit,
+    dismiss: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    equalWidths: Boolean = false
+) {
+    Layout(content = { dismiss(); confirm() }, modifier = modifier) { measurables, constraints ->
+        require(measurables.size == 2) { "DialogButtons takes exactly one button in each slot" }
+        val (dismissButton, confirmButton) = measurables
+        val gap = Spacing.sm.roundToPx()
+        val dismissWidth = dismissButton.maxIntrinsicWidth(constraints.maxHeight)
+        val confirmWidth = confirmButton.maxIntrinsicWidth(constraints.maxHeight)
+        val widest = maxOf(dismissWidth, confirmWidth)
+        val rowWidth = if (equalWidths) 2 * widest + gap else dismissWidth + confirmWidth + gap
+
+        if (rowWidth <= constraints.maxWidth) {
+            fun fixed(width: Int) = Constraints.fixedWidth(width).copy(maxHeight = constraints.maxHeight)
+            val d = dismissButton.measure(fixed(if (equalWidths) widest else dismissWidth))
+            val c = confirmButton.measure(fixed(if (equalWidths) widest else confirmWidth))
+            val height = maxOf(d.height, c.height)
+            val width = if (constraints.hasBoundedWidth) constraints.maxWidth else rowWidth
+            layout(width, height) {
+                // Aligned to the end, where a dialog's answers sit, the confirm last.
+                c.placeRelative(width - c.width, (height - c.height) / 2)
+                d.placeRelative(width - c.width - gap - d.width, (height - d.height) / 2)
+            }
+        } else {
+            val full = Constraints.fixedWidth(constraints.maxWidth).copy(maxHeight = constraints.maxHeight)
+            val c = confirmButton.measure(full)
+            val d = dismissButton.measure(full)
+            layout(constraints.maxWidth, c.height + gap + d.height) {
+                c.placeRelative(0, 0)
+                d.placeRelative(0, c.height + gap)
+            }
+        }
+    }
 }
