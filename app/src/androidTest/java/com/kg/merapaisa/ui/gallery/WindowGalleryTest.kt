@@ -46,7 +46,7 @@ class WindowGalleryTest {
     fun captureEverySheetAndDialog() = capture(fontScale = 1f, label = "")
 
     /**
-     * The history screen's own sheet at double type, alongside the history itself.
+     * Every sheet and dialog whose words or buttons can wrap, at double type.
      *
      * DeviceConfigurationOverride alone does not reach these: a sheet or dialog is its own window,
      * which reads its density from the activity, so the first run at "double type" produced images
@@ -58,7 +58,9 @@ class WindowGalleryTest {
         label = "-fs2",
         only = setOf(
             "sheet-edit-entry", "dialog-delete-person", "sheet-add-person", "sheet-reminder", "sheet-settle-up",
-            "sheet-theme-trying"
+            "sheet-theme-trying", "sheet-move-debt", "dialog-convert-currency", "sheet-edit-person",
+            "sheet-create-group", "sheet-edit-group", "sheet-add-expense", "sheet-share",
+            "dialog-replace-ledger"
         )
     )
 

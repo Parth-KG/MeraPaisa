@@ -59,11 +59,17 @@ fun EditGroupSheet(
     members: List<Person>,
     people: List<PersonWithBalance>,
     onDismiss: () -> Unit,
-    onSave: (name: String, newMemberIds: List<Long>) -> Unit
+    onSave: (name: String, newMemberIds: List<Long>) -> Unit,
+    /**
+     * People ticked when the sheet opens. Empty in the app, since nobody is added until ticked. It
+     * exists so the gallery can show the sheet with people chosen, which is otherwise only
+     * reachable by tapping and therefore never appears in a screenshot.
+     */
+    initiallySelectedIds: Set<Long> = emptySet()
 ) {
     val theme = LocalAppTheme.current
     var name by remember(group.id) { mutableStateOf(group.name) }
-    var selected by remember(group.id) { mutableStateOf(setOf<Long>()) }
+    var selected by remember(group.id) { mutableStateOf(initiallySelectedIds) }
 
     val memberIds = members.map { it.id }.toSet()
     val candidates = people.filter { it.id !in memberIds }

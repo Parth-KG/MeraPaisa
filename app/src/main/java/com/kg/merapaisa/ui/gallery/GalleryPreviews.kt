@@ -44,6 +44,7 @@ import com.kg.merapaisa.ui.groups.AddExpenseDialog
 import com.kg.merapaisa.ui.groups.GroupDetailScreen
 import com.kg.merapaisa.ui.groups.GroupRow
 import com.kg.merapaisa.ui.groups.GroupsEmptyState
+import com.kg.merapaisa.ui.groups.EditGroupSheet
 import com.kg.merapaisa.ui.groups.SettleUpSheet
 import com.kg.merapaisa.ui.share.ImportLedgerDialog
 import com.kg.merapaisa.ui.share.ShareLedgerSheet
@@ -481,6 +482,18 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
             defaultCurrency = "INR",
             onDismiss = {},
             onCreate = { _, _, _, _ -> }
+        )
+    },
+    // Three members and four people who could join, two of them ticked: the sheet as it looks once
+    // someone is being added, with the count in the heading.
+    "sheet-edit-group" to {
+        EditGroupSheet(
+            group = Fixtures.group,
+            members = Fixtures.mixedPeople.take(3).map { it.person },
+            people = Fixtures.mixedPeople,
+            onDismiss = {},
+            onSave = { _, _ -> },
+            initiallySelectedIds = setOf(Fixtures.dollarPerson.id, Fixtures.shortName.id)
         )
     },
     "sheet-add-expense" to {
