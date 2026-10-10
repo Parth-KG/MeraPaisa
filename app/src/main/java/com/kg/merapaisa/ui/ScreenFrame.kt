@@ -243,7 +243,7 @@ internal fun RowScope.SecondaryAction(
  * under a first line that looked centred: "Keep Chaitanya / Venkataraman" read as two labels.
  */
 @Composable
-internal fun ButtonLabel(text: String, color: Color = Color.Unspecified, modifier: Modifier = Modifier) {
+internal fun ButtonLabel(text: String, modifier: Modifier = Modifier, color: Color = Color.Unspecified) {
     Text(text, style = MeraPaisaType.action, color = color, textAlign = TextAlign.Center, modifier = modifier)
 }
 
