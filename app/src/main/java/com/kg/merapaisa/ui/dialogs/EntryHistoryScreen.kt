@@ -1,6 +1,7 @@
 package com.kg.merapaisa.ui.dialogs
 
 import com.kg.merapaisa.ui.format.entrySpoken
+import com.kg.merapaisa.ui.ButtonLabel
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -151,7 +152,7 @@ fun EntryHistoryContent(
                     onClick = { showClearConfirm = true },
                     modifier = Modifier.heightIn(min = 48.dp)
                 ) {
-                    Text("Clear history", style = MeraPaisaType.action, color = theme.textPrimary)
+                    ButtonLabel("Clear history", color = theme.textPrimary)
                 }
             }
         }

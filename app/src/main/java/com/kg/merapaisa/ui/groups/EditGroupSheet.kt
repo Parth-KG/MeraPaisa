@@ -1,12 +1,9 @@
 package com.kg.merapaisa.ui.groups
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -14,11 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -42,6 +36,9 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.SheetFrame
+import com.kg.merapaisa.ui.SheetFoot
+import com.kg.merapaisa.ui.PrimaryAction
+import com.kg.merapaisa.ui.SecondaryAction
 import kotlinx.coroutines.launch
 
 /**
@@ -156,37 +153,17 @@ fun EditGroupSheet(
             )
         }
 
-        Row(
-            modifier = Modifier.height(IntrinsicSize.Min)
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedButton(
-                onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                border = BorderStroke(1.dp, theme.border),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
-            ) {
-                Text("Keep it as it was", style = MeraPaisaType.action)
+        SheetFoot {
+            SecondaryAction("Keep it as it was", enabled = true) {
+                scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }
-            Button(
-                onClick = {
-                    val newName = name.trim()
-                    val added = selected.toList()
-                    scope.launch { sheetState.hide() }.invokeOnCompletion { onSave(newName, added) }
-                },
-                enabled = name.isNotBlank() && (name.trim() != group.name || selected.isNotEmpty()),
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = theme.primary,
-                    contentColor = theme.onAccent
-                )
+            PrimaryAction(
+                "Save group",
+                enabled = name.isNotBlank() && (name.trim() != group.name || selected.isNotEmpty())
             ) {
-                Text("Save group", style = MeraPaisaType.action)
+                val newName = name.trim()
+                val added = selected.toList()
+                scope.launch { sheetState.hide() }.invokeOnCompletion { onSave(newName, added) }
             }
         }
     }

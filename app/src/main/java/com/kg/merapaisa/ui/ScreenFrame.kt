@@ -33,6 +33,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -133,28 +137,63 @@ internal fun FootActions(content: @Composable RowScope.() -> Unit) {
     )
 }
 
-/** What the screen is for, in the accent. */
+/**
+ * What the screen is for, in the accent.
+ *
+ * [busyLabel] holds the button while its work runs, with a spinner and the words for what is
+ * happening. Held is not unavailable: the spinner and the words are the only sign of the work, so
+ * they keep the button's colours rather than fading to a disabled grey nobody can read.
+ */
 @Composable
-internal fun RowScope.PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
+internal fun RowScope.PrimaryAction(
+    label: String,
+    enabled: Boolean,
+    busyLabel: String? = null,
+    onClick: () -> Unit
+) {
     val theme = LocalAppTheme.current
+    val busy = busyLabel != null
+    val standard = ButtonDefaults.buttonColors()
     Button(
         onClick = onClick,
-        enabled = enabled,
+        enabled = enabled && !busy,
         shape = Shapes.small,
         modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
         contentPadding = FootButtonPadding,
         colors = ButtonDefaults.buttonColors(
             containerColor = theme.primary,
-            contentColor = theme.onAccent
+            contentColor = theme.onAccent,
+            disabledContainerColor = if (busy) theme.primary else standard.disabledContainerColor,
+            disabledContentColor = if (busy) theme.onAccent else standard.disabledContentColor
         )
     ) {
-        Text(label, style = MeraPaisaType.action)
+        if (busyLabel != null) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = theme.onAccent
+            )
+            Spacer(Modifier.width(Spacing.sm))
+            ButtonLabel(busyLabel)
+        } else {
+            ButtonLabel(label)
+        }
     }
 }
 
-/** The way out, outlined so it does not compete with the decision beside it. */
+/**
+ * The way out, outlined so it does not compete with the decision beside it.
+ *
+ * [fill] is for a button that floats over a list, as Balances' Split does: filled with the page,
+ * a row scrolled beneath it does not show through the outline.
+ */
 @Composable
-internal fun RowScope.SecondaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
+internal fun RowScope.SecondaryAction(
+    label: String,
+    enabled: Boolean,
+    fill: Color = Color.Transparent,
+    onClick: () -> Unit
+) {
     val theme = LocalAppTheme.current
     OutlinedButton(
         onClick = onClick,
@@ -163,10 +202,21 @@ internal fun RowScope.SecondaryAction(label: String, enabled: Boolean, onClick: 
         modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
         contentPadding = FootButtonPadding,
         border = BorderStroke(1.dp, theme.border),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
+        colors = ButtonDefaults.outlinedButtonColors(containerColor = fill, contentColor = theme.textPrimary)
     ) {
-        Text(label, style = MeraPaisaType.action)
+        ButtonLabel(label)
     }
+}
+
+/**
+ * The words on any button, centred.
+ *
+ * A label that wraps at large type took Text's start alignment, so its second line sat flush left
+ * under a first line that looked centred: "Keep Chaitanya / Venkataraman" read as two labels.
+ */
+@Composable
+internal fun ButtonLabel(text: String, color: Color = Color.Unspecified, modifier: Modifier = Modifier) {
+    Text(text, style = MeraPaisaType.action, color = color, textAlign = TextAlign.Center, modifier = modifier)
 }
 
 /**

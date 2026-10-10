@@ -1,10 +1,8 @@
 package com.kg.merapaisa.ui.dialogs
 
 import com.kg.merapaisa.data.isTypableAmount
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
+import com.kg.merapaisa.ui.ButtonLabel
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,10 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -29,7 +24,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -46,12 +40,13 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import com.kg.merapaisa.ui.DecisionDialog
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.SheetFrame
+import com.kg.merapaisa.ui.SheetFoot
+import com.kg.merapaisa.ui.PrimaryAction
+import com.kg.merapaisa.ui.SecondaryAction
 
 /** A field of [EditEntrySheet], for opening it with that field ready to type in. */
 enum class EntryField { Amount, Note }
@@ -181,44 +176,21 @@ fun EditEntrySheet(
                 onClick = { confirmingDelete = true },
                 modifier = Modifier.heightIn(min = 48.dp).padding(horizontal = Spacing.sm)
             ) {
-                Text("Delete this entry", style = MeraPaisaType.action, color = theme.textPrimary)
+                ButtonLabel("Delete this entry", color = theme.textPrimary)
             }
         }
 
-        Row(
-            modifier = Modifier.height(IntrinsicSize.Min)
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedButton(
-                onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                border = BorderStroke(1.dp, theme.border),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
-            ) {
-                Text("Keep it as it was", style = MeraPaisaType.action)
+        SheetFoot {
+            SecondaryAction("Keep it as it was", enabled = true) {
+                scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }
-            Button(
-                onClick = {
-                    val minor = amountMinor ?: return@Button
-                    // The sheet plays its way out before the entry is written, so the list behind
-                    // it is not seen reordering under a sheet that is still on screen.
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        onSave(entry.copy(amountMinor = minor, note = note.text.trim()))
-                    }
-                },
-                enabled = isValid,
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = theme.primary,
-                    contentColor = theme.onAccent
-                )
-            ) {
-                Text("Save entry", style = MeraPaisaType.action)
+            PrimaryAction("Save entry", enabled = isValid) {
+                val minor = amountMinor ?: return@PrimaryAction
+                // The sheet plays its way out before the entry is written, so the list behind
+                // it is not seen reordering under a sheet that is still on screen.
+                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                    onSave(entry.copy(amountMinor = minor, note = note.text.trim()))
+                }
             }
         }
     }

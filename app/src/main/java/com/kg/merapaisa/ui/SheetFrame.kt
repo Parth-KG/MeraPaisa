@@ -1,6 +1,14 @@
 package com.kg.merapaisa.ui
 
 import androidx.compose.foundation.layout.Column
+import com.kg.merapaisa.ui.theme.Spacing
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -60,6 +68,25 @@ internal fun SheetFrame(
     ) {
         Column(modifier = Modifier.fillMaxWidth().nestedScroll(keepStill), content = content)
     }
+}
+
+/**
+ * A sheet's actions, side by side at its foot: the way out, then the way forward, each from
+ * [SecondaryAction] and [PrimaryAction].
+ *
+ * Eleven sheets built this row by hand, each with Material's 24dp of padding inside the buttons,
+ * which left a long label so little room that it wrapped where the shared buttons' 12dp does not.
+ */
+@Composable
+internal fun SheetFoot(content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = Modifier.height(IntrinsicSize.Min)
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        content = content
+    )
 }
 
 /**

@@ -1,6 +1,5 @@
 package com.kg.merapaisa.ui.groups
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,11 +13,8 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -48,9 +44,10 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.SheetFrame
+import com.kg.merapaisa.ui.SheetFoot
+import com.kg.merapaisa.ui.PrimaryAction
+import com.kg.merapaisa.ui.SecondaryAction
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
 
 /**
  * What somebody paid for, who paid, and who it is split between.
@@ -198,43 +195,20 @@ fun AddExpenseDialog(
             }
         }
 
-        Row(
-            modifier = Modifier.height(IntrinsicSize.Min)
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedButton(
-                onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                border = BorderStroke(1.dp, theme.border),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
-            ) {
-                Text("Don't add", style = MeraPaisaType.action)
+        SheetFoot {
+            SecondaryAction("Don't add", enabled = true) {
+                scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }
-            Button(
-                onClick = {
-                    val minor = amountMinor ?: return@Button
-                    // Once only: the button stays live while the sheet slides away, and a second
-                    // tap in that time added the expense twice.
-                    if (adding) return@Button
-                    adding = true
-                    val shares = sharedWith.toList().sorted()
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        onAdd(description.trim(), minor, paidBy, shares)
-                    }
-                },
-                enabled = valid && !adding,
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = theme.primary,
-                    contentColor = theme.onAccent
-                )
-            ) {
-                Text("Add expense", style = MeraPaisaType.action)
+            PrimaryAction("Add expense", enabled = valid && !adding) {
+                val minor = amountMinor ?: return@PrimaryAction
+                // Once only: the button stays live while the sheet slides away, and a second
+                // tap in that time added the expense twice.
+                if (adding) return@PrimaryAction
+                adding = true
+                val shares = sharedWith.toList().sorted()
+                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                    onAdd(description.trim(), minor, paidBy, shares)
+                }
             }
         }
     }

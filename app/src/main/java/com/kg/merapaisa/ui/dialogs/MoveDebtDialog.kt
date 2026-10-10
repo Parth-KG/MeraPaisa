@@ -1,6 +1,5 @@
 package com.kg.merapaisa.ui.dialogs
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +20,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -48,10 +46,11 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import com.kg.merapaisa.ui.format.TypedAmountText
 import com.kg.merapaisa.ui.SheetFrame
+import com.kg.merapaisa.ui.SheetFoot
+import com.kg.merapaisa.ui.PrimaryAction
+import com.kg.merapaisa.ui.SecondaryAction
 
 /**
  * Moving part of the debt between you and one person onto somebody else, whichever way it runs.
@@ -211,37 +210,14 @@ fun MoveDebtDialog(
             }
         }
 
-        Row(
-            modifier = Modifier.height(IntrinsicSize.Min)
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedButton(
-                onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                border = BorderStroke(1.dp, theme.border),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
-            ) {
-                Text("Don't move", style = MeraPaisaType.action)
+        SheetFoot {
+            SecondaryAction("Don't move", enabled = true) {
+                scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }
-            Button(
-                // No hide before the callback here, unlike every other button on a sheet in this
-                // app: the move can come back refused, and the sentence saying why is written on
-                // this sheet. Playing it out first would hide the answer.
-                onClick = onConfirm,
-                enabled = state.canMove,
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = theme.primary,
-                    contentColor = theme.onAccent
-                )
-            ) {
-                Text("Move the debt", style = MeraPaisaType.action)
-            }
+            // No hide before the callback here, unlike every other button on a sheet in this
+            // app: the move can come back refused, and the sentence saying why is written on
+            // this sheet. Playing it out first would hide the answer.
+            PrimaryAction("Move the debt", enabled = state.canMove, onClick = onConfirm)
         }
     }
 }

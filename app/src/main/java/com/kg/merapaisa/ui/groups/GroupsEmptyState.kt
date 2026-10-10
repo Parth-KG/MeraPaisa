@@ -1,6 +1,7 @@
 package com.kg.merapaisa.ui.groups
 
 import androidx.compose.foundation.layout.Arrangement
+import com.kg.merapaisa.ui.ButtonLabel
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -43,7 +44,7 @@ fun GroupsEmptyState(modifier: Modifier = Modifier, onCreateGroup: () -> Unit = 
                 contentColor = theme.onAccent
             )
         ) {
-            Text("New group", style = MeraPaisaType.action)
+            ButtonLabel("New group")
         }
     }
 }

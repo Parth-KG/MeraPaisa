@@ -53,7 +53,7 @@ fun EmptyState(tab: Tab, modifier: Modifier = Modifier, onAddPerson: () -> Unit 
                         contentColor = theme.onAccent
                     )
                 ) {
-                    Text("Add a person", style = MeraPaisaType.action)
+                    ButtonLabel("Add a person")
                 }
             }
 

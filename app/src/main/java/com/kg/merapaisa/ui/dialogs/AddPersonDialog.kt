@@ -4,7 +4,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -21,11 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -59,9 +55,10 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.SheetFrame
+import com.kg.merapaisa.ui.SheetFoot
+import com.kg.merapaisa.ui.PrimaryAction
+import com.kg.merapaisa.ui.SecondaryAction
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
 
 /**
  * A name, a face, and the currency this person's balance is kept in.
@@ -171,40 +168,17 @@ fun AddPersonDialog(
             CurrencyChips(selected = selectedCurrency, onSelect = { selectedCurrency = it })
         }
 
-        Row(
-            modifier = Modifier.height(IntrinsicSize.Min)
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedButton(
-                onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { dismiss() } },
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                border = BorderStroke(1.dp, theme.border),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
-            ) {
-                Text("Don't add", style = MeraPaisaType.action)
+        SheetFoot {
+            SecondaryAction("Don't add", enabled = true) {
+                scope.launch { sheetState.hide() }.invokeOnCompletion { dismiss() }
             }
-            Button(
-                onClick = {
-                    val personName = name.trim()
-                    val type = avatarTypeFor(pfpType, emoji, photoPath)
-                    val value = avatarValueFor(type, personName, emoji, photoPath)
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        onAdd(personName, type, value, selectedColour, selectedCurrency)
-                    }
-                },
-                enabled = name.isNotBlank(),
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = theme.primary,
-                    contentColor = theme.onAccent
-                )
-            ) {
-                Text("Add person", style = MeraPaisaType.action)
+            PrimaryAction("Add person", enabled = name.isNotBlank()) {
+                val personName = name.trim()
+                val type = avatarTypeFor(pfpType, emoji, photoPath)
+                val value = avatarValueFor(type, personName, emoji, photoPath)
+                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                    onAdd(personName, type, value, selectedColour, selectedCurrency)
+                }
             }
         }
     }

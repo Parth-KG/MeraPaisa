@@ -59,10 +59,8 @@ import com.kg.merapaisa.ThemeStore
 import com.kg.merapaisa.data.netTotalsByCurrency
 import com.kg.merapaisa.data.sidesByCurrency
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.animation.core.tween
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -70,12 +68,10 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.unit.Dp
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Motion
-import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.RowDivider
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.PaddingValues
@@ -361,38 +357,16 @@ fun MainScreen(viewModel: MainViewModel) {
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(
-                    onClick = {
-                        if (ui.tab == Tab.Groups) viewModel.showCreateGroupDialog(true)
-                        else viewModel.showAddDialog(true)
-                    },
-                    shape = Shapes.small,
-                    modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = theme.primary,
-                        contentColor = theme.onAccent
-                    )
-                ) {
-                    Text(
-                        if (ui.tab == Tab.Groups) "New group" else "Add a person",
-                        style = MeraPaisaType.action
-                    )
+                PrimaryAction(if (ui.tab == Tab.Groups) "New group" else "Add a person", enabled = true) {
+                    if (ui.tab == Tab.Groups) viewModel.showCreateGroupDialog(true)
+                    else viewModel.showAddDialog(true)
                 }
 
                 if (ui.tab != Tab.Groups) {
-                    OutlinedButton(
-                        onClick = { viewModel.startSplit() },
-                        shape = Shapes.small,
-                        modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                        border = BorderStroke(1.dp, theme.border),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            // Filled with the background so a row scrolled beneath it does not
-                            // show through the outline.
-                            containerColor = theme.background,
-                            contentColor = theme.textPrimary
-                        )
-                    ) {
-                        Text("Split an expense", style = MeraPaisaType.action)
+                    // Filled with the background so a row scrolled beneath it does not show
+                    // through the outline.
+                    SecondaryAction("Split an expense", enabled = true, fill = theme.background) {
+                        viewModel.startSplit()
                     }
                 }
             }

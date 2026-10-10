@@ -1,28 +1,23 @@
 package com.kg.merapaisa.ui.dialogs
 
 import android.net.Uri
+import com.kg.merapaisa.ui.ButtonLabel
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -32,7 +27,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -44,9 +38,10 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.SheetFrame
+import com.kg.merapaisa.ui.SheetFoot
+import com.kg.merapaisa.ui.PrimaryAction
+import com.kg.merapaisa.ui.SecondaryAction
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
 
 /**
  * The same form as adding somebody, filled in, plus the one thing only an existing person can do:
@@ -203,59 +198,24 @@ fun EditPersonDialog(
             }
         }
 
-        Row(
-            modifier = Modifier.height(IntrinsicSize.Min)
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedButton(
-                onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { dismiss() } },
-                enabled = !converting,
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                border = BorderStroke(1.dp, theme.border),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
-            ) {
-                Text("Keep as it was", style = MeraPaisaType.action)
+        SheetFoot {
+            SecondaryAction("Keep as it was", enabled = !converting) {
+                scope.launch { sheetState.hide() }.invokeOnCompletion { dismiss() }
             }
-            Button(
-                onClick = {
-                    val personName = name.trim()
-                    val type = avatarTypeFor(pfpType, emoji, photoPath)
-                    val value = avatarValueFor(type, personName, emoji, photoPath)
-                    // Saved without closing the sheet first: a conversion can come back without a
-                    // rate, and the sentence saying so has to arrive somewhere the user can still
-                    // see it.
-                    onSave(personName, type, value, selectedColour, selectedCurrency, shouldConvert)
-                },
-                enabled = !converting && name.isNotBlank(),
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = theme.primary,
-                    contentColor = theme.onAccent,
-                    // While a conversion runs the button is held, not unavailable: the spinner and
-                    // "Converting" are the only sign of the work, so they keep the button's colours
-                    // instead of fading to a disabled grey nobody can read.
-                    disabledContainerColor = if (converting) theme.primary else ButtonDefaults.buttonColors().disabledContainerColor,
-                    disabledContentColor = if (converting) theme.onAccent else ButtonDefaults.buttonColors().disabledContentColor
-                )
+            // The save is held until the rate resolves, so it cannot relabel the currency while
+            // leaving the amount in the old one.
+            PrimaryAction(
+                "Save person",
+                enabled = name.isNotBlank(),
+                busyLabel = if (converting) "Converting" else null
             ) {
-                if (converting) {
-                    // The save is held until the rate resolves, so it cannot relabel the currency
-                    // while leaving the amount in the old one.
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = theme.onAccent
-                    )
-                    Spacer(Modifier.width(Spacing.sm))
-                    Text("Converting", style = MeraPaisaType.action)
-                } else {
-                    Text("Save person", style = MeraPaisaType.action)
-                }
+                val personName = name.trim()
+                val type = avatarTypeFor(pfpType, emoji, photoPath)
+                val value = avatarValueFor(type, personName, emoji, photoPath)
+                // Saved without closing the sheet first: a conversion can come back without a
+                // rate, and the sentence saying so has to arrive somewhere the user can still
+                // see it.
+                onSave(personName, type, value, selectedColour, selectedCurrency, shouldConvert)
             }
         }
     }
@@ -337,7 +297,7 @@ internal fun ConvertCurrencyDialog(
                     contentColor = theme.onAccent
                 )
             ) {
-                Text("Convert the entries", style = MeraPaisaType.action)
+                ButtonLabel("Convert the entries")
             }
         },
         dismissButton = {
@@ -351,7 +311,7 @@ internal fun ConvertCurrencyDialog(
                     contentColor = theme.textPrimary
                 )
             ) {
-                Text("Keep the amounts", style = MeraPaisaType.action)
+                ButtonLabel("Keep the amounts")
             }
         }
     )

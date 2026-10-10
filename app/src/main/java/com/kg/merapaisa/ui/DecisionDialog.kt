@@ -61,12 +61,12 @@ internal fun DecisionDialog(
         },
         confirmButton = {
             TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(confirmLabel, style = MeraPaisaType.action, color = confirmColour)
+                ButtonLabel(confirmLabel, color = confirmColour)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(dismissLabel, style = MeraPaisaType.action, color = theme.textSecondary)
+                ButtonLabel(dismissLabel, color = theme.textSecondary)
             }
         }
     )

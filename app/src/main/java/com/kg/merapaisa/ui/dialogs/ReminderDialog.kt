@@ -1,6 +1,5 @@
 package com.kg.merapaisa.ui.dialogs
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,10 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -43,10 +39,11 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.SheetFrame
+import com.kg.merapaisa.ui.SheetFoot
+import com.kg.merapaisa.ui.PrimaryAction
+import com.kg.merapaisa.ui.SecondaryAction
 import kotlin.math.abs
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
 
 /**
  * A message about one balance, written for you and yours to edit before it goes.
@@ -146,46 +143,23 @@ fun ReminderSheet(
             }
         }
 
-        Row(
-            modifier = Modifier.height(IntrinsicSize.Min)
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedButton(
-                onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                border = BorderStroke(1.dp, theme.border),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
-            ) {
-                Text("Don't send", style = MeraPaisaType.action)
+        SheetFoot {
+            SecondaryAction("Don't send", enabled = true) {
+                scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }
-            Button(
-                onClick = {
-                    val finalText = if (includeLog && entries.isNotEmpty()) {
-                        message + "\n\nEvery entry so far:\n" +
-                            buildActivityLog(entries, person.currency)
-                    } else {
-                        message
-                    }
-                    // The sheet is played out before the share sheet arrives over it, so the two
-                    // do not animate across each other.
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        shareText(context, finalText, "Send reminder via")
-                        onDismiss()
-                    }
-                },
-                enabled = message.isNotBlank(),
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = theme.primary,
-                    contentColor = theme.onAccent
-                )
-            ) {
-                Text("Send reminder", style = MeraPaisaType.action)
+            PrimaryAction("Send reminder", enabled = message.isNotBlank()) {
+                val finalText = if (includeLog && entries.isNotEmpty()) {
+                    message + "\n\nEvery entry so far:\n" +
+                        buildActivityLog(entries, person.currency)
+                } else {
+                    message
+                }
+                // The sheet is played out before the share sheet arrives over it, so the two
+                // do not animate across each other.
+                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                    shareText(context, finalText, "Send reminder via")
+                    onDismiss()
+                }
             }
         }
     }

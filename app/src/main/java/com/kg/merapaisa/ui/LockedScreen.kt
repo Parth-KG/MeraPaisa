@@ -65,7 +65,7 @@ fun LockedScreen(onUnlock: () -> Unit) {
             // The system prompt's own title, so the tap and the prompt it opens say the same thing.
             // Not a list of methods: the lock also accepts a pattern or a password, and which
             // biometrics exist depends on the phone.
-            Text("Unlock Mera Paisa", style = MeraPaisaType.action)
+            ButtonLabel("Unlock Mera Paisa")
         }
     }
 }

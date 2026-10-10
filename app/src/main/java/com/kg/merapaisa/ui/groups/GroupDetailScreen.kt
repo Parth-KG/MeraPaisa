@@ -1,8 +1,11 @@
 package com.kg.merapaisa.ui.groups
 
 import androidx.compose.ui.semantics.Role
+import com.kg.merapaisa.ui.ButtonLabel
+import com.kg.merapaisa.ui.SecondaryAction
+import com.kg.merapaisa.ui.PrimaryAction
+import com.kg.merapaisa.ui.FootActions
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,13 +27,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,9 +60,6 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.coversLedger
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
 import com.kg.merapaisa.ui.DecisionDialog
 import com.kg.merapaisa.ui.format.amountString
 import androidx.compose.foundation.layout.Spacer
@@ -131,7 +128,7 @@ fun GroupDetailScreen(
                 // Top right, as Clear history is on a person's history: a thing you do to the
                 // group itself, rare enough not to take the foot of the screen.
                 TextButton(onClick = onEdit, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text("Edit group", style = MeraPaisaType.action, color = theme.textPrimary)
+                    ButtonLabel("Edit group", color = theme.textPrimary)
                 }
             }
         }
@@ -267,37 +264,9 @@ fun GroupDetailScreen(
 
         // Both actions named, side by side, the way the people list carries its own two. Settling
         // up is the second one because it is what you reach for once, at the end of a trip.
-        Row(
-            modifier = Modifier.height(IntrinsicSize.Min)
-                .fillMaxWidth()
-                .windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
-                )
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(
-                onClick = onAddExpense,
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = theme.primary,
-                    contentColor = theme.onAccent
-                )
-            ) {
-                Text("Add an expense", style = MeraPaisaType.action)
-            }
-            OutlinedButton(
-                onClick = onSettleUp,
-                enabled = !everyoneEven,
-                shape = Shapes.small,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
-                border = BorderStroke(1.dp, theme.border),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary)
-            ) {
-                Text("Settle up", style = MeraPaisaType.action)
-            }
+        FootActions {
+            PrimaryAction("Add an expense", enabled = true, onClick = onAddExpense)
+            SecondaryAction("Settle up", enabled = !everyoneEven, onClick = onSettleUp)
         }
     }
 }

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -67,6 +66,7 @@ import com.kg.merapaisa.ui.PersonRow
 import com.kg.merapaisa.ui.PrimaryAction
 import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.SecondaryAction
+import com.kg.merapaisa.ui.SheetFoot
 import com.kg.merapaisa.ui.SheetFrame
 import com.kg.merapaisa.ui.format.shrinkToFit
 import com.kg.merapaisa.ui.theme.MeraPaisaTheme
@@ -142,13 +142,7 @@ internal fun ThemeSheet(
 
         // The way out always names what you keep. The way forward appears once there is something
         // to use, and names it: a button that would change nothing is not offered.
-        Row(
-            modifier = Modifier.height(IntrinsicSize.Min)
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        SheetFoot {
             SecondaryAction("Keep ${inUse.name}", enabled = true) { close(onDismiss) }
             if (tried.name != inUse.name) {
                 PrimaryAction("Use ${tried.name}", enabled = true) { close { onUse(tried.name) } }

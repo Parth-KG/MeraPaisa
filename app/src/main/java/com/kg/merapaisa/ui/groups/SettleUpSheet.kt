@@ -1,6 +1,9 @@
 package com.kg.merapaisa.ui.groups
 
 import com.kg.merapaisa.ui.format.amountSpokenFigure
+import com.kg.merapaisa.ui.ButtonLabel
+import com.kg.merapaisa.ui.SecondaryAction
+import com.kg.merapaisa.ui.SheetFoot
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,13 +40,9 @@ import com.kg.merapaisa.ui.format.AmountText
 import com.kg.merapaisa.ui.format.SignStyle
 import com.kg.merapaisa.ui.format.amountParts
 import com.kg.merapaisa.ui.theme.MeraPaisaType
-import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.SheetFrame
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.layout.PaddingValues
 
 /**
@@ -122,7 +121,7 @@ fun SettleUpSheet(
                         modifier = Modifier.heightIn(min = 48.dp),
                         contentPadding = PaddingValues(start = Spacing.md, end = 0.dp)
                     ) {
-                        Text("Record payment", style = MeraPaisaType.action)
+                        ButtonLabel("Record payment")
                     }
                 }
             }
@@ -130,17 +129,10 @@ fun SettleUpSheet(
 
         // The way out, outlined and full width like the foot of every other sheet. Recording
         // happens on each line above, so there is no second button here to pair it with.
-        OutlinedButton(
-            onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
-            shape = Shapes.small,
-            border = BorderStroke(1.dp, theme.border),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = theme.textPrimary),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.lg)
-                .heightIn(min = 52.dp)
-        ) {
-            Text("Back to the group", style = MeraPaisaType.action)
+        SheetFoot {
+            SecondaryAction("Back to the group", enabled = true) {
+                scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+            }
         }
     }
 }

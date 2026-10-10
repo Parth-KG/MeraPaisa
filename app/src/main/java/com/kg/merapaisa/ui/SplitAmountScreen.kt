@@ -299,6 +299,6 @@ internal fun SplitPrimaryButton(label: String, enabled: Boolean, onClick: () -> 
             contentColor = theme.onAccent
         )
     ) {
-        Text(label, style = MeraPaisaType.action)
+        ButtonLabel(label)
     }
 }

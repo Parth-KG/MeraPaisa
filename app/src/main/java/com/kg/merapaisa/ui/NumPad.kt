@@ -176,11 +176,7 @@ fun NumPad(
             onClick = onSettleToggle,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
         ) {
-            Text(
-                if (person.isSettled) "Reopen" else "Settle up",
-                style = MeraPaisaType.action,
-                color = theme.textPrimary
-            )
+            ButtonLabel(if (person.isSettled) "Reopen" else "Settle up", color = theme.textPrimary)
         }
     }
 }
