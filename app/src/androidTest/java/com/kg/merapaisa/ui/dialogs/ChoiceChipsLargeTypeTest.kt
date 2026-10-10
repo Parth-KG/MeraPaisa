@@ -23,7 +23,6 @@ import com.kg.merapaisa.data.SUPPORTED_CURRENCIES
 import com.kg.merapaisa.themes
 import com.kg.merapaisa.ui.theme.MeraPaisaTheme
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -78,8 +77,15 @@ class ChoiceChipsLargeTypeTest {
         listOf("Initials", "Emoji", "Photo").forEach { word ->
             val layout = layoutOf(word)
             assertEquals("$word broke over two lines", 1, layout.lineCount)
-            // A word squeezed into too narrow a chip is cut off rather than wrapped.
-            assertFalse("$word does not fit its chip", layout.hasVisualOverflow)
+            // A word squeezed into too narrow a chip is cut off rather than wrapped. Measured by
+            // the line itself: a centred line that cannot wrap is laid out across the whole width
+            // it was offered, so the paragraph always reads as wider than the text and
+            // hasVisualOverflow says so even when the word fits.
+            val line = layout.multiParagraph.getLineWidth(0)
+            assertTrue(
+                "$word is cut off: ${line}px of it in ${layout.size.width}px",
+                line <= layout.size.width + 0.5f
+            )
             assertInside(compose.onNodeWithText(word).getUnclippedBoundsInRoot(), form, word)
         }
     }
