@@ -27,7 +27,6 @@ import androidx.compose.material.icons.automirrored.outlined.Backspace
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -45,6 +44,7 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.format.TypedAmountText
+import androidx.compose.foundation.layout.FlowRow
 
 /**
  * Step one of a split: how much there is to divide, and the currency it is divided in.
@@ -93,22 +93,20 @@ fun SplitAmountScreen(
         // Which currency the split is in. Everyone's share converts from this, so leaving it
         // implicit is how the amounts used to come out wrong. Codes rather than symbols: ₹ and
         // $ side by side are two glyphs to compare, INR and USD are two words to read.
-        Row(
+        FlowRow(
             modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             SUPPORTED_CURRENCIES.forEach { code ->
-                FilterChip(
+                ChoiceChip(
+                    label = code,
                     selected = currency == code,
                     onClick = {
                         onCurrencyChange(code)
                         // A fraction typed for rupees has no meaning in yen.
                         if (currencyDecimals(code) == 0 && '.' in amount) onAmountChange(amount.substringBefore('.'))
-                    },
-                    shape = Shapes.small,
-                    label = { Text(code, style = MeraPaisaType.action) },
-                    colors = choiceChipColors(),
-                    border = choiceChipBorder(currency == code)
+                    }
                 )
             }
         }

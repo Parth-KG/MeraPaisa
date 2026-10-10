@@ -10,18 +10,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -49,8 +46,6 @@ import com.kg.merapaisa.deleteProfilePhoto
 import com.kg.merapaisa.saveProfilePhoto
 import com.kg.merapaisa.ui.AVATAR_HUES
 import com.kg.merapaisa.ui.avatarInk
-import com.kg.merapaisa.ui.choiceChipBorder
-import com.kg.merapaisa.ui.choiceChipColors
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
@@ -59,6 +54,7 @@ import com.kg.merapaisa.ui.SheetFoot
 import com.kg.merapaisa.ui.PrimaryAction
 import com.kg.merapaisa.ui.SecondaryAction
 import kotlinx.coroutines.launch
+import com.kg.merapaisa.ui.ChoiceChip
 
 /**
  * A name, a face, and the currency this person's balance is kept in.
@@ -236,24 +232,21 @@ internal fun AvatarPicker(
     val theme = LocalAppTheme.current
 
     SheetHeading("Shown as")
-    Row(
-        modifier = Modifier.padding(horizontal = Spacing.lg),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+    FlowRow(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         AVATAR_TYPES.forEach { (type, label) ->
-            FilterChip(
+            ChoiceChip(
+                label = label,
                 selected = pfpType == type,
                 onClick = {
                     // Photo only becomes the type once a file is actually saved. Setting it on the
                     // tap left an avatar with no image and no fallback whenever somebody opened
                     // the picker and backed out of it.
                     if (type == "photo") onPickPhoto() else onTypeChange(type)
-                },
-                shape = Shapes.small,
-                modifier = Modifier.heightIn(min = 48.dp),
-                label = { Text(label, style = MeraPaisaType.action) },
-                colors = choiceChipColors(),
-                border = choiceChipBorder(pfpType == type)
+                }
             )
         }
     }
@@ -343,20 +336,19 @@ private fun ColourSwatch(hue: String, selected: Boolean, onSelect: () -> Unit) {
 /** The currencies a balance can be kept in. Symbols, because that is what the amounts will wear. */
 @Composable
 internal fun CurrencyChips(selected: String, enabled: Boolean = true, onSelect: (String) -> Unit) {
-    Row(
-        modifier = Modifier.padding(horizontal = Spacing.lg),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+    FlowRow(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         SUPPORTED_CURRENCIES.forEach { code ->
-            FilterChip(
+            ChoiceChip(
+                label = currencySymbol(code),
                 selected = selected == code,
                 enabled = enabled,
                 onClick = { onSelect(code) },
-                shape = Shapes.small,
-                modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = code },
-                label = { Text(currencySymbol(code), style = MeraPaisaType.body) },
-                colors = choiceChipColors(),
-                border = choiceChipBorder(selected == code, enabled)
+                style = MeraPaisaType.body,
+                modifier = Modifier.semantics { contentDescription = code }
             )
         }
     }

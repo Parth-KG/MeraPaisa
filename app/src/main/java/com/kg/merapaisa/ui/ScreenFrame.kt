@@ -50,6 +50,8 @@ import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material3.FilterChip
+import androidx.compose.ui.text.TextStyle
 
 /**
  * A full screen switched in by UI state: a back arrow, a title in the gutter, a list, and the
@@ -243,6 +245,38 @@ internal fun RowScope.SecondaryAction(
 @Composable
 internal fun ButtonLabel(text: String, color: Color = Color.Unspecified, modifier: Modifier = Modifier) {
     Text(text, style = MeraPaisaType.action, color = color, textAlign = TextAlign.Center, modifier = modifier)
+}
+
+/**
+ * One choice among a few, as a chip: a label on one line, centred, in a chip at least 48dp each
+ * way.
+ *
+ * A chip sized itself to its label, so a currency symbol made a chip 34dp wide, a target to aim
+ * at, and at large type the last chip in a row was squeezed until its word broke inside it
+ * ("Phot/o"). Here the label never wraps and the chip never narrows below 48dp. Rows of these are
+ * FlowRows, so a chip that does not fit moves to the next line whole.
+ */
+@Composable
+internal fun ChoiceChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    style: TextStyle = MeraPaisaType.action
+) {
+    FilterChip(
+        selected = selected,
+        enabled = enabled,
+        onClick = onClick,
+        shape = Shapes.small,
+        modifier = modifier.heightIn(min = 48.dp).widthIn(min = 48.dp),
+        label = {
+            Text(label, style = style, maxLines = 1, softWrap = false, textAlign = TextAlign.Center)
+        },
+        colors = choiceChipColors(),
+        border = choiceChipBorder(selected, enabled)
+    )
 }
 
 /**

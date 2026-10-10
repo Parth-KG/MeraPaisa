@@ -13,7 +13,6 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -31,11 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
-import com.kg.merapaisa.data.SUPPORTED_CURRENCIES
-import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.ui.RowDivider
-import com.kg.merapaisa.ui.choiceChipBorder
-import com.kg.merapaisa.ui.choiceChipColors
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
@@ -131,22 +126,7 @@ fun CreateGroupDialog(
             }
 
             FormHeading("Currency")
-            Row(
-                modifier = Modifier.padding(horizontal = Spacing.lg),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-            ) {
-                SUPPORTED_CURRENCIES.forEach { code ->
-                    FilterChip(
-                        selected = currency == code,
-                        onClick = { currency = code },
-                        shape = Shapes.small,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                        label = { Text(currencySymbol(code), style = MeraPaisaType.body) },
-                        colors = choiceChipColors(),
-                        border = choiceChipBorder(currency == code)
-                    )
-                }
-            }
+            CurrencyChips(selected = currency, onSelect = { currency = it })
 
             FormHeading(
                 if (chosen.isEmpty()) "Who else is in it?"
