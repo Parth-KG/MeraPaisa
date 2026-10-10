@@ -86,6 +86,17 @@ class AppLockTest {
     }
 
     @Test
+    fun `a slow PIN still asks once when the answer arrives before the return`() {
+        val lock = unlockedLock()
+        lock.onAskStarted()
+        lock.onStopped()
+        clock += longerThanTheGrace
+        lock.onAskEnded(confirmed = true)
+        lock.onStarted()
+        assertFalse("locked behind a confirmed prompt", lock.locked)
+    }
+
+    @Test
     fun `a slow PIN that is cancelled locks, since nothing was proven`() {
         val lock = unlockedLock()
         lock.onAskStarted()

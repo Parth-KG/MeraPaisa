@@ -165,13 +165,20 @@ class AppLockViewModel(
         stoppedWhileAsking = false
     }
 
-    /** A confirmed prompt is an unlock. A cancelled one locks if the app was away long enough. */
+    /**
+     * A confirmed prompt is an unlock, and restarts the clock the grace period runs on, so a return
+     * that is reported after the answer cannot lock behind it. A cancelled one locks if the app
+     * was away long enough.
+     */
     fun onAskEnded(confirmed: Boolean) {
         val away = stoppedWhileAsking && now() - backgroundedAt > SecurityStore.GRACE_MILLIS
         asking = false
         stoppedWhileAsking = false
         when {
-            confirmed -> locked = false
+            confirmed -> {
+                locked = false
+                backgroundedAt = now()
+            }
             away -> locked = true
         }
     }

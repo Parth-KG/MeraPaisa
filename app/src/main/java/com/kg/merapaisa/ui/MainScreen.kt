@@ -77,6 +77,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewModelScope
 import com.kg.merapaisa.widget.WidgetLedgerNotifier
 import com.kg.merapaisa.ui.format.columnShowsFraction
 
@@ -467,13 +468,18 @@ fun MainScreen(viewModel: MainViewModel) {
                                 onEnded = lock::onAskEnded
                             )
                         },
+                        // In the lock's own scope, which outlives this screen: the prompt's answer
+                        // can arrive after the activity was recreated under it (turned sideways
+                        // mid-prompt), when this screen's scope is already gone and the change
+                        // would quietly not be written.
                         store = { on ->
-                            scope.launch {
-                                SecurityStore.setAppLockEnabled(context, on)
+                            val appContext = context.applicationContext
+                            lock.viewModelScope.launch {
+                                SecurityStore.setAppLockEnabled(appContext, on)
                                 // The widget reads the lock too. Without this it kept showing names
                                 // and amounts on the home screen after the lock went on, until the
                                 // next entry.
-                                WidgetLedgerNotifier(context.applicationContext).onLedgerChanged()
+                                WidgetLedgerNotifier(appContext).onLedgerChanged()
                             }
                         }
                     )
