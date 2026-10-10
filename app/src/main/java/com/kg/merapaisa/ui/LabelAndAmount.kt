@@ -30,7 +30,8 @@ fun listTitleMaxLines(): Int = if (LocalDensity.current.fontScale >= LIST_STACK_
  * to a lone "+"; with the figure measured first, a name shrank to one letter per line. The figure is
  * the thing being read, so it is always measured at full width first. The words get what is left,
  * and if that is less than [minLabel], the pair stacks: words on top at full width, the figure
- * under them on the right, where the eye already looks for it.
+ * under them on the right, where the eye already looks for it. Both are placed relative to the
+ * layout direction, so in a right-to-left language the pair mirrors with the row around it.
  *
  * [keepLabelOnOneLine] stacks rather than wrap the words: a short label broken as "owed to / you"
  * reads worse than the same label with the figure under it. [stackFromFontScale] stacks every row
@@ -62,15 +63,15 @@ fun LabelAndAmount(
             val words = labelParts.first().measure(loose.copy(maxWidth = room))
             val height = maxOf(words.height, figure.height).coerceIn(c.minHeight, c.maxHeight)
             layout(width, height) {
-                words.place(0, (height - words.height) / 2)
-                figure.place(width - figure.width, (height - figure.height) / 2)
+                words.placeRelative(0, (height - words.height) / 2)
+                figure.placeRelative(width - figure.width, (height - figure.height) / 2)
             }
         } else {
             val words = labelParts.first().measure(loose)
             val height = (words.height + figure.height).coerceIn(c.minHeight, c.maxHeight)
             layout(width, height) {
-                words.place(0, 0)
-                figure.place(width - figure.width, words.height)
+                words.placeRelative(0, 0)
+                figure.placeRelative(width - figure.width, words.height)
             }
         }
     }
