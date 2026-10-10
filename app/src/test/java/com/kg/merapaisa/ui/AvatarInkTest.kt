@@ -57,6 +57,28 @@ class AvatarInkTest {
     }
 
     /**
+     * Two people still cannot share a look once their hues are re-lit for a theme. Re-lighting
+     * pulls every ink toward one lightness, so hues that are apart on the wheel can land close on
+     * the page: Slate and Indigo did, 5.5 apart in Kamal, which is why Slate became Violet.
+     */
+    @Test
+    fun theRelitInksStayApartInEveryTheme() {
+        val failures = themes.flatMap { theme ->
+            val inks = AVATAR_HUES.map { it to avatarInk(it, theme) }
+            inks.flatMapIndexed { i, (a, inkA) ->
+                inks.drop(i + 1).map { (b, inkB) -> "${theme.name}: $a vs $b" to distance(inkA, inkB) }
+            }
+        }
+        val tooClose = failures.filter { (_, d) -> d < MIN_INK_DISTANCE }
+        assertTrue(
+            "these avatar inks are too close to tell apart\n" +
+                tooClose.joinToString("\n") { (label, d) -> "  %s = %.1f".format(label, d) } +
+                "\nclosest: %s = %.1f".format(failures.minBy { it.second }.first, failures.minOf { it.second }),
+            tooClose.isEmpty()
+        )
+    }
+
+    /**
      * The point of re-lighting rather than replacing: somebody who chose green keeps green. Every
      * avatar in an existing ledger is Material Green 500, and they should stay green and become
      * readable, not turn into the accent.
@@ -82,6 +104,27 @@ class AvatarInkTest {
     }
 
     private companion object {
+        const val MIN_INK_DISTANCE = 10.0
+
+        /** CIE76 distance in Lab, as ThemeContrastTest measures it. */
+        fun distance(a: androidx.compose.ui.graphics.Color, b: androidx.compose.ui.graphics.Color): Double {
+            fun lab(c: androidx.compose.ui.graphics.Color): Triple<Double, Double, Double> {
+                fun lin(v: Float): Double {
+                    val d = v.toDouble()
+                    return if (d <= 0.04045) d / 12.92 else ((d + 0.055) / 1.055).pow(2.4)
+                }
+                val r = lin(c.red); val g = lin(c.green); val bl = lin(c.blue)
+                val x = (r * 0.4124 + g * 0.3576 + bl * 0.1805) / 0.95047
+                val y = r * 0.2126 + g * 0.7152 + bl * 0.0722
+                val z = (r * 0.0193 + g * 0.1192 + bl * 0.9505) / 1.08883
+                fun f(t: Double) = if (t > 0.008856) t.pow(1.0 / 3) else 7.787 * t + 16.0 / 116
+                return Triple(116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z)))
+            }
+            val (l1, a1, b1) = lab(a)
+            val (l2, a2, b2) = lab(b)
+            return kotlin.math.sqrt((l1 - l2).pow(2) + (a1 - a2).pow(2) + (b1 - b2).pow(2))
+        }
+
         fun channel(v: Float): Double {
             val d = v.toDouble()
             return if (d <= 0.03928) d / 12.92 else ((d + 0.055) / 1.055).pow(2.4)

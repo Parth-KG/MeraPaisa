@@ -397,7 +397,7 @@ private val AVATAR_HUE_NAMES = mapOf(
     "#A65A2E" to "Rust",
     "#A6423F" to "Brick",
     "#8C4A7D" to "Plum",
-    "#5B5F8C" to "Slate"
+    "#4E39AC" to "Violet"
 )
 
 /** The hue a name lands on when nobody has picked one. Stable: String.hashCode is specified. */

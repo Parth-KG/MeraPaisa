@@ -41,7 +41,10 @@ val AVATAR_HUES = listOf(
     "#A65A2E", // rust
     "#A6423F", // brick
     "#8C4A7D", // plum
-    "#5B5F8C"  // slate
+    // Violet, where slate was until v3.3.0. Re-lit, slate and indigo landed under 6 apart in Kamal,
+    // two people you had to compare side by side. A stored slate keeps drawing as it did; it is
+    // only no longer offered.
+    "#4E39AC"  // violet
 )
 
 /** How much of the ink washes the tile behind the initials. See [avatarInk]. */
