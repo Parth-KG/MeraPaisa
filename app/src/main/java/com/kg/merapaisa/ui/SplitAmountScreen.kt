@@ -33,7 +33,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
@@ -203,13 +202,7 @@ private fun SplitKey(key: String, modifier: Modifier = Modifier, onClick: () -> 
         if (isBackspace) {
             Icon(Icons.AutoMirrored.Outlined.Backspace, contentDescription = "Delete a digit")
         } else {
-            Text(
-                key,
-                style = MeraPaisaType.body,
-                modifier = Modifier.clearAndSetSemantics {
-                    contentDescription = if (key == ".") "decimal point" else key
-                }
-            )
+            KeyLabel(key)
         }
     }
 }

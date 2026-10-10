@@ -44,6 +44,15 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.format.TypedAmountText
+import androidx.compose.foundation.Canvas
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 /** The key that clears one digit, told apart from the digits by name rather than by a glyph. */
 private const val BACKSPACE = "backspace"
@@ -210,9 +219,43 @@ private fun Key(key: String, onKey: (String) -> Unit, modifier: Modifier = Modif
         if (isBackspace) {
             Icon(Icons.AutoMirrored.Outlined.Backspace, contentDescription = "Delete a digit")
         } else {
-            Text(key, style = MeraPaisaType.body, modifier = Modifier.clearAndSetSemantics {
-                contentDescription = if (key == ".") "decimal point" else key
-            })
+            KeyLabel(key)
+        }
+    }
+}
+
+/**
+ * What a key on any of the keypads shows: a digit in the body face, or the decimal point as a
+ * filled dot about a third of the body size, sitting on the digits' baseline.
+ *
+ * Figtree's "." at body size is a speck a few pixels across, and alone on a key the size of a thumb
+ * it read as a key with nothing on it. The dot is drawn rather than set, so it can be large enough
+ * to see and still sit where a point sits. TalkBack says "decimal point" either way.
+ */
+@Composable
+internal fun KeyLabel(key: String) {
+    val spoken = Modifier.clearAndSetSemantics {
+        contentDescription = if (key == ".") "decimal point" else key
+    }
+    if (key != ".") {
+        Text(key, style = MeraPaisaType.body, modifier = spoken)
+        return
+    }
+    val ink = LocalContentColor.current
+    var baseline by remember { mutableFloatStateOf(Float.NaN) }
+    Box(spoken) {
+        // An invisible digit gives the dot the same line as the digits on the keys beside it.
+        Text(
+            "0",
+            style = MeraPaisaType.body,
+            color = Color.Transparent,
+            onTextLayout = { baseline = it.firstBaseline }
+        )
+        Canvas(Modifier.matchParentSize()) {
+            if (!baseline.isNaN()) {
+                val radius = MeraPaisaType.body.fontSize.toPx() * 0.3f / 2
+                drawCircle(ink, radius = radius, center = Offset(size.width / 2, baseline - radius))
+            }
         }
     }
 }

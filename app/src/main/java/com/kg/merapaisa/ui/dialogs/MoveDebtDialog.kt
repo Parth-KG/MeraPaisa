@@ -52,6 +52,7 @@ import com.kg.merapaisa.ui.SheetFoot
 import com.kg.merapaisa.ui.PrimaryAction
 import com.kg.merapaisa.ui.SecondaryAction
 import com.kg.merapaisa.ui.format.columnShowsFraction
+import com.kg.merapaisa.ui.KeyLabel
 
 /**
  * Moving part of the debt between you and one person onto somebody else, whichever way it runs.
@@ -340,9 +341,7 @@ private fun Key(key: String, onKey: (String) -> Unit, modifier: Modifier = Modif
         if (isBackspace) {
             Icon(Icons.AutoMirrored.Outlined.Backspace, contentDescription = "Delete a digit")
         } else {
-            Text(key, style = MeraPaisaType.body, modifier = Modifier.clearAndSetSemantics {
-                contentDescription = if (key == ".") "decimal point" else key
-            })
+            KeyLabel(key)
         }
     }
 }
