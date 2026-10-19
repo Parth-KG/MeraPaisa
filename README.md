@@ -53,7 +53,7 @@ Mera Paisa keeps all of that on your phone.
 | **Net position** | Where you stand overall, one line per currency, never added together |
 | **Multi-currency** | ₹, $, €, £, ¥ with live rates from [Frankfurter](https://www.frankfurter.app/). Balances stay in each person's currency and are never silently converted |
 | **Expense splitting** | Equal or custom shares, with lock-on-edit redistribution |
-| **Groups** | A trip or a flatshare: log who paid for what, then settle everyone in the fewest payments. Kept apart from your personal balances, in its own currency |
+| **Groups** | A trip or a flatshare: log who paid for what, then settle everyone in at most *n* − 1 payments for *n* members. Kept apart from your personal balances, in its own currency |
 | **Settle up** | Close a balance after one confirmation, and reopen it later without losing its history |
 | **Move a debt** | Hand part of what one person owes onto someone else, converted if they keep a different currency |
 | **History** | Notes, timestamps, edit or delete any entry, reverse an entry and everything newer, or clear the history |
@@ -81,14 +81,14 @@ Mera Paisa keeps all of that on your phone.
 > **Lock-on-edit redistribution**
 > Change one person's share and that row locks, and the remaining unlocked rows split what is left. Leftover paise go to the first person rather than quietly disappearing. If the locked shares leave nothing that adds up, the screen says by how much and why, and the split cannot be saved until it does, because a split that does not add up records money nobody spent.
 
-> **Settling a group in the fewest payments**
-> Inside a group, who paid whom for any single expense stops mattering once you only care about ending even. All that survives is each member's net position. If A owes B and B owes C the same amount, B is a pass-through and A can pay C directly. Matching the largest debtor against the largest creditor settles at least one member with every payment, so a group of *n* people never needs more than *n* minus 1 payments. You can turn this off per group and keep every debt attached to the expense that created it. Either way, a group where everyone is even asks for no payments at all.
+> **Settling a group in few payments**
+> Inside a group, who paid whom for any single expense stops mattering once you only care about ending even. All that survives is each member's net position. If A owes B and B owes C the same amount, B is a pass-through and A can pay C directly. Matching the largest debtor against the largest creditor settles at least one member with every payment, so a group of *n* people never needs more than *n* minus 1 payments. That isn't always the absolute minimum, which is NP-hard to find in general, but it never goes above that bound. You can turn this off per group and keep every debt attached to the expense that created it. Either way, a group where everyone is even asks for no payments at all.
 
 > **Two ledgers that can disagree, and say so**
 > An update link carries a stable id per entry, so the receiving app can tell a new entry from an edited one from one the sender deleted. It shows you the differences and writes nothing you have not ticked. Additions are ticked for you; an edit or a deletion never is, because nothing about a link proves who sent it. The ids of entries you delete or clear are kept, so the other phone's next link cannot quietly bring them back: a cleared entry already counts in the opening balance, and a deleted one arrives unticked for you to decide.
 
 > **No account, no backend**
-> Data lives in Room on the device and rides Android's own backup to your Google account, which is a system feature rather than anything of ours. Reinstall on a new phone that uses the same Google account and it is there. There is no account to create, no server, and nothing of yours on a machine I control. Exactly three things leave the phone: that system backup, links and messages you choose to send, and requests to Frankfurter for an exchange rate and GitHub for an update check. No names, no notes, no analytics, no crash reporting. The manifest asks for `INTERNET` for those requests, and `REQUEST_INSTALL_PACKAGES` so the updater can hand a checked APK to Android's installer. Not contacts, not storage, not location.
+> Data lives in Room on the device and rides Android's own backup to your Google account, which is a system feature rather than anything of ours. Reinstall on a new phone that uses the same Google account and it is there. There is no account to create, no server, and nothing of yours on a machine I control. Exactly three things leave the phone: that system backup, links and messages you choose to send, and requests to Frankfurter for an exchange rate and GitHub for an update check. No names, no notes, no analytics, no crash reporting. The app's own manifest asks for `INTERNET` for those requests, and `REQUEST_INSTALL_PACKAGES` so the updater can hand a checked APK to Android's installer; the AndroidX libraries add their standard ones, such as `USE_BIOMETRIC` for the app lock and WorkManager's `WAKE_LOCK` and `RECEIVE_BOOT_COMPLETED` for the weekly backup. Not contacts, not storage, not location.
 
 <details>
 <summary><b>How each part works</b></summary>
