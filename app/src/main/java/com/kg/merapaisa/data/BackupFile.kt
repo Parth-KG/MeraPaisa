@@ -8,16 +8,14 @@ package com.kg.merapaisa.data
  * every expense and every share. This format carries all of it, which is why "restore" means this
  * file and not that one.
  *
- * Two things it still cannot carry, both worth knowing before trusting it:
+ * Every table is here, including `applied_payloads` and `retired_uids`. Leave the first out and
+ * restoring an old backup would let a share link you had already applied land a second time;
+ * leave the second out and a cleared history would take the other phone's entries a second time.
  *
- *  - **Profile photos.** `pfpValue` holds a path into the app's private files directory, not the
- *    image. Restoring onto a different phone leaves those people showing initials, which is what
- *    the app already falls back to when a photo file has gone missing. Nothing breaks; a picture
- *    is lost.
- *  - **Nothing else.** Every other table is here, including `applied_payloads` and
- *    `retired_uids`. Leave the first out and restoring an old backup would let a share link you
- *    had already applied land a second time; leave the second out and a cleared history would
- *    take the other phone's entries a second time.
+ * Profile photos are here too, from v3.4.0: `pfpValue` is only a path into this phone's private
+ * files, so each photo travels as the image itself, in an optional `photo` on its person. The
+ * format version stays 1, so v3.3 and older still restore a newer file: they read named fields
+ * only, and simply restore those people with initials.
  */
 
 /** Everything in the database, read together. Row ids are kept so the tables still join up. */
@@ -30,7 +28,12 @@ data class BackupSnapshot(
     val expenseShares: List<ExpenseShare>,
     val appliedPayloads: List<AppliedPayload>,
     /** Uids removed on purpose. Absent from backups written before v10. See [RetiredUid]. */
-    val retiredUids: List<RetiredUid> = emptyList()
+    val retiredUids: List<RetiredUid> = emptyList(),
+    /**
+     * Profile photos, by person id, as Base64URL of the saved JPEG. Only people whose photo file
+     * could be read are here; absent from backups written before v3.4.0.
+     */
+    val photos: Map<Long, String> = emptyMap()
 ) {
     val isEmpty: Boolean
         get() = persons.none { !it.isSelf } && transactions.isEmpty() && groups.isEmpty()
@@ -55,7 +58,18 @@ sealed interface BackupResult {
 }
 
 const val BACKUP_FORMAT = "mera-paisa-backup"
+
+/**
+ * Still 1 with photos in the file (v3.4.0). A higher number would make v3.3 and older refuse the
+ * file as too new, when they can restore everything in it except the pictures.
+ */
 const val BACKUP_VERSION = 1
+
+/**
+ * The longest `photo` read back. A saved photo is a 256px JPEG, tens of kilobytes; a megabyte of
+ * Base64 is far past any of them, and is what a hand-edited or damaged file looks like.
+ */
+private const val MAX_PHOTO_CHARS = 1_000_000
 
 /** Renders a snapshot as indented JSON. */
 fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String): String =
@@ -66,6 +80,7 @@ fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String)
             "exportedAt" to exportedAt.json(),
             "appVersion" to appVersion.json(),
             "persons" to jsonArray(snapshot.persons.map { p ->
+                val photo = snapshot.photos[p.id]
                 jsonObject(
                     "id" to p.id.json(),
                     "name" to p.name.json(),
@@ -76,7 +91,8 @@ fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String)
                     "isSettled" to p.isSettled.json(),
                     "currency" to p.currency.json(),
                     "isSelf" to p.isSelf.json(),
-                    "lastSharedAt" to p.lastSharedAt.json()
+                    "lastSharedAt" to p.lastSharedAt.json(),
+                    *listOfNotNull(photo?.let { "photo" to it.json() }).toTypedArray()
                 )
             }),
             "transactions" to jsonArray(snapshot.transactions.map { t ->
@@ -182,6 +198,16 @@ fun decodeBackup(text: String): BackupResult {
             lastSharedAt = o.long("lastSharedAt") ?: return BackupResult.Damaged
         )
     } ?: return BackupResult.Damaged
+
+    // Optional, and the one field read leniently: a photo that is not Base64, or is far larger
+    // than any photo the app saves, costs that one person their picture rather than costing
+    // everyone their ledger. A picture is not money.
+    val photos = root.objects("persons").orEmpty().mapNotNull { o ->
+        val id = o.long("id") ?: return@mapNotNull null
+        val photo = o.string("photo")?.takeIf { it.length <= MAX_PHOTO_CHARS } ?: return@mapNotNull null
+        val bytes = base64UrlDecode(photo)
+        if (bytes == null || bytes.isEmpty()) null else id to photo
+    }.toMap()
 
     val transactions = root.objects("transactions")?.map { o ->
         Transaction(
@@ -291,7 +317,8 @@ fun decodeBackup(text: String): BackupResult {
             expenses = expenses,
             expenseShares = expenseShares,
             appliedPayloads = appliedPayloads,
-            retiredUids = retiredUids
+            retiredUids = retiredUids,
+            photos = photos
         ),
         exportedAt = exportedAt,
         appVersion = appVersion

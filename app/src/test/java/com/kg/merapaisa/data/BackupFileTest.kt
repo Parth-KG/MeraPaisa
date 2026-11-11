@@ -244,6 +244,74 @@ class BackupFileTest {
         assertEquals("mera-paisa-backup-20260928-143000.json", backupFileName("20260928-143000"))
         assertTrue(backupFileName("20260101-000000") < backupFileName("20260928-143000"))
     }
+
+    // -----------------------------------------------------------------------------------------
+    // Photos (v3.4.0)
+    // -----------------------------------------------------------------------------------------
+
+    private val photoBytes = ByteArray(30_000) { (it * 31 + 7).toByte() }
+    private val photo = base64UrlEncode(photoBytes)
+
+    @Test
+    fun `round trips a photo with its person`() {
+        val s = snapshot().copy(photos = mapOf(2L to photo))
+        val back = roundTrip(s).snapshot
+        assertEquals(s, back)
+        org.junit.Assert.assertArrayEquals(photoBytes, base64UrlDecode(back.photos.getValue(2L)))
+    }
+
+    @Test
+    fun `a backup without photos reads as one with none`() {
+        assertEquals(emptyMap<Long, String>(), roundTrip().snapshot.photos)
+    }
+
+    @Test
+    fun `a photo does not change the format version`() {
+        val text = encodeBackup(snapshot().copy(photos = mapOf(2L to photo)), 1, "3.4.0")
+        assertTrue("v3.3 must not refuse this file as too new", text.contains("\"version\": 1"))
+        assertEquals(1, BACKUP_VERSION)
+    }
+
+    /**
+     * What v3.3 and older read from a person is still all there, so they restore a newer file and
+     * only lose the pictures. Their reader refuses a person missing any of these.
+     */
+    @Test
+    fun `every field older versions require is still written`() {
+        val text = encodeBackup(snapshot().copy(photos = mapOf(2L to photo)), 1, "3.4.0")
+        val person = ((parseJson(text) as JsonObject).objects("persons")!!).first { it.long("id") == 2L }
+        for (key in listOf("id", "name", "pfpType", "pfpValue", "pfpColor", "sortOrder", "isSettled", "currency", "isSelf", "lastSharedAt")) {
+            assertTrue("$key must still be written", person.fields.containsKey(key))
+        }
+    }
+
+    @Test
+    fun `a photo that is not Base64 costs that person their picture, not the backup`() {
+        val text = encodeBackup(snapshot().copy(photos = mapOf(2L to photo, 3L to photo)), 1, "3.4.0")
+            .replaceFirst(photo, "not*base64")
+        val back = (decodeBackup(text) as BackupResult.Ok).snapshot
+        assertEquals("the ledger still restores in full", snapshot().persons, back.persons)
+        assertEquals("only the damaged photo is dropped", setOf(3L), back.photos.keys)
+    }
+
+    @Test
+    fun `a photo of the wrong type or far too large is dropped`() {
+        val wrongType = encodeBackup(snapshot().copy(photos = mapOf(2L to photo)), 1, "3.4.0")
+            .replace("\"photo\": \"$photo\"", "\"photo\": 12")
+        assertEquals(emptyMap<Long, String>(), (decodeBackup(wrongType) as BackupResult.Ok).snapshot.photos)
+
+        val huge = base64UrlEncode(ByteArray(900_000))
+        val tooLarge = encodeBackup(snapshot().copy(photos = mapOf(2L to huge)), 1, "3.4.0")
+        assertEquals(emptyMap<Long, String>(), (decodeBackup(tooLarge) as BackupResult.Ok).snapshot.photos)
+    }
+
+    @Test
+    fun `a long photo string survives the JSON writer and reader`() {
+        val big = base64UrlEncode(ByteArray(60_000) { it.toByte() })
+        val back = roundTrip(snapshot().copy(photos = mapOf(2L to big, 3L to big))).snapshot
+        assertEquals(big, back.photos[2L])
+        assertEquals(big, back.photos[3L])
+    }
 }
 
 /**
