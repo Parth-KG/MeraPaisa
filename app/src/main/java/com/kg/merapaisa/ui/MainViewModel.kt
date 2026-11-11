@@ -124,6 +124,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         it.copy(tab = tab, selectedId = null, input = "")
     }
 
+    /**
+     * Moves to [tab] without letting go of the person whose keypad is open, so the tab can follow
+     * them when an entry takes their balance across zero.
+     */
+    fun followToTab(tab: Tab) = _uiState.update { it.copy(tab = tab) }
+
     fun togglePerson(personId: Long) = _uiState.update {
         val next = if (it.selectedId == personId) null else personId
         it.copy(selectedId = next, input = "")
@@ -246,7 +252,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun settlePerson(person: PersonWithBalance) {
         viewModelScope.launch {
             repository.settle(person.id)
-            _uiState.update { it.copy(tab = Tab.Settled, selectedId = null, input = "", note = "") }
+            _uiState.update { it.copy(tab = Tab.Even, selectedId = null, input = "", note = "") }
         }
     }
 

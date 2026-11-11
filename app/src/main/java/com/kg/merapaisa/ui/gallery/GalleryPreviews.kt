@@ -200,7 +200,7 @@ fun NumPadYenCase() {
 fun EmptyActiveCase() = EmptyState(tab = Tab.Active, modifier = Modifier.fillMaxSize(), onAddPerson = {})
 
 @Composable
-fun EmptySettledCase() = EmptyState(tab = Tab.Settled, modifier = Modifier.fillMaxSize())
+fun EmptySettledCase() = EmptyState(tab = Tab.Even, modifier = Modifier.fillMaxSize())
 
 @Composable
 fun EmptyGroupsCase() = GroupsEmptyState(modifier = Modifier.fillMaxSize())

@@ -113,11 +113,10 @@ fun MainScreen(viewModel: MainViewModel) {
     }
     BackHandler(enabled = ui.split == null && ui.selectedId != null) { viewModel.clearSelection() }
 
-    // A settled debt is one you have marked settled, not merely one that nets to zero.
-    // Otherwise everyone you add lands in Settled the moment they are created.
-    val activePersons = persons.filter { !it.isSettled }
-    val settledPersons = persons.filter { it.isSettled }
-    val list = if (ui.tab == Tab.Active) activePersons else settledPersons
+    // The balance decides the tab: Even is everyone at exactly zero, Active everyone else.
+    val activePersons = persons.filter { !it.isEven }
+    val evenPersons = persons.filter { it.isEven }
+    val list = if (ui.tab == Tab.Active) activePersons else evenPersons
     val listShowsFraction = remember(list) { columnShowsFraction(list.map { it.balanceMinor to it.currency }) }
     val peopleListState = rememberLazyListState()
     // The keypad takes the bottom of the screen when someone is picked, and the list shrinks to
@@ -141,6 +140,16 @@ fun MainScreen(viewModel: MainViewModel) {
         }
     }
     val selectedPerson = persons.find { it.id == ui.selectedId }
+    // The tab follows the person whose keypad is open. An amount recorded for someone on Even takes
+    // them to Active, and a payment that squares someone takes them to Even; without this their row
+    // left the list from under the keypad, and the keypad went on naming someone you could no
+    // longer see.
+    val selectedPersonTab = selectedPerson?.let { if (it.isEven) Tab.Even else Tab.Active }
+    LaunchedEffect(selectedPersonTab) {
+        if (selectedPersonTab != null && ui.split == null && ui.tab != Tab.Groups && ui.tab != selectedPersonTab) {
+            viewModel.followToTab(selectedPersonTab)
+        }
+    }
     val editingPerson = persons.find { it.id == ui.editingPersonId }
     val historyPerson = persons.find { it.id == ui.historyPersonId }
     val pendingDelete = persons.find { it.id == ui.pendingDeleteId }
@@ -239,7 +248,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(Spacing.md))
 
-            // Groups get their own list; Active and Settled share the people list. Nothing at all
+            // Groups get their own list; Active and Even share the people list. Nothing at all
             // until the ledger has been read, rather than an empty state that is not true.
             if (!ledgerReady || keypadTakesScreen) {
                 if (!keypadTakesScreen) Spacer(Modifier.weight(1f))
@@ -398,7 +407,9 @@ fun MainScreen(viewModel: MainViewModel) {
                 onAdd = { name, pfpType, pfpValue, pfpColor, currency ->
                     viewModel.addPerson(name, pfpType, pfpValue, pfpColor, currency) { newId ->
                         viewModel.showAddDialog(false)
-                        viewModel.selectTab(Tab.Active)
+                        // Someone new owes nothing yet, so they start on Even, picked with the
+                        // keypad open. Their first amount takes them, and the tab, to Active.
+                        viewModel.selectTab(Tab.Even)
                         viewModel.togglePerson(newId)
                     }
                 }

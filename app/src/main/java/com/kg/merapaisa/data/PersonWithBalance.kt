@@ -15,4 +15,15 @@ data class PersonWithBalance(
     val currency: String get() = person.currency
     val isSettled: Boolean get() = person.isSettled
     val sortOrder: Int get() = person.sortOrder
+
+    /**
+     * Where this person sits on the main screen: on Even at exactly zero, on Active otherwise.
+     *
+     * The balance decides, and nothing else. It used to be the stored `isSettled` flag, which only
+     * Settle up set, so someone just added sat on Active at zero, and someone who had paid you
+     * back stayed there too. The flag is still written, because backups and older versions of the
+     * app expect it, but nothing reads it to place a person any more. The list and the widget both
+     * ask this, so they cannot disagree about who is open.
+     */
+    val isEven: Boolean get() = balanceMinor == 0L
 }

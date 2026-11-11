@@ -57,13 +57,12 @@ fun EmptyState(tab: Tab, modifier: Modifier = Modifier, onAddPerson: () -> Unit 
                 }
             }
 
-            // Nothing to offer here: you reach this tab by settling someone on the Active tab,
-            // so a button would have to send you back where you came from. The second line
-            // stands in for it by naming that action.
-            Tab.Settled -> {
-                Text("Nothing settled yet.", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
+            // Nothing to offer here: people arrive on their own when their balance reaches zero,
+            // so there is no first action to put on a button. The second line says who turns up.
+            Tab.Even -> {
+                Text("No one's even yet.", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
                 Text(
-                    "Settle someone up and they move here, with their history kept.",
+                    "People you're even with show up here: someone new, or someone who has paid you back.",
                     style = MeraPaisaType.body,
                     color = theme.textSecondary
                 )

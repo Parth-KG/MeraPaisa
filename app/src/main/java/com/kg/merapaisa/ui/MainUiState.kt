@@ -7,8 +7,13 @@ import com.kg.merapaisa.data.ReconcilePlan
 import com.kg.merapaisa.data.RestorePlan
 import com.kg.merapaisa.data.SharePayload
 
-/** Which of the two lists is on screen. */
-enum class Tab { Active, Settled, Groups }
+/**
+ * Which list is on screen. Each name is also the tab's label.
+ *
+ * Even was Settled until v3.3.1, when the tabs began to follow the balance: Even is everyone at
+ * exactly zero, which is the app's word for that already ("Everyone even").
+ */
+enum class Tab { Active, Even, Groups }
 
 /**
  * Everything the main screen remembers between frames. It lives in the ViewModel rather than

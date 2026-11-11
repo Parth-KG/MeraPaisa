@@ -168,7 +168,7 @@ class DebtWidget : GlanceAppWidget() {
     }
 
     private fun openBalances(repository: PersonRepository) = repository.personsWithBalances()
-        .map { all -> all.filter { !it.isSettled && it.balanceMinor != 0L } }
+        .map { all -> all.filter { !it.isEven } }
 }
 
 /** Says the app is locked and nothing more: no name, no figure, not even a count. */
