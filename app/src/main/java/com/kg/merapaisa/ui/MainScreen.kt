@@ -611,6 +611,12 @@ fun MainScreen(viewModel: MainViewModel) {
                     // person id -> amount in that person's own currency, as minor units
                     viewModel.recordSplit(perPersonAmounts, split.note.ifBlank { "Split" })
                     viewModel.cancelSplit()
+                    // A split started from Even moves the people in it to Active, so go with them
+                    // rather than coming back to an Even tab they have just left, or an empty one.
+                    val leavesEven = perPersonAmounts.any { (id, amount) ->
+                        amount != 0L && persons.find { it.id == id }?.isEvenAfter(amount) == false
+                    }
+                    if (ui.tab == Tab.Even && leavesEven) viewModel.followToTab(Tab.Active)
                 }
             )
         }
