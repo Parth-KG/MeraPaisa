@@ -48,12 +48,12 @@ suspend fun saveProfilePhoto(
  * restore saves several in the same millisecond, so they overwrote each other. The bytes are kept
  * as they are: they are a photo this app already scaled and saved once.
  */
-fun saveProfilePhotoBytes(context: Context, bytes: ByteArray): String? {
+fun saveProfilePhotoBytes(dir: File, bytes: ByteArray): String? {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
     val file = try {
-        File.createTempFile("pfp_", ".jpg", context.filesDir)
+        File.createTempFile("pfp_", ".jpg", dir)
     } catch (e: Exception) {
         return null
     }
@@ -67,12 +67,13 @@ fun saveProfilePhotoBytes(context: Context, bytes: ByteArray): String? {
 }
 
 /**
- * The app's own photo files, for backups and restores: only `pfp_*.jpg` directly in the private
- * files directory is read, listed or deleted.
+ * The app's own photo files, for backups and restores: only `pfp_*.jpg` directly in [dir], the
+ * private files directory, is read, listed or deleted. Tests pass a directory of their own, so a
+ * Replace in a test can never clear away the photos of the app it runs in.
  */
-class AppPhotoStore(private val context: Context) : PhotoStore {
+class AppPhotoStore(context: Context, private val dir: File = context.filesDir) : PhotoStore {
     private fun ours(file: File) =
-        file.parentFile == context.filesDir && file.name.startsWith("pfp_") && file.name.endsWith(".jpg")
+        file.parentFile == dir && file.name.startsWith("pfp_") && file.name.endsWith(".jpg")
 
     override fun read(path: String): ByteArray? = try {
         File(path).takeIf { ours(it) && it.isFile && it.length() in 1..MAX_PHOTO_FILE_BYTES }?.readBytes()
@@ -80,14 +81,15 @@ class AppPhotoStore(private val context: Context) : PhotoStore {
         null
     }
 
-    override fun save(bytes: ByteArray): String? = saveProfilePhotoBytes(context, bytes)
+    override fun save(bytes: ByteArray): String? = saveProfilePhotoBytes(dir, bytes)
 
     override fun delete(path: String) {
-        if (ours(File(path))) deleteProfilePhoto(context, path)
+        val file = File(path)
+        if (ours(file) && file.isFile) file.delete()
     }
 
     override fun all(): List<String> =
-        context.filesDir.listFiles()?.filter { ours(it) && it.isFile }?.map { it.absolutePath }.orEmpty()
+        dir.listFiles()?.filter { ours(it) && it.isFile }?.map { it.absolutePath }.orEmpty()
 }
 
 /** Far past any 256px JPEG this app writes; a file larger than this is not one of its photos. */

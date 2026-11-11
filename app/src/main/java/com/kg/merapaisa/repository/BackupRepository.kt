@@ -88,7 +88,21 @@ class BackupRepository(
             saved.values.forEach(photos::delete)
             throw e
         }
+        if (plan.mode == RestoreMode.Replace) removeUnusedPhotos()
         notifier.onLedgerChanged()
+    }
+
+    /**
+     * After a Replace, the photo files no one points at any more: the old ledger's, which the
+     * restored people replaced. Left alone they stayed in the app's files for good, one more set
+     * for every Replace.
+     */
+    private suspend fun removeUnusedPhotos() {
+        val inUse = personDao.getAllPersonsForBackup()
+            .filter { it.pfpType == "photo" }
+            .map { it.pfpValue }
+            .toSet()
+        photos.all().filterNot { it in inUse }.forEach(photos::delete)
     }
 
     /** The inserts, in an order the foreign keys allow. Runs inside [apply]'s transaction. */
