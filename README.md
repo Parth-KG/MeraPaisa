@@ -54,7 +54,7 @@ Mera Paisa keeps all of that on your phone.
 | **Multi-currency** | ₹, $, €, £, ¥ with live rates from [Frankfurter](https://www.frankfurter.app/). Balances stay in each person's currency and are never silently converted |
 | **Expense splitting** | Equal or custom shares, with lock-on-edit redistribution |
 | **Groups** | A trip or a flatshare: log who paid for what, then settle everyone in at most *n* − 1 payments for *n* members. Kept apart from your personal balances, in its own currency |
-| **Settle up** | Close a balance after one confirmation, and reopen it later without losing its history |
+| **Settle up** | Square a balance after one confirmation; the closing entry stays in their history |
 | **Move a debt** | Hand part of what one person owes onto someone else, converted if they keep a different currency |
 | **History** | Notes, timestamps, edit or delete any entry, reverse an entry and everything newer, or clear the history |
 | **Export and summaries** | The whole ledger as CSV, or a plain-text summary of one person's balance |
@@ -99,9 +99,9 @@ Mera Paisa keeps all of that on your phone.
 
 Add people with names, pictures and a currency; a new person starts in the currency you used last. Tap a name to open the numpad, type the amount, add a note if you want one, and say which way it went: **You paid for them** or **They paid for you**. The top of the list shows where you stand overall, a line per currency, closed with a double rule. Long-press a name for everything else: settle up, a reminder, a summary, an update link, moving the debt, editing or deleting them.
 
-### Active, Settled, and settling up
+### Active, Even, and settling up
 
-A person is in **Settled** because you put them there, not because their balance happened to reach zero. **Settle up** says the amount it will record and asks first, then records a closing entry for exactly what is outstanding and files them away. **Reopen** brings them back without resurrecting the old balance, since the closing entry is real history and stays. Recording money against a settled person reopens them: if you are lending again, the balance is live again.
+**Active** is everyone who owes you or whom you owe. **Even** is everyone at exactly zero: someone you have just added, someone who has paid you back, someone you settled up with. Nobody is moved by hand. A person sits where their balance puts them, and moves the moment it changes; the tab follows whoever you are typing an amount for. **Settle up** says the amount it will record and asks first, then records a closing entry for exactly what is outstanding, which takes them to Even. That entry is real history and stays. Record anything for them later and they are back on Active.
 
 ### Multi-currency
 
@@ -117,7 +117,7 @@ Each person has their own currency and balances stay in it. Your net position is
 
 ### Groups
 
-A group is a trip, a flatshare, a dinner: anywhere several people keep paying on each other's behalf. You are always a member, because a trip you are not part of is somebody else's ledger. A group is its own ledger in its own currency: nothing in it changes anyone's balance on Active or Settled, and settling someone there leaves their groups alone. Anyone can join a group, whatever currency their own balance is kept in.
+A group is a trip, a flatshare, a dinner: anywhere several people keep paying on each other's behalf. You are always a member, because a trip you are not part of is somebody else's ledger. A group is its own ledger in its own currency: nothing in it changes anyone's balance on Active or Even, and settling someone there leaves their groups alone. Anyone can join a group, whatever currency their own balance is kept in.
 
 Log an expense with a description, an amount and who paid. Shares are equal by default and split so the parts always add back to the whole, since paise cannot be divided three ways. Each member's position is what they paid out less what they were assigned, so a group always nets to zero.
 
