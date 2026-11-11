@@ -37,21 +37,6 @@ internal fun convertedMinor(amountMinor: Long, convertedMagnitudeMajor: Double):
 class ExchangeRateApi {
 
     /**
-     * Converts minor units between two ISO 4217 codes. Returns null when no rate could be
-     * fetched: callers must surface that rather than carrying on with the original amount.
-     *
-     * Only the magnitude is sent. The service answers a negative `amount` with HTTP 422
-     * ("invalid amount"), and a negative balance is simply one you owe rather than one you
-     * are owed, so passing the raw figure made conversion fail for half the ledger, and
-     * fail with a message blaming the user's connection. The sign is re-applied here.
-     */
-    suspend fun convert(amountMinor: Long, from: String, to: String): Long? {
-        if (from == to) return amountMinor
-        val rate = rate(from, to) ?: return null
-        return convertedMinor(amountMinor, requestAmountMajor(amountMinor) * rate)
-    }
-
-    /**
      * The plain rate from one currency to another, for converting many amounts at once.
      *
      * Changing someone's currency rewrites every entry in their history, and asking the service
