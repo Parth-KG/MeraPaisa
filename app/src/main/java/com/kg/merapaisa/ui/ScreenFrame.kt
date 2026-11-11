@@ -51,6 +51,7 @@ import com.kg.merapaisa.ui.theme.Spacing
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material3.FilterChip
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 
 /**
@@ -67,6 +68,15 @@ import androidx.compose.ui.text.TextStyle
 @Composable
 internal fun ScreenFrame(
     title: String,
+    onBack: (() -> Unit)?,
+    footer: (@Composable () -> Unit)? = null,
+    content: LazyListScope.() -> Unit
+) = ScreenFrame(AnnotatedString(title), onBack, footer, content)
+
+/** The same, for a title with styled parts, such as [betaLabel]'s. */
+@Composable
+internal fun ScreenFrame(
+    title: AnnotatedString,
     onBack: (() -> Unit)?,
     footer: (@Composable () -> Unit)? = null,
     content: LazyListScope.() -> Unit

@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.ui.ShareFlowState
+import com.kg.merapaisa.ui.betaLabel
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
@@ -68,7 +69,7 @@ fun ShareLedgerSheet(
                 .verticalScroll(scroll)
         ) {
             Text(
-                "Send an update link (beta)",
+                betaLabel("Send an update link"),
                 style = MeraPaisaType.screenTitle,
                 color = theme.textPrimary,
                 modifier = Modifier.padding(horizontal = Spacing.lg)

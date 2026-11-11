@@ -50,6 +50,7 @@ import com.kg.merapaisa.ui.ImportFlowState
 import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.TextRowInset
 import com.kg.merapaisa.ui.UnreadableReason
+import com.kg.merapaisa.ui.betaLabel
 import com.kg.merapaisa.ui.format.AmountText
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.ui.theme.MeraPaisaType
@@ -123,7 +124,7 @@ private fun PastingScreen(
 ) {
     val theme = LocalAppTheme.current
     ScreenFrame(
-        title = "Record an update link (beta)",
+        title = betaLabel("Record an update link"),
         onBack = onDismiss,
         footer = {
             FootActions {
@@ -249,9 +250,9 @@ private fun ConfirmingScreen(
     ScreenFrame(
         // A full link carries the whole ledger, which is not an update.
         title = if (payload.scope == ShareScope.Full) {
-            "Check this ledger link (beta)"
+            betaLabel("Check this ledger link")
         } else {
-            "Check this update link (beta)"
+            betaLabel("Check this update link")
         },
         onBack = if (state.busy) null else onDismiss,
         footer = {

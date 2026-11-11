@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
@@ -179,7 +180,7 @@ private fun PersonMenu(
         // records, so both ledgers end up agreeing. Marked (beta) wherever it is named: a long
         // history makes a link that chat apps cut or the other phone refuses, and a debt both
         // people record themselves counts twice. Both are still to be solved.
-        MenuRow("Send an update link (beta)", theme.textPrimary) { onDismiss(); onShareLedger() }
+        MenuRow(betaLabel("Send an update link"), theme.textPrimary) { onDismiss(); onShareLedger() }
         // Only when something is owed, named for which way it runs. At zero there is nothing to
         // hand on, and an always-visible item that always refuses is worse than no item.
         if (person.balanceMinor > 0) {
@@ -193,7 +194,11 @@ private fun PersonMenu(
 }
 
 @Composable
-private fun MenuRow(label: String, colour: Color, onClick: () -> Unit) {
+private fun MenuRow(label: String, colour: Color, onClick: () -> Unit) =
+    MenuRow(AnnotatedString(label), colour, onClick)
+
+@Composable
+private fun MenuRow(label: AnnotatedString, colour: Color, onClick: () -> Unit) {
     DropdownMenuItem(
         text = { Text(label, style = MeraPaisaType.body, color = colour) },
         onClick = onClick

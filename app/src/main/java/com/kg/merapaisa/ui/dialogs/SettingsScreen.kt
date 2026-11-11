@@ -34,12 +34,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.TextRowInset
+import com.kg.merapaisa.ui.betaLabel
 import com.kg.merapaisa.ui.coversLedger
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Spacing
@@ -134,7 +136,7 @@ fun SettingsScreen(
                 // An action rather than a setting, so it acts at once and leaves the screen. Until
                 // assetlinks.json is live at the domain root, a tapped link does not reach the
                 // app, which makes this the only way one can get in.
-                ActionRow(title = "Record an update link (beta)", onClick = onImportLink)
+                ActionRow(title = betaLabel("Record an update link"), onClick = onImportLink)
             }
             item { RowDivider(TextRowInset) }
             item {
@@ -280,6 +282,14 @@ private fun AppLockRow(enabled: Boolean, available: Boolean, onChange: (Boolean)
 @Composable
 private fun ActionRow(
     title: String,
+    subtitle: String? = null,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) = ActionRow(AnnotatedString(title), subtitle, enabled, onClick)
+
+@Composable
+private fun ActionRow(
+    title: AnnotatedString,
     subtitle: String? = null,
     enabled: Boolean = true,
     onClick: () -> Unit
