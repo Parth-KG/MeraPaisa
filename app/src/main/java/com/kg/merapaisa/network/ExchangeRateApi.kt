@@ -3,21 +3,22 @@ package com.kg.merapaisa.network
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.abs
 
 /**
- * The amount the service is asked about, in major units.
+ * The size of an amount in major units, which today's rate is applied to.
  *
- * Always a magnitude. The service answers a negative `amount` with HTTP 422 "invalid amount",
- * and half of this app's balances are negative. Those are the people you owe.
+ * Always a magnitude. It was once sent to the service, which answered a negative `amount` with
+ * HTTP 422 "invalid amount" while half of this app's balances are negative (the people you owe).
+ * Only a rate is asked for now, but converting the magnitude and restoring the sign afterwards
+ * keeps what you owe from flipping to owing.
  */
 internal fun requestAmountMajor(amountMinor: Long): Double = abs(amountMinor) / 100.0
 
 /**
- * Puts back the sign the request could not carry, so converting what you owe still reads as
+ * Puts back the sign [requestAmountMajor] took off, so converting what you owe still reads as
  * owed rather than flipping to owing.
  */
 internal fun convertedMinor(amountMinor: Long, convertedMagnitudeMajor: Double): Long {
@@ -26,8 +27,12 @@ internal fun convertedMinor(amountMinor: Long, convertedMagnitudeMajor: Double):
 }
 
 /**
- * Live rates from frankfurter.app. The only network in the app, kept away from the ViewModel
- * and the database so each has one job.
+ * Live rates from Frankfurter, kept away from the ViewModel and the database so each has one job.
+ *
+ * Asked at `api.frankfurter.dev/v1/latest` with `base` and `symbols`, the address and parameters
+ * Frankfurter documents. The app used to ask `api.frankfurter.app/latest` with `amount`, `from`
+ * and `to`, which answered through a redirect with parameters no longer documented, and never
+ * checked which currency the answer was in. The reply is now checked (see [parseRate]).
  */
 class ExchangeRateApi {
 
@@ -42,10 +47,8 @@ class ExchangeRateApi {
      */
     suspend fun convert(amountMinor: Long, from: String, to: String): Long? {
         if (from == to) return amountMinor
-        val converted = withTimeoutOrNull(REQUEST_TIMEOUT_MS) {
-            withContext(Dispatchers.IO) { fetch(requestAmountMajor(amountMinor), from, to) }
-        } ?: return null
-        return convertedMinor(amountMinor, converted)
+        val rate = rate(from, to) ?: return null
+        return convertedMinor(amountMinor, requestAmountMajor(amountMinor) * rate)
     }
 
     /**
@@ -62,12 +65,13 @@ class ExchangeRateApi {
     suspend fun rate(from: String, to: String): Double? {
         if (from == to) return 1.0
         return withTimeoutOrNull(REQUEST_TIMEOUT_MS) {
-            withContext(Dispatchers.IO) { fetch(1.0, from, to) }
+            withContext(Dispatchers.IO) { fetch(from, to) }
         }
     }
 
-    private fun fetch(amountMajor: Double, from: String, to: String): Double? {
-        val url = URL("$BASE_URL?amount=$amountMajor&from=$from&to=$to")
+    private fun fetch(from: String, to: String): Double? {
+        if (!isCurrencyCode(from) || !isCurrencyCode(to)) return null
+        val url = URL("$BASE_URL?base=$from&symbols=$to")
         val connection = (url.openConnection() as HttpURLConnection).apply {
             connectTimeout = CONNECT_TIMEOUT_MS
             readTimeout = READ_TIMEOUT_MS
@@ -75,8 +79,19 @@ class ExchangeRateApi {
         }
         return try {
             if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
-            val body = connection.inputStream.bufferedReader().use { it.readText() }
-            JSONObject(body).getJSONObject("rates").getDouble(to)
+            // A rate reply is under a hundred characters. Anything far longer is not one.
+            val body = connection.inputStream.bufferedReader().use { reader ->
+                val buffer = CharArray(MAX_REPLY_CHARS + 1)
+                var read = 0
+                while (read < buffer.size) {
+                    val n = reader.read(buffer, read, buffer.size - read)
+                    if (n < 0) break
+                    read += n
+                }
+                if (read > MAX_REPLY_CHARS) return null
+                String(buffer, 0, read)
+            }
+            parseRate(body, from, to)
         } catch (e: Exception) {
             null
         } finally {
@@ -85,7 +100,8 @@ class ExchangeRateApi {
     }
 
     private companion object {
-        const val BASE_URL = "https://api.frankfurter.app/latest"
+        const val BASE_URL = "https://api.frankfurter.dev/v1/latest"
+        const val MAX_REPLY_CHARS = 16_384
         const val CONNECT_TIMEOUT_MS = 5_000
         const val READ_TIMEOUT_MS = 5_000
         const val REQUEST_TIMEOUT_MS = 12_000L

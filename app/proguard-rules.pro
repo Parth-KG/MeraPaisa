@@ -6,5 +6,5 @@
 -keep class com.kg.merapaisa.data.Transaction { *; }
 -keep class com.kg.merapaisa.data.PersonWithBalance { *; }
 
-# org.json is part of the platform; the rate response is parsed by key, not by field name.
+# org.json is part of the platform; the update check reads GitHub's reply with it, by key.
 -dontwarn org.json.**
