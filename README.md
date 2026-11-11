@@ -65,7 +65,7 @@ Mera Paisa keeps all of that on your phone.
 | **In-app updates** | Checks GitHub for a newer release and installs it only if it is signed with the same key |
 | **Accessible** | TalkBack reads every figure with its direction in words, and every screen works at large text and on a phone turned sideways |
 | **Ten themes** | Diya, Jamun, Monsoon, Kaapi and Kamal by night, Tulsi, Khadi, Gulab, Kansa and Neel by day, with amounts and grey text at 7:1 in every one |
-| **Backup** | Everything in one file, saved when you like or every week to a folder you pick, with a preview before any restore. Android's own backup also copies your ledger and settings to your Google account |
+| **Backup** | Everything in one file, profile photos included, saved when you like or every week to a folder you pick, with a preview before any restore. Android's own backup also copies your ledger and settings to your Google account |
 
 ## Worth a closer look
 
@@ -151,7 +151,7 @@ Some start from palettes other people made, all under the MIT licence: Monsoon i
 
 ### Backup and restore
 
-Android's own backup carries the database to your Google account. That is a system feature, not something Mera Paisa runs. There is also a backup you control, under **Back up and restore** in Settings: **Save a backup** writes everything to one file, and **Restore from a file** reads it back, either adding what is missing or replacing everything. **Choose a folder** and it saves one there every week, keeping the last 12. A restore is previewed before it runs, and the whole thing is one database transaction, so a failure changes nothing.
+Android's own backup carries the database to your Google account. That is a system feature, not something Mera Paisa runs. There is also a backup you control, under **Back up and restore** in Settings: **Save a backup** writes everything to one file, profile photos included, and **Restore from a file** reads it back, either adding what is missing (and a photo for anyone here who has none) or replacing everything. **Choose a folder** and it saves one there every week, keeping the last 12. A restore is previewed before it runs, and the whole thing is one database transaction, so a failure changes nothing.
 
 </details>
 
@@ -161,7 +161,7 @@ Kotlin and Jetpack Compose with Material 3. Room for storage, with exported sche
 
 Type is Anek Latin by Ek Type for amounts and titles and Figtree for everything else, shipped as static subset instances because API 24 and 25 ignore variable font axes.
 
-444 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec and theme contrast, and 192 instrumentation tests covering every migration, the full migration chain, and the settle, reopen, rollback, edit, delete, reconcile and move-debt paths against a real database.
+494 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec, exchange-rate replies, backups with photos and theme contrast, and 206 instrumentation tests covering every migration, the full migration chain, and the settle, rollback, edit, delete, reconcile, move-debt and backup-photo paths against a real database.
 
 ## Repository structure
 
