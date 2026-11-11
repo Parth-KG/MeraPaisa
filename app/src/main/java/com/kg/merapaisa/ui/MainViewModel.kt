@@ -838,7 +838,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         onSuccess = { size ->
                             BackupFlowState.Done(
                                 "Backup saved",
-                                "Everything is in that file: people, entries, groups and expenses. " +
+                                "Everything is in that file: people and their photos, entries, groups and expenses. " +
                                     "Keep it somewhere that is not this phone. (${maxOf(1, (size + 1023) / 1024)} KB)"
                             )
                         },
