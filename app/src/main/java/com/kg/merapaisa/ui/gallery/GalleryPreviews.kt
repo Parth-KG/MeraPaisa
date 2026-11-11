@@ -200,6 +200,11 @@ fun NumPadYenCase() {
 @Composable
 fun EmptyActiveCase() = EmptyState(tab = Tab.Active, modifier = Modifier.fillMaxSize(), onAddPerson = {})
 
+/** People exist, all of them even, so Active is empty for a happier reason. */
+@Composable
+fun EmptyActiveEveryoneEvenCase() =
+    EmptyState(tab = Tab.Active, modifier = Modifier.fillMaxSize(), everyoneEven = true, onAddPerson = {})
+
 @Composable
 fun EmptyEvenCase() = EmptyState(tab = Tab.Even, modifier = Modifier.fillMaxSize())
 
@@ -433,6 +438,7 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "numpad-even" to { NumPadEvenCase() },
     "empty-active" to { EmptyActiveCase() },
     "empty-even" to { EmptyEvenCase() },
+    "empty-active-everyone-even" to { EmptyActiveEveryoneEvenCase() },
     "empty-groups" to { EmptyGroupsCase() },
     "group-rows" to { GroupRowsCase() },
     "group-detail" to { GroupDetailCase() },

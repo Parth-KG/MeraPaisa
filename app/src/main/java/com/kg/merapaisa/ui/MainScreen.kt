@@ -297,6 +297,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     modifier = Modifier
                         .weight(1f)
                         .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
+                    everyoneEven = persons.isNotEmpty(),
                     onAddPerson = { viewModel.showAddDialog(true) }
                 )
             } else LazyColumn(

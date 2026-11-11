@@ -33,7 +33,13 @@ import com.kg.merapaisa.ui.theme.Spacing
  * it will start once there is something here.
  */
 @Composable
-fun EmptyState(tab: Tab, modifier: Modifier = Modifier, onAddPerson: () -> Unit = {}) {
+fun EmptyState(
+    tab: Tab,
+    modifier: Modifier = Modifier,
+    /** People exist, but all of them are on Even, so Active is empty without being new. */
+    everyoneEven: Boolean = false,
+    onAddPerson: () -> Unit = {}
+) {
     val theme = LocalAppTheme.current
 
     Column(
@@ -43,7 +49,19 @@ fun EmptyState(tab: Tab, modifier: Modifier = Modifier, onAddPerson: () -> Unit 
     ) {
         when (tab) {
             Tab.Active -> {
-                Text("No one here yet.", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
+                if (everyoneEven) {
+                    // Not "No one here yet": there are people, all of them even, and saying the
+                    // ledger is new would be wrong. A quiet line for a good state, then where they
+                    // went and what to do next.
+                    Text("It's quiet in here.", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
+                    Text(
+                        "Everyone's even. Pick someone on Even to record an amount, or add someone new.",
+                        style = MeraPaisaType.body,
+                        color = theme.textSecondary
+                    )
+                } else {
+                    Text("No one here yet.", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
+                }
                 Button(
                     onClick = onAddPerson,
                     shape = Shapes.small,
