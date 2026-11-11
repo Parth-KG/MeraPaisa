@@ -338,4 +338,84 @@ class RestorePlanTest {
         assertFalse(plan.changesNothing)
         assertEquals(1, plan.deletes.people)
     }
+
+    // -----------------------------------------------------------------------------------------
+    // Photos (v3.4.0)
+    // -----------------------------------------------------------------------------------------
+
+    private val ashaPhoto = base64UrlEncode(byteArrayOf(1, 2, 3))
+    private val raviPhoto = base64UrlEncode(byteArrayOf(4, 5, 6))
+    private val selfPhoto = base64UrlEncode(byteArrayOf(7, 8, 9))
+
+    private fun backupWithPhotos() = backup().copy(photos = mapOf(10L to selfPhoto, 11L to ashaPhoto, 12L to raviPhoto))
+
+    /** Folds a plan back in the way apply does, photos included, for a second plan to run against. */
+    private fun BackupSnapshot.restoredWith(plan: RestorePlan): BackupSnapshot {
+        val marked = (persons + plan.persons).map { p ->
+            if (p.id in plan.photos) p.copy(pfpType = "photo", pfpValue = "/files/pfp_${p.id}.jpg") else p
+        }
+        return plus(plan).copy(persons = marked)
+    }
+
+    @Test
+    fun `Replace brings every photo back under the backup's own ids`() {
+        val plan = planRestore(emptyLedger(), backupWithPhotos(), RestoreMode.Replace, SELF_ID)
+        assertEquals(mapOf(10L to selfPhoto, 11L to ashaPhoto, 12L to raviPhoto), plan.photos)
+        assertEquals(0, plan.photosForPeopleAlreadyHere)
+    }
+
+    @Test
+    fun `Replace ignores a photo for someone not in the backup`() {
+        val plan = planRestore(emptyLedger(), backup().copy(photos = mapOf(99L to ashaPhoto)), RestoreMode.Replace, SELF_ID)
+        assertEquals(emptyMap<Long, String>(), plan.photos)
+    }
+
+    @Test
+    fun `Merge gives each new person their photo under their new id`() {
+        val plan = planRestore(emptyLedger(), backupWithPhotos(), RestoreMode.Merge, SELF_ID)
+        val asha = plan.persons.single { it.name == "Asha" }
+        val ravi = plan.persons.single { it.name == "Ravi" }
+        assertEquals(ashaPhoto, plan.photos[asha.id])
+        assertEquals(raviPhoto, plan.photos[ravi.id])
+        assertEquals("people it adds are not counted as people already here", 0, plan.photosForPeopleAlreadyHere)
+    }
+
+    @Test
+    fun `Merge never gives this phone's own row the backup's photo`() {
+        val plan = planRestore(emptyLedger(), backupWithPhotos(), RestoreMode.Merge, SELF_ID)
+        assertFalse(SELF_ID in plan.photos)
+        assertFalse(selfPhoto in plan.photos.values)
+    }
+
+    @Test
+    fun `Merge gives a photo to someone already here who has none`() {
+        val here = snapshot(persons = listOf(self, Person(id = 2, name = "Asha", currency = "INR")))
+        val plan = planRestore(here, backupWithPhotos(), RestoreMode.Merge, SELF_ID)
+        assertEquals(ashaPhoto, plan.photos[2L])
+        assertEquals(1, plan.photosForPeopleAlreadyHere)
+        assertFalse("a photo to fill in is a change", plan.changesNothing)
+    }
+
+    @Test
+    fun `Merge leaves someone's own photo alone`() {
+        val here = snapshot(persons = listOf(self, Person(id = 2, name = "Asha", currency = "INR", pfpType = "photo", pfpValue = "/files/pfp_mine.jpg")))
+        val plan = planRestore(here, backupWithPhotos(), RestoreMode.Merge, SELF_ID)
+        assertFalse(2L in plan.photos)
+        assertEquals(0, plan.photosForPeopleAlreadyHere)
+    }
+
+    @Test
+    fun `the same Merge run twice gives no photo the second time`() {
+        val here = snapshot(persons = listOf(self, Person(id = 2, name = "Asha", currency = "INR")))
+        val first = planRestore(here, backupWithPhotos(), RestoreMode.Merge, SELF_ID)
+        val second = planRestore(here.restoredWith(first), backupWithPhotos(), RestoreMode.Merge, SELF_ID)
+        assertEquals(emptyMap<Long, String>(), second.photos)
+        assertTrue(second.changesNothing)
+    }
+
+    @Test
+    fun `a backup without photos plans none`() {
+        assertEquals(emptyMap<Long, String>(), planRestore(emptyLedger(), backup(), RestoreMode.Merge, SELF_ID).photos)
+        assertEquals(emptyMap<Long, String>(), planRestore(emptyLedger(), backup(), RestoreMode.Replace, SELF_ID).photos)
+    }
 }

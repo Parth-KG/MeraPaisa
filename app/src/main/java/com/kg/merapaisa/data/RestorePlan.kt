@@ -42,6 +42,17 @@ data class RestorePlan(
     val expenseShares: List<ExpenseShare>,
     val appliedPayloads: List<AppliedPayload>,
     val retiredUids: List<RetiredUid> = emptyList(),
+    /**
+     * Photos to put back, by final person id, as Base64URL of the image. For people this plan
+     * inserts, and in Merge also for people already here who have no photo of their own.
+     */
+    val photos: Map<Long, String> = emptyMap(),
+    /**
+     * How many of [photos] go to people already on the phone, for the preview to say so. Merge
+     * otherwise changes nothing about someone it matched; a photo for someone with none is the
+     * one exception (Parth, 11 Nov 2026), since otherwise it would silently not come back.
+     */
+    val photosForPeopleAlreadyHere: Int = 0,
     /** What Replace would delete first. Zeroes in Merge, which deletes nothing. */
     val deletes: RestoreCounts,
     /** What Merge recognised and skipped. Zeroes in Replace, which starts from nothing. */
@@ -57,7 +68,7 @@ data class RestorePlan(
 
     /** True when the restore would leave the ledger exactly as it is. */
     val changesNothing: Boolean
-        get() = inserts.isZero && deletes.isZero
+        get() = inserts.isZero && deletes.isZero && photosForPeopleAlreadyHere == 0
 }
 
 data class RestoreCounts(
@@ -100,6 +111,7 @@ private fun planReplace(existing: BackupSnapshot, incoming: BackupSnapshot) = Re
     expenseShares = incoming.expenseShares,
     appliedPayloads = incoming.appliedPayloads,
     retiredUids = incoming.retiredUids,
+    photos = incoming.photos.filterKeys { id -> incoming.persons.any { it.id == id } },
     deletes = RestoreCounts(
         people = existing.persons.count { !it.isSelf },
         transactions = existing.transactions.size,
@@ -124,6 +136,8 @@ private fun planMerge(
     val personIdMap = HashMap<Long, Long>()
     val newPersons = mutableListOf<Person>()
     var peopleAlreadyPresent = 0
+    val photos = HashMap<Long, String>()
+    var photosForPeopleAlreadyHere = 0
 
     // Name and currency together, because the app itself treats the same name in two currencies as
     // two people. Case and surrounding space are ignored: "asha " and "Asha" are one person.
@@ -138,13 +152,21 @@ private fun planMerge(
             return@forEach
         }
         val match = existingByKey[personKey(person.name, person.currency)]
+        val photo = incoming.photos[person.id]
         if (match != null) {
             personIdMap[person.id] = match.id
             peopleAlreadyPresent++
+            // Their own photo wins; a photo is only given to someone with none. Once given, they
+            // have one, so the same Merge run again gives nothing.
+            if (photo != null && match.pfpType != "photo") {
+                photos[match.id] = photo
+                photosForPeopleAlreadyHere++
+            }
         } else {
             val id = nextPersonId++
             personIdMap[person.id] = id
             newPersons.add(person.copy(id = id))
+            if (photo != null) photos[id] = photo
         }
     }
 
@@ -253,6 +275,8 @@ private fun planMerge(
         expenseShares = newShares,
         appliedPayloads = newPayloads,
         retiredUids = newRetired,
+        photos = photos,
+        photosForPeopleAlreadyHere = photosForPeopleAlreadyHere,
         deletes = RestoreCounts(),
         alreadyPresent = RestoreCounts(
             people = peopleAlreadyPresent,

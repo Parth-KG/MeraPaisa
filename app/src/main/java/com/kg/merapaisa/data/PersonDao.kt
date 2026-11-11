@@ -131,6 +131,10 @@ interface PersonDao {
     @Query("UPDATE persons SET isSettled = :settled WHERE id = :personId")
     suspend fun setSettled(personId: Long, settled: Boolean)
 
+    /** Points a person at a photo file, for a restore giving a photo to someone who had none. */
+    @Query("UPDATE persons SET pfpType = 'photo', pfpValue = :path WHERE id = :personId")
+    suspend fun setPhoto(personId: Long, path: String)
+
     /**
      * Closes a debt out: records an entry for exactly what is outstanding, which brings the
      * balance to zero and so moves the person to Even. The balance is read inside the transaction

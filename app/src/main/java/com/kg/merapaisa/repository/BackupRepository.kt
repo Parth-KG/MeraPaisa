@@ -10,6 +10,7 @@ import com.kg.merapaisa.data.PersonDao
 import com.kg.merapaisa.data.RestoreMode
 import com.kg.merapaisa.data.RestorePlan
 import com.kg.merapaisa.data.Transaction
+import com.kg.merapaisa.data.base64UrlDecode
 import com.kg.merapaisa.data.encodeBackup
 import com.kg.merapaisa.data.planRestore
 
@@ -69,27 +70,52 @@ class BackupRepository(
      * decides anything. That is what makes the decisions testable without a device.
      */
     suspend fun apply(plan: RestorePlan) {
-        db.withTransaction {
-            if (plan.mode == RestoreMode.Replace) {
-                groupDao.deleteAllGroups()
-                personDao.deleteAllPersons()
-                personDao.deleteAllAppliedPayloads()
-            }
+        // Photo files first, outside the transaction, so no file is written while the database is
+        // held. If the transaction then fails, the files it would have pointed at go with it.
+        val saved = HashMap<Long, String>()
+        plan.photos.forEach { (personId, photo) ->
+            val bytes = base64UrlDecode(photo) ?: return@forEach
+            photos.save(bytes)?.let { saved[personId] = it }
+        }
+        val inserted = plan.persons.map { person ->
+            saved[person.id]?.let { person.copy(pfpType = "photo", pfpValue = it) } ?: person
+        }
+        val insertedIds = plan.persons.map { it.id }.toSet()
 
-            if (plan.persons.isNotEmpty()) personDao.insertPersons(plan.persons)
-            // A backup with no self row of its own still needs one, and a Replace just deleted the
-            // local one. Runs after the inserts so it adopts the backup's row when there was one.
-            personDao.ensureSelf()
-
-            if (plan.transactions.isNotEmpty()) personDao.insertTransactions(plan.transactions)
-            if (plan.groups.isNotEmpty()) groupDao.insertGroups(plan.groups)
-            if (plan.groupMembers.isNotEmpty()) groupDao.addMembers(plan.groupMembers)
-            if (plan.expenses.isNotEmpty()) groupDao.insertExpenses(plan.expenses)
-            if (plan.expenseShares.isNotEmpty()) groupDao.insertShares(plan.expenseShares)
-            if (plan.appliedPayloads.isNotEmpty()) personDao.insertAppliedPayloads(plan.appliedPayloads)
-            if (plan.retiredUids.isNotEmpty()) personDao.insertRetiredUids(plan.retiredUids)
+        try {
+            db.withTransaction { applyTables(plan, inserted, saved.filterKeys { it !in insertedIds }) }
+        } catch (e: Throwable) {
+            saved.values.forEach(photos::delete)
+            throw e
         }
         notifier.onLedgerChanged()
+    }
+
+    /** The inserts, in an order the foreign keys allow. Runs inside [apply]'s transaction. */
+    private suspend fun applyTables(
+        plan: RestorePlan,
+        persons: List<Person>,
+        photosForPeopleHere: Map<Long, String>
+    ) {
+        if (plan.mode == RestoreMode.Replace) {
+            groupDao.deleteAllGroups()
+            personDao.deleteAllPersons()
+            personDao.deleteAllAppliedPayloads()
+        }
+
+        if (persons.isNotEmpty()) personDao.insertPersons(persons)
+        photosForPeopleHere.forEach { (personId, path) -> personDao.setPhoto(personId, path) }
+        // A backup with no self row of its own still needs one, and a Replace just deleted the
+        // local one. Runs after the inserts so it adopts the backup's row when there was one.
+        personDao.ensureSelf()
+
+        if (plan.transactions.isNotEmpty()) personDao.insertTransactions(plan.transactions)
+        if (plan.groups.isNotEmpty()) groupDao.insertGroups(plan.groups)
+        if (plan.groupMembers.isNotEmpty()) groupDao.addMembers(plan.groupMembers)
+        if (plan.expenses.isNotEmpty()) groupDao.insertExpenses(plan.expenses)
+        if (plan.expenseShares.isNotEmpty()) groupDao.insertShares(plan.expenseShares)
+        if (plan.appliedPayloads.isNotEmpty()) personDao.insertAppliedPayloads(plan.appliedPayloads)
+        if (plan.retiredUids.isNotEmpty()) personDao.insertRetiredUids(plan.retiredUids)
     }
 }
 
