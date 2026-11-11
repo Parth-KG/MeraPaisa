@@ -233,7 +233,9 @@ fun SplitAdjustmentsContent(
                     conversionError = "Couldn't get today's rate for ${p.currency}, so ${p.name}'s " +
                         "share can't be worked out. Try again once you're connected, or take " +
                         "${p.name} out of the split."
-                    result[p.id] = srcAmt   // fallback, but warning is shown
+                    // Left out rather than filled with the unconverted figure: that showed under
+                    // the row as "Saved as $1,200", a rupee amount with a dollar sign on it. The
+                    // split cannot be saved while the error stands, so nothing reads the gap.
                 } else {
                     result[p.id] = convertedAmount
                 }
