@@ -25,4 +25,12 @@ data class PersonWithBalance(
      * ask this, so they cannot disagree about who is open.
      */
     val isEven: Boolean get() = balanceMinor == 0L
+
+    /**
+     * Whether recording [amountMinor] against this person leaves them at exactly zero, so the
+     * screen can move to the tab they are about to be on. A sum too large for a Long cannot be
+     * zero.
+     */
+    fun isEvenAfter(amountMinor: Long): Boolean =
+        runCatching { Math.addExact(balanceMinor, amountMinor) == 0L }.getOrDefault(false)
 }

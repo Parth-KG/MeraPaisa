@@ -140,6 +140,16 @@ fun MainScreen(viewModel: MainViewModel) {
         }
     }
     val selectedPerson = persons.find { it.id == ui.selectedId }
+    // Records an entry from the keypad, which then closes as it always has, and moves to the tab
+    // the person is about to be on: an amount for someone on Even takes you to Active with them, and
+    // a payment that squares someone takes you to Even. Left where it was, the row vanished from
+    // under you and the tab you were on could be empty.
+    fun recordAndFollow(person: com.kg.merapaisa.data.PersonWithBalance, amountMinor: Long) {
+        viewModel.recordAmount(person.id, amountMinor, ui.note)
+        viewModel.clearSelection()
+        viewModel.followToTab(if (person.isEvenAfter(amountMinor)) Tab.Even else Tab.Active)
+    }
+
     // The tab follows the person whose keypad is open. An amount recorded for someone on Even takes
     // them to Active, and a payment that squares someone takes them to Even; without this their row
     // left the list from under the keypad, and the keypad went on naming someone you could no
@@ -336,13 +346,11 @@ fun MainScreen(viewModel: MainViewModel) {
                     } else Modifier,
                     onAdd = {
                         val amount = parseAmountToMinor(ui.input) ?: return@NumPad
-                        viewModel.recordAmount(selectedPerson.id, amount, ui.note)
-                        viewModel.clearSelection()
+                        recordAndFollow(selectedPerson, amount)
                     },
                     onSubtract = {
                         val amount = parseAmountToMinor(ui.input) ?: return@NumPad
-                        viewModel.recordAmount(selectedPerson.id, -amount, ui.note)
-                        viewModel.clearSelection()
+                        recordAndFollow(selectedPerson, -amount)
                     }
                 )
             }

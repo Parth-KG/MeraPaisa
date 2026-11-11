@@ -44,4 +44,28 @@ class EvenRuleTest {
         assertFalse(person(Long.MAX_VALUE).isEven)
         assertFalse(person(Long.MIN_VALUE).isEven)
     }
+
+    @Test
+    fun `an amount for someone even takes them off Even`() {
+        assertFalse(person(0).isEvenAfter(1_200_00))
+        assertFalse(person(0).isEvenAfter(-40_00))
+    }
+
+    @Test
+    fun `a payment that squares a balance leaves them even`() {
+        assertTrue(person(1_200_00).isEvenAfter(-1_200_00))
+        assertTrue(person(-40_00).isEvenAfter(40_00))
+    }
+
+    @Test
+    fun `a payment that does not square a balance leaves them active`() {
+        assertFalse(person(1_200_00).isEvenAfter(-1_000_00))
+        assertFalse(person(1_200_00).isEvenAfter(1))
+    }
+
+    @Test
+    fun `a sum past what a Long holds is not even`() {
+        assertFalse(person(Long.MAX_VALUE).isEvenAfter(1))
+        assertFalse(person(Long.MIN_VALUE).isEvenAfter(-1))
+    }
 }
