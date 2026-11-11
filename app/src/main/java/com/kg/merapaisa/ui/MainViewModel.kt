@@ -977,21 +977,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update {
                 it.copy(backup = result.fold(
                     onSuccess = {
-                        val i = reviewing.plan.inserts
-                        val detail = buildString {
-                            if (reviewing.mode == RestoreMode.Replace) {
-                                append("Your ledger now matches the file exactly. ")
-                            }
-                            append("Added ${i.people} ${if (i.people == 1) "person" else "people"}, ")
-                            append("${i.transactions} ${if (i.transactions == 1) "entry" else "entries"}")
-                            if (i.groups > 0) append(", ${i.groups} ${if (i.groups == 1) "group" else "groups"}")
-                            append(".")
-                            val skipped = reviewing.plan.alreadyPresent
-                            if (reviewing.mode == RestoreMode.Merge && !skipped.isZero) {
-                                append(" ${skipped.transactions} ${if (skipped.transactions == 1) "entry was" else "entries were"} already here and ${if (skipped.transactions == 1) "was" else "were"} left alone.")
-                            }
-                        }
-                        BackupFlowState.Done("Ledger restored", detail)
+                        val (title, detail) = com.kg.merapaisa.ui.backup.restoreDoneMessage(reviewing.plan)
+                        BackupFlowState.Done(title, detail)
                     },
                     onFailure = { e ->
                         BackupFlowState.Unreadable(
