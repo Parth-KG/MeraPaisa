@@ -25,11 +25,21 @@ class BackupRepository(
     private val db: AppDatabase,
     private val personDao: PersonDao,
     private val groupDao: GroupDao,
-    private val notifier: LedgerChangeNotifier = LedgerChangeNotifier.None
+    private val notifier: LedgerChangeNotifier = LedgerChangeNotifier.None,
+    private val photos: PhotoStore = PhotoStore.None
 ) {
 
-    /** Every table, read together inside one transaction so they cannot disagree. */
-    suspend fun snapshot(): BackupSnapshot = db.withTransaction {
+    /**
+     * Every table, read together inside one transaction so they cannot disagree, then the photo
+     * files of the people who have one, read after it so no file is read while the database is
+     * held.
+     */
+    suspend fun snapshot(): BackupSnapshot {
+        val tables = readTables()
+        return tables.copy(photos = photosOf(tables.persons, photos::read))
+    }
+
+    private suspend fun readTables(): BackupSnapshot = db.withTransaction {
         BackupSnapshot(
             persons = personDao.getAllPersonsForBackup(),
             transactions = personDao.getAllTransactionsNow(),

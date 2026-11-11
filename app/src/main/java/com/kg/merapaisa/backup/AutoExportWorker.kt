@@ -9,6 +9,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.kg.merapaisa.AppPhotoStore
 import com.kg.merapaisa.BackupStore
 import com.kg.merapaisa.BuildConfig
 import com.kg.merapaisa.data.AppDatabase
@@ -64,7 +65,7 @@ class AutoExportWorker(
 
         return try {
             val db = AppDatabase.getDatabase(context)
-            val repository = BackupRepository(db, db.personDao(), db.groupDao())
+            val repository = BackupRepository(db, db.personDao(), db.groupDao(), photos = AppPhotoStore(context))
             val json = repository.exportJson(now, BuildConfig.VERSION_NAME)
 
             val uri = BackupWriter.write(context, treeUri, backupFileName(BackupWriter.stamp(now)), json)

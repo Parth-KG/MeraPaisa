@@ -18,6 +18,7 @@ import com.kg.merapaisa.data.buildPersonSummary
 import com.kg.merapaisa.data.MoveDebtResult
 import com.kg.merapaisa.data.buildShareLink
 import com.kg.merapaisa.data.claimedNameForDisplay
+import com.kg.merapaisa.AppPhotoStore
 import com.kg.merapaisa.BackupStore
 import com.kg.merapaisa.BuildConfig
 import com.kg.merapaisa.backup.AutoExportWorker
@@ -82,7 +83,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         db = AppDatabase.getDatabase(application),
         personDao = AppDatabase.getDatabase(application).personDao(),
         groupDao = AppDatabase.getDatabase(application).groupDao(),
-        notifier = WidgetLedgerNotifier(application)
+        notifier = WidgetLedgerNotifier(application),
+        photos = AppPhotoStore(application)
     )
     private val exchangeRates = ExchangeRateApi()
     private val updates = UpdateCheck()

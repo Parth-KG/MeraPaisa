@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import com.kg.merapaisa.repository.PhotoStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -38,6 +39,59 @@ suspend fun saveProfilePhoto(
     deleteProfilePhoto(context, previousPath)
     file.absolutePath
 }
+
+/**
+ * Saves a photo that arrived as bytes, from a backup being restored, and returns its path, or null
+ * if the bytes are not an image.
+ *
+ * Each file gets a name no other can have. `saveProfilePhoto` names files by the millisecond, and a
+ * restore saves several in the same millisecond, so they overwrote each other. The bytes are kept
+ * as they are: they are a photo this app already scaled and saved once.
+ */
+fun saveProfilePhotoBytes(context: Context, bytes: ByteArray): String? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    val file = try {
+        File.createTempFile("pfp_", ".jpg", context.filesDir)
+    } catch (e: Exception) {
+        return null
+    }
+    return try {
+        file.writeBytes(bytes)
+        file.absolutePath
+    } catch (e: Exception) {
+        file.delete()
+        null
+    }
+}
+
+/**
+ * The app's own photo files, for backups and restores: only `pfp_*.jpg` directly in the private
+ * files directory is read, listed or deleted.
+ */
+class AppPhotoStore(private val context: Context) : PhotoStore {
+    private fun ours(file: File) =
+        file.parentFile == context.filesDir && file.name.startsWith("pfp_") && file.name.endsWith(".jpg")
+
+    override fun read(path: String): ByteArray? = try {
+        File(path).takeIf { ours(it) && it.isFile && it.length() in 1..MAX_PHOTO_FILE_BYTES }?.readBytes()
+    } catch (e: Exception) {
+        null
+    }
+
+    override fun save(bytes: ByteArray): String? = saveProfilePhotoBytes(context, bytes)
+
+    override fun delete(path: String) {
+        if (ours(File(path))) deleteProfilePhoto(context, path)
+    }
+
+    override fun all(): List<String> =
+        context.filesDir.listFiles()?.filter { ours(it) && it.isFile }?.map { it.absolutePath }.orEmpty()
+}
+
+/** Far past any 256px JPEG this app writes; a file larger than this is not one of its photos. */
+private const val MAX_PHOTO_FILE_BYTES = 2L * 1024 * 1024
 
 /** Removes a stored avatar, ignoring anything that is not ours to delete. */
 fun deleteProfilePhoto(context: Context, path: String?) {
