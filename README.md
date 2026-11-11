@@ -51,7 +51,7 @@ Mera Paisa keeps all of that on your phone.
 |---|---|
 | **Per-person balances** | Each person has their own currency, picture and history |
 | **Net position** | Where you stand overall, one line per currency, never added together |
-| **Multi-currency** | ₹, $, €, £, ¥ with live rates from [Frankfurter](https://www.frankfurter.app/). Balances stay in each person's currency and are never silently converted |
+| **Multi-currency** | ₹, $, €, £, ¥ with live rates from [Frankfurter](https://frankfurter.dev/). Balances stay in each person's currency and are never silently converted |
 | **Expense splitting** | Equal or custom shares, with lock-on-edit redistribution |
 | **Groups** | A trip or a flatshare: log who paid for what, then settle everyone in at most *n* − 1 payments for *n* members. Kept apart from your personal balances, in its own currency |
 | **Settle up** | Square a balance after one confirmation; the closing entry stays in their history |
