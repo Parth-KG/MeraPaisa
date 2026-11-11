@@ -60,8 +60,11 @@ object Fixtures {
     /** Exactly zero: no sign, and the word "even". */
     val evenPerson = personWith(6, "Farid Ahmed", "INR", 0)
 
-    /** Closed with Settle up, so it renders in the Settled tab. */
-    val settledPerson = personWith(7, "Gita Rao", "INR", 0, settled = true)
+    /**
+     * Squared with Settle up, so at zero and on Even. The stored flag is set, as Settle up still
+     * sets it, and must make no difference to how the row looks.
+     */
+    val settledUpPerson = personWith(7, "Gita Rao", "INR", 0, settled = true)
 
     /** The shortest possible name, which tends to break rows built around a wide avatar. */
     val shortName = personWith(8, "Jo", "INR", 75_50)

@@ -120,11 +120,12 @@ fun PeopleListLongCase() {
     }
 }
 
+/** Two people on Even: one squared with Settle up, one who never owed anything. */
 @Composable
-fun SettledPersonCase() {
+fun EvenPeopleCase() {
     Column(Modifier.fillMaxWidth()) {
         PersonRow(
-            person = Fixtures.settledPerson,
+            person = Fixtures.settledUpPerson,
             isSelected = false,
             onHistoryClick = {}, onClick = {}, onSendReminder = {}, onDelete = {},
             onEditClick = {}, onSettleUp = {}, onShareSummary = {},
@@ -173,11 +174,11 @@ fun NumPadCase() {
     )
 }
 
-/** A settled person's keypad, where the button under the directions is Reopen. */
+/** The keypad at zero: nothing to settle, so no button under the two directions. */
 @Composable
-fun NumPadSettledCase() {
+fun NumPadEvenCase() {
     NumPad(
-        person = Fixtures.settledPerson,
+        person = Fixtures.settledUpPerson,
         input = "",
         onKey = {}, onSettleUp = {}, onAdd = {}, onSubtract = {},
         note = "",
@@ -200,7 +201,7 @@ fun NumPadYenCase() {
 fun EmptyActiveCase() = EmptyState(tab = Tab.Active, modifier = Modifier.fillMaxSize(), onAddPerson = {})
 
 @Composable
-fun EmptySettledCase() = EmptyState(tab = Tab.Even, modifier = Modifier.fillMaxSize())
+fun EmptyEvenCase() = EmptyState(tab = Tab.Even, modifier = Modifier.fillMaxSize())
 
 @Composable
 fun EmptyGroupsCase() = GroupsEmptyState(modifier = Modifier.fillMaxSize())
@@ -417,7 +418,7 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "people-rows" to { PeopleRowsCase() },
     "people-rows-whole" to { PeopleRowsWholeCase() },
     "people-list-long" to { PeopleListLongCase() },
-    "people-settled-and-even" to { SettledPersonCase() },
+    "people-even" to { EvenPeopleCase() },
     "net-total-multi" to { NetTotalMultiCase() },
     "net-total-single" to { NetTotalSingleCase() },
     "net-total-multi-both-sides" to { NetTotalMultiCase(bothSides = true) },
@@ -425,9 +426,9 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "net-total-even" to { NetTotalEvenCase() },
     "numpad" to { NumPadCase() },
     "numpad-yen" to { NumPadYenCase() },
-    "numpad-settled" to { NumPadSettledCase() },
+    "numpad-even" to { NumPadEvenCase() },
     "empty-active" to { EmptyActiveCase() },
-    "empty-settled" to { EmptySettledCase() },
+    "empty-even" to { EmptyEvenCase() },
     "empty-groups" to { EmptyGroupsCase() },
     "group-rows" to { GroupRowsCase() },
     "group-detail" to { GroupDetailCase() },
