@@ -54,8 +54,8 @@ import java.util.Locale
  *
  * The restore half exists to answer one question before anything happens: *what is this about to
  * do to my ledger?* A restore can delete every person and entry, so the counts are on screen, in
- * the selected mode, before the button is live, and the two things a file cannot put back (groups
- * from a CSV, photos from anywhere) are stated rather than discovered afterwards.
+ * the selected mode, before the button is live, and what a file cannot put back (groups from a
+ * CSV) is stated rather than discovered afterwards.
  *
  * All of that used to live in AlertDialogs: a scrolling menu, a scrolling review with two radio
  * options and a warning block, and two more for the result. A dialog is a box sized for a
@@ -119,7 +119,8 @@ private fun MenuScreen(
     ) {
         item {
             Paragraph(
-                "A backup is one file with everything: people, entries, groups and expenses. " +
+                "A backup is one file with everything: people and their photos, entries, groups " +
+                    "and expenses. " +
                     "Restoring reads one back, or a CSV export from this app."
             )
         }
@@ -204,13 +205,6 @@ private fun MenuScreen(
             }
         }
 
-        item { SectionHeading("What a backup leaves out") }
-        item {
-            // Said here rather than discovered on a new phone, where it is too late.
-            Paragraph(
-                "Profile photos. Restoring on another phone shows initials for those people instead."
-            )
-        }
     }
 }
 
@@ -352,6 +346,17 @@ private fun ReviewScreen(
                         "${countPhrase(plan.alreadyPresent.transactions, "entry", "entries")}" +
                         (if (plan.alreadyPresent.groups > 0) ", ${countPhrase(plan.alreadyPresent.groups, "group", "groups")}" else "") +
                         "."
+                )
+            }
+        }
+
+        // The one change Merge makes to someone already here, so it is said out loud.
+        if (plan.photosForPeopleAlreadyHere > 0) {
+            item {
+                Paragraph(
+                    "Of the people already here, ${plan.photosForPeopleAlreadyHere} with no photo " +
+                        "${if (plan.photosForPeopleAlreadyHere == 1) "gets" else "get"} the one in the file.",
+                    colour = theme.textPrimary
                 )
             }
         }

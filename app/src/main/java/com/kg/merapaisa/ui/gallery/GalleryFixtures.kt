@@ -235,6 +235,26 @@ object Fixtures {
             )
         }
 
+    /** Adding what is missing from a full backup, where two people already here get their photos. */
+    val backupReviewMerge: BackupFlowState.Reviewing
+        get() {
+            val replace = backupReview
+            return replace.copy(
+                source = RestoreSource.Json,
+                exportedAt = 1_700_000_000_000 + 40 * DAY,
+                appVersion = "3.4.0",
+                mode = RestoreMode.Merge,
+                plan = replace.plan.copy(
+                    mode = RestoreMode.Merge,
+                    persons = replace.plan.persons.take(2),
+                    transactions = replace.plan.transactions.take(5),
+                    photosForPeopleAlreadyHere = 2,
+                    deletes = RestoreCounts(),
+                    alreadyPresent = RestoreCounts(people = 5, transactions = 33)
+                )
+            )
+        }
+
     val backupDone = BackupFlowState.Done(
         "Ledger restored",
         "Your ledger now matches the file exactly. Added 7 people, 38 entries."

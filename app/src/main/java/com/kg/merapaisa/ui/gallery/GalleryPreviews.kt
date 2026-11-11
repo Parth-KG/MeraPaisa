@@ -368,6 +368,10 @@ fun BackupMenuCase() = Backup(Fixtures.backupMenu)
 @Composable
 fun BackupReviewCase() = Backup(Fixtures.backupReview)
 
+/** Merge from a full backup, where people already here with no photo get the file's. */
+@Composable
+fun BackupReviewMergeCase() = Backup(Fixtures.backupReviewMerge)
+
 @Composable
 fun BackupDoneCase() = Backup(Fixtures.backupDone)
 
@@ -443,6 +447,7 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "settings" to { SettingsCase() },
     "backup-menu" to { BackupMenuCase() },
     "backup-review" to { BackupReviewCase() },
+    "backup-review-merge" to { BackupReviewMergeCase() },
     "backup-done" to { BackupDoneCase() },
     "import-paste" to { ImportPasteCase() },
     "import-confirm" to { ImportConfirmCase() },

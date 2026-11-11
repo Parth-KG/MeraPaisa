@@ -10,7 +10,7 @@ Two file formats, deliberately. Only one of them is a backup.
 | Groups, expenses, shares | Yes | **No, not carried at all** |
 | The row that is you | Yes | No |
 | Update link history (`applied_payloads`) | Yes | No |
-| Profile photos | No | No |
+| Profile photos | Yes, from v3.4.0 | No |
 | Opens in a spreadsheet | No | Yes |
 
 **The export is for reading, not for recovering.** It flattens to one row per entry so it opens
@@ -27,11 +27,21 @@ while the `amount` rows cover direct entries only, so for anyone in a group the 
 Balances are now direct entries alone, so a new export's column matches its rows, but old files
 are still around. The importer derives balances from the rows and ignores the column entirely.
 
-### What a backup cannot carry
+### Profile photos
 
-Profile photos. `pfpValue` stores a path into the app's private files, not the image, so restoring
-on a different phone shows initials for those people. That is the same fallback the app already
-uses when a photo file goes missing. Nothing breaks; a picture is lost.
+From v3.4.0 a backup carries each photo itself, in an optional `photo` field on its person (the
+saved 256px JPEG, in Base64URL). `pfpValue` is only a path into the app's private files, which
+means nothing on another phone, so it was never enough on its own.
+
+- **About 20 to 55 KB per photo**, in every copy the weekly job keeps.
+- **The format version is still 1.** v3.3 and older read named fields only, so they restore a newer
+  backup in full and show initials for those people. A backup from before v3.4.0 restores the same
+  way into v3.4.0: no photos, initials instead.
+- **A photo that will not decode costs that person their picture**, not the restore. Everything else
+  in the file is read as strictly as ever.
+- **Replace** brings every photo back, and then removes the old ledger's photo files.
+- **Add what is missing** brings photos with the people it adds, and gives a photo to someone already
+  here only when they have none. Their own photo always wins, and the preview says how many get one.
 
 ## Restoring
 
@@ -39,8 +49,8 @@ Settings → **Back up and restore** → *Restore from a file*. Pick either form
 out which it is. Then choose:
 
 - **Add what is missing** matches people on name and currency, and entries on person, time, amount
-  and note, then adds only what is absent. Running it twice changes nothing the second time. It
-  cannot undo a deletion you made since the backup.
+  and note, then adds only what is absent, plus a photo for anyone here who has none. Running it
+  twice changes nothing the second time. It cannot undo a deletion you made since the backup.
 - **Replace everything** deletes the current ledger, then lays the file down exactly. Right on a
   fresh install, destructive anywhere else, so the preview counts what it would delete first.
 
