@@ -35,7 +35,7 @@ Grab the APK from the **[latest release](https://github.com/Parth-KG/MeraPaisa/r
 
 Android warns about installing outside the Play Store, which is expected for a directly distributed APK. You will need to allow installs from your browser or file manager once.
 
-Every release lists the APK's SHA-256. Run `shasum -a 256` on the file if you would rather verify than trust.
+Every release since v3.0.0 lists the APK's SHA-256. Run `shasum -a 256` on the file if you would rather verify than trust.
 
 > **Updating?** Install over the top. Every schema change ships with a tested migration, so an update carries your ledger forward. Uninstalling deletes it, so do not uninstall first.
 
@@ -163,15 +163,70 @@ Type is Anek Latin by Ek Type for amounts and titles and Figtree for everything 
 
 444 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec and theme contrast, and 192 instrumentation tests covering every migration, the full migration chain, and the settle, reopen, rollback, edit, delete, reconcile and move-debt paths against a real database.
 
+## Repository structure
+
+```
+app/                        the one Android module
+  build.gradle.kts          SDK levels, the debug, release and check builds, dependencies
+  proguard-rules.pro        R8 rules for the release and check builds
+  schemas/                  Room's exported schema for each database version, read by the migration tests
+  src/main/                 the app: Kotlin under java/com/kg/merapaisa, resources under res
+  src/check/                the check build's name on the launcher
+  src/test/                 JVM tests
+  src/androidTest/          device tests: migrations, database paths, screens, the screenshot gallery
+docs/                       served by GitHub Pages at parth-kg.github.io/MeraPaisa
+  BACKUP.md                 the two backup formats and what each can restore
+  RELEASE.md                signing, the check build and releasing
+  SHARE_LINKS.md            how update links travel, and the hosting they need
+  s/                        the page an update link opens when the app is not installed
+  .well-known/              the source copy of assetlinks.json for App Links
+  assets/, screenshots/     the pictures in this README
+gradle/                     the wrapper, the version catalog and the JDK the Gradle daemon runs on
+scripts/
+  ui-lint.sh                checks the UI rules: no em dashes, emoji, raw sizes or colours, vague buttons
+  run-gallery.sh            screenshots every case in every theme on a connected phone
+  build-fonts.sh            rebuilds the bundled font subsets
+third_party/                licences for the fonts and for the palettes some themes start from
+settings.gradle.kts         the project, its one module and where dependencies come from
+```
+
 ## Build from source
+
+You need Android Studio, which brings a JDK and the Android SDK with it, or a JDK 21 and the Android SDK on their own. The versions come from the build files:
+
+| | |
+|---|---|
+| JDK for the Gradle daemon | 21 (`gradle/gradle-daemon-jvm.properties`) |
+| Bytecode | Java 17 |
+| Gradle | 9.4.1, through the wrapper |
+| Android Gradle Plugin | 8.13.0 |
+| Kotlin | 2.1.21 |
+| Compile and target SDK | 36 |
+| Minimum SDK | 24, Android 7.0 |
+
+Gradle finds the SDK through the `ANDROID_HOME` environment variable, or through `sdk.dir` in a `local.properties` file at the root of the repository. Android Studio writes that file for you. It belongs to your machine and is never committed.
 
 ```sh
 git clone https://github.com/Parth-KG/MeraPaisa.git
 cd MeraPaisa
+export ANDROID_HOME=~/Library/Android/sdk   # where Android Studio puts it on a Mac
 ./gradlew assembleDebug
+./gradlew testDebugUnitTest
+./gradlew assembleDebugAndroidTest
+bash scripts/ui-lint.sh
 ```
 
+In order: build the debug app, run the JVM tests, build the device tests without running them, and check the UI rules, which prints nothing when they hold.
+
 The APK lands in `app/build/outputs/apk/debug/`. Debug builds install as `com.kg.merapaisa.debug`, alongside a release build rather than replacing it, so testing cannot put a real ledger at risk. Release signing is described in [docs/RELEASE.md](docs/RELEASE.md).
+
+To run the device tests, connect a phone or start an emulator, then:
+
+```sh
+./gradlew connectedDebugAndroidTest
+```
+
+Gradle's connected task uninstalls the debug app when it finishes, and its data goes with it. Run `./gradlew installDebug` before using the debug app again. `scripts/run-gallery.sh` runs its tests through `am instrument` for that reason.
 
 ## Status
 

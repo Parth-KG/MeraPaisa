@@ -79,7 +79,7 @@ exists and why the fallback page explains it. Everything works; it is one tap lo
 Taken from the shipped APK rather than typed from memory:
 
 ```sh
-apksigner verify --print-certs merapaisa-v2.0.2.apk
+apksigner verify --print-certs local-files/releases/merapaisa-v2.0.2.apk
 ```
 
 Two consequences worth knowing:

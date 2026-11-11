@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360"
-     role="img" aria-label="Mera Paisa. Who owes whom, in everyone's own currency. No account, no server, no analytics. An expense of 2,400 rupees split four ways: Asha is locked at 800 and the remaining 1,600 redistributes as 534, 533 and 533.">
+     role="img" aria-label="Mera Paisa. Who owes whom, in everyone's own currency. No account, no server, no analytics. An expense of 2,400 rupees split four ways: Asha is locked at 800 and the remaining 1,600 redistributes as 533.34, 533.33 and 533.33.">
   <title>Mera Paisa: who owes whom, in everyone’s own currency</title>
   <style>
     .wordmark{ font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:56px; font-weight:700; letter-spacing:-1px; }
@@ -39,14 +39,14 @@
   <path d="M862.0 153.0 H896.0" stroke="#D3DAE5" stroke-width="1.5"/>
   <rect x="900.0" y="132.0" width="244.0" height="42.0" rx="11" fill="#F5F7FA" stroke="#D3DAE5" stroke-width="1"/>
   <text x="918.0" y="158.0" class="nm" fill="#3F4B63">Bilal</text>
-  <text x="1126.0" y="159.0" class="amt" text-anchor="end" fill="#0E1A33">₹534</text>
+  <text x="1126.0" y="159.0" class="amt" text-anchor="end" fill="#0E1A33">₹533.34</text>
   <path d="M862.0 209.0 H896.0" stroke="#D3DAE5" stroke-width="1.5"/>
   <rect x="900.0" y="188.0" width="244.0" height="42.0" rx="11" fill="#F5F7FA" stroke="#D3DAE5" stroke-width="1"/>
   <text x="918.0" y="214.0" class="nm" fill="#3F4B63">Chaitanya</text>
-  <text x="1126.0" y="215.0" class="amt" text-anchor="end" fill="#0E1A33">₹533</text>
+  <text x="1126.0" y="215.0" class="amt" text-anchor="end" fill="#0E1A33">₹533.33</text>
   <path d="M862.0 265.0 H896.0" stroke="#D3DAE5" stroke-width="1.5"/>
   <rect x="900.0" y="244.0" width="244.0" height="42.0" rx="11" fill="#F5F7FA" stroke="#D3DAE5" stroke-width="1"/>
   <text x="918.0" y="270.0" class="nm" fill="#3F4B63">Dev</text>
-  <text x="1126.0" y="271.0" class="amt" text-anchor="end" fill="#0E1A33">₹533</text>
+  <text x="1126.0" y="271.0" class="amt" text-anchor="end" fill="#0E1A33">₹533.33</text>
   <text x="1144.0" y="336" class="cap" text-anchor="end" fill="#3F4B63">edit one share, the rest redistribute</text>
 </svg>
