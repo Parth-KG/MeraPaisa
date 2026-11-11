@@ -705,9 +705,9 @@ fun MainScreen(viewModel: MainViewModel) {
     pendingGroupDelete?.let { target ->
         DecisionDialog(
             title = "Delete ${target.group.name}?",
-            // Only the group: balances on Active and Settled never included it.
+            // Only the group: balances on Active and Even never included it.
             body = "Removes every expense and payment in it, and what its members owe each " +
-                "other there. Balances on Active and Settled don't change. This can't be undone.",
+                "other there. Balances on Active and Even don't change. This can't be undone.",
             confirmLabel = "Delete",
             dismissLabel = "Keep the group",
             destructive = true,

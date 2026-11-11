@@ -604,7 +604,7 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
         DecisionDialog(
             title = "Delete Goa, October?",
             body = "Removes every expense and payment in it, and what its members owe each " +
-                "other there. Balances on Active and Settled don't change. This can't be undone.",
+                "other there. Balances on Active and Even don't change. This can't be undone.",
             confirmLabel = "Delete",
             dismissLabel = "Keep the group",
             destructive = true,
