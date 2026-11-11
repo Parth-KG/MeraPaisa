@@ -258,7 +258,7 @@ private fun LedgerPreview(tried: AppTheme, people: List<PersonWithBalance>, modi
                                 person = person,
                                 isSelected = false,
                                 onHistoryClick = {}, onClick = {}, onSendReminder = {}, onDelete = {},
-                                onEditClick = {}, onSettleToggle = {}, onShareSummary = {},
+                                onEditClick = {}, onSettleUp = {}, onShareSummary = {},
                                 onShareLedger = {}, onMoveDebt = {},
                                 reserveFraction = reserve
                             )

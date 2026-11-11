@@ -93,7 +93,7 @@ private fun PeopleRows(people: List<PersonWithBalance>) {
                 person = person,
                 isSelected = person.id == 1L,
                 onHistoryClick = {}, onClick = {}, onSendReminder = {}, onDelete = {},
-                onEditClick = {}, onSettleToggle = {}, onShareSummary = {},
+                onEditClick = {}, onSettleUp = {}, onShareSummary = {},
                 onShareLedger = {}, onMoveDebt = {},
                 reserveFraction = reserve
             )
@@ -112,7 +112,7 @@ fun PeopleListLongCase() {
                 person = person,
                 isSelected = false,
                 onHistoryClick = {}, onClick = {}, onSendReminder = {}, onDelete = {},
-                onEditClick = {}, onSettleToggle = {}, onShareSummary = {},
+                onEditClick = {}, onSettleUp = {}, onShareSummary = {},
                 onShareLedger = {}, onMoveDebt = {},
                 reserveFraction = reserve
             )
@@ -127,14 +127,14 @@ fun SettledPersonCase() {
             person = Fixtures.settledPerson,
             isSelected = false,
             onHistoryClick = {}, onClick = {}, onSendReminder = {}, onDelete = {},
-            onEditClick = {}, onSettleToggle = {}, onShareSummary = {},
+            onEditClick = {}, onSettleUp = {}, onShareSummary = {},
             onShareLedger = {}, onMoveDebt = {}
         )
         PersonRow(
             person = Fixtures.evenPerson,
             isSelected = false,
             onHistoryClick = {}, onClick = {}, onSendReminder = {}, onDelete = {},
-            onEditClick = {}, onSettleToggle = {}, onShareSummary = {},
+            onEditClick = {}, onSettleUp = {}, onShareSummary = {},
             onShareLedger = {}, onMoveDebt = {}
         )
     }
@@ -167,7 +167,7 @@ fun NumPadCase() {
     NumPad(
         person = Fixtures.asha,
         input = "1234.50",
-        onKey = {}, onSettleToggle = {}, onAdd = {}, onSubtract = {},
+        onKey = {}, onSettleUp = {}, onAdd = {}, onSubtract = {},
         note = Fixtures.LONG_NOTE,
         onNoteChange = {}, showNote = true, onToggleNote = {}
     )
@@ -179,7 +179,7 @@ fun NumPadSettledCase() {
     NumPad(
         person = Fixtures.settledPerson,
         input = "",
-        onKey = {}, onSettleToggle = {}, onAdd = {}, onSubtract = {},
+        onKey = {}, onSettleUp = {}, onAdd = {}, onSubtract = {},
         note = "",
         onNoteChange = {}, showNote = false, onToggleNote = {}
     )
@@ -191,7 +191,7 @@ fun NumPadYenCase() {
     NumPad(
         person = Fixtures.asha.copy(person = Fixtures.asha.person.copy(currency = "JPY"), balanceMinor = 12_500_00),
         input = "1250",
-        onKey = {}, onSettleToggle = {}, onAdd = {}, onSubtract = {},
+        onKey = {}, onSettleUp = {}, onAdd = {}, onSubtract = {},
         note = "", onNoteChange = {}, showNote = false, onToggleNote = {}
     )
 }
@@ -569,7 +569,7 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
         DecisionDialog(
             title = "Settle up with Asha?",
             body = "Records Asha paying you ${amountString(1_250_00, "INR")}, which squares you, and " +
-                "moves them to Settled. Reopening them later doesn't undo the payment.",
+                "moves them to Even.",
             confirmLabel = "Settle up",
             dismissLabel = "Not yet",
             onConfirm = {},

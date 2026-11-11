@@ -13,7 +13,6 @@ data class PersonWithBalance(
     val id: Long get() = person.id
     val name: String get() = person.name
     val currency: String get() = person.currency
-    val isSettled: Boolean get() = person.isSettled
     val sortOrder: Int get() = person.sortOrder
 
     /**

@@ -38,7 +38,8 @@ fun buildLedgerCsv(
             person.name,
             person.currency,
             formatMinorPlain(person.balanceMinor, person.currency),
-            if (person.isSettled) "yes" else "no"
+            // The stored flag, as before: older versions read it back on import.
+            if (person.person.isSettled) "yes" else "no"
         )
 
         if (ledger.transactions.isEmpty()) {

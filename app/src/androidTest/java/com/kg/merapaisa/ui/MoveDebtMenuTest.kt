@@ -39,7 +39,7 @@ class MoveDebtMenuTest {
                         person = PersonWithBalance(Person(id = 1, name = "Rondu", currency = "INR"), balanceMinor),
                         isSelected = false,
                         onHistoryClick = {}, onClick = {}, onSendReminder = {}, onDelete = {},
-                        onEditClick = {}, onSettleToggle = {}, onShareSummary = {}, onShareLedger = {},
+                        onEditClick = {}, onSettleUp = {}, onShareSummary = {}, onShareLedger = {},
                         onMoveDebt = {}
                     )
                 }

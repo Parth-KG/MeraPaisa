@@ -256,13 +256,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun reopenPerson(person: PersonWithBalance) {
-        viewModelScope.launch {
-            repository.reopen(person.id)
-            _uiState.update { it.copy(tab = Tab.Active, selectedId = null, input = "", note = "") }
-        }
-    }
-
     fun addPerson(
         name: String,
         pfpType: String,

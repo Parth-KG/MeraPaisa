@@ -60,7 +60,7 @@ fun PersonRow(
     onSendReminder: () -> Unit,
     onDelete: () -> Unit,
     onEditClick: () -> Unit,
-    onSettleToggle: () -> Unit,
+    onSettleUp: () -> Unit,
     onShareSummary: () -> Unit,
     onShareLedger: () -> Unit,
     onMoveDebt: () -> Unit,
@@ -141,7 +141,7 @@ fun PersonRow(
                 person = person,
                 expanded = showMenu,
                 onDismiss = { showMenu = false },
-                onSettleToggle = onSettleToggle,
+                onSettleUp = onSettleUp,
                 onSendReminder = onSendReminder,
                 onShareSummary = onShareSummary,
                 onShareLedger = onShareLedger,
@@ -159,7 +159,7 @@ private fun PersonMenu(
     person: PersonWithBalance,
     expanded: Boolean,
     onDismiss: () -> Unit,
-    onSettleToggle: () -> Unit,
+    onSettleUp: () -> Unit,
     onSendReminder: () -> Unit,
     onShareSummary: () -> Unit,
     onShareLedger: () -> Unit,
@@ -169,7 +169,10 @@ private fun PersonMenu(
 ) {
     val theme = LocalAppTheme.current
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss, shape = Shapes.medium) {
-        MenuRow(if (person.isSettled) "Reopen" else "Settle up", theme.textPrimary) { onDismiss(); onSettleToggle() }
+        // Only with a balance to square. At zero the person is already on Even.
+        if (!person.isEven) {
+            MenuRow("Settle up", theme.textPrimary) { onDismiss(); onSettleUp() }
+        }
         MenuRow("Send a reminder", theme.textPrimary) { onDismiss(); onSendReminder() }
         MenuRow("Share a summary", theme.textPrimary) { onDismiss(); onShareSummary() }
         // Distinct from a summary: that sends text a human reads, this sends a link their app

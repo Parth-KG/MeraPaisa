@@ -42,7 +42,7 @@ class PersonRowSemanticsTest {
                         isSelected = false,
                         onHistoryClick = { historyOpened++ },
                         onClick = {}, onSendReminder = {}, onDelete = {}, onEditClick = {},
-                        onSettleToggle = {}, onShareSummary = {}, onShareLedger = {}, onMoveDebt = {}
+                        onSettleUp = {}, onShareSummary = {}, onShareLedger = {}, onMoveDebt = {}
                     )
                 }
             }

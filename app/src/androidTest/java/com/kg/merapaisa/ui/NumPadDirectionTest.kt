@@ -45,7 +45,7 @@ class NumPadDirectionTest {
                     NumPad(
                         person = asha,
                         input = "100",
-                        onKey = {}, onSettleToggle = {},
+                        onKey = {}, onSettleUp = {},
                         onAdd = onAdd, onSubtract = onSubtract,
                         note = "", onNoteChange = {}, showNote = false, onToggleNote = {}
                     )

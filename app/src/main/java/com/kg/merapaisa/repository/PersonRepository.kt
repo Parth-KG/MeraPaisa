@@ -173,10 +173,6 @@ class PersonRepository(
         notifier.onLedgerChanged()
     }
 
-    suspend fun reopen(personId: Long) {
-        dao.reopen(personId)
-        notifier.onLedgerChanged()
-    }
 
     suspend fun rollbackTo(personId: Long, since: Long) {
         dao.rollbackTo(personId, since)

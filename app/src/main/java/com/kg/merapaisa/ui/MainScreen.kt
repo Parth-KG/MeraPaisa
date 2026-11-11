@@ -97,8 +97,8 @@ fun MainScreen(viewModel: MainViewModel) {
     // Large type as well: at 1.5x the keypad's Settle up fell below the bottom of the screen.
     val shortScreen = LocalConfiguration.current.screenHeightDp < SHORT_SCREEN_DP ||
         LocalConfiguration.current.fontScale >= 1.3f
-    // Asked before Settle up writes anything. It records a closing entry, and Reopen does not take
-    // it back.
+    // Asked before Settle up writes anything: it records a closing entry, which stays in the
+    // history even if they owe again later.
     var confirmSettle by remember { mutableStateOf<com.kg.merapaisa.data.PersonWithBalance?>(null) }
 
     // The split flow is part of this tree rather than a Dialog, so back has to be handled
@@ -307,9 +307,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         onSendReminder = { viewModel.composeReminder(person.id) },
                         onEditClick = { viewModel.editPerson(person.id) },
                         onHistoryClick = { viewModel.showHistory(person.id) },
-                        onSettleToggle = {
-                            if (person.isSettled) viewModel.reopenPerson(person) else confirmSettle = person
-                        },
+                        onSettleUp = { confirmSettle = person },
                         onShareSummary = {
                             viewModel.personSummary(person) { text ->
                                 shareText(context, text, "Share summary via")
@@ -327,13 +325,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 NumPad(
                     person = selectedPerson,
                     input = ui.input,
-                    onSettleToggle = {
-                        if (selectedPerson.isSettled) {
-                            viewModel.reopenPerson(selectedPerson)
-                        } else {
-                            confirmSettle = selectedPerson
-                        }
-                    },
+                    onSettleUp = { confirmSettle = selectedPerson },
                     note = ui.note,
                     onNoteChange = viewModel::setNote,
                     showNote = ui.showNote,
@@ -626,21 +618,21 @@ fun MainScreen(viewModel: MainViewModel) {
     confirmSettle?.let { target ->
         val live = persons.find { it.id == target.id } ?: target
         if (live.balanceMinor == 0L) {
-            // Nothing to record, so nothing to ask: they are filed away as they are.
-            LaunchedEffect(live.id) { viewModel.settlePerson(live); confirmSettle = null }
+            // Squared some other way since the button was pressed: nothing is left to record.
+            LaunchedEffect(live.id) { confirmSettle = null }
         } else {
             val figure = amountString(kotlin.math.abs(live.balanceMinor), live.currency)
             val what = if (live.balanceMinor > 0) {
-                "Records ${live.name} paying you $figure, which squares you, and moves them to Settled."
+                "Records ${live.name} paying you $figure, which squares you, and moves them to Even."
             } else {
-                "Records you paying ${live.name} $figure, which squares you, and moves them to Settled."
+                "Records you paying ${live.name} $figure, which squares you, and moves them to Even."
             }
             val typed = if (ui.selectedId == live.id && ui.input.isNotEmpty()) {
                 " The amount you typed isn't added."
             } else ""
             DecisionDialog(
                 title = "Settle up with ${live.name}?",
-                body = "$what$typed Reopening them later doesn't undo the payment.",
+                body = "$what$typed",
                 confirmLabel = "Settle up",
                 dismissLabel = "Not yet",
                 onConfirm = { viewModel.settlePerson(live); confirmSettle = null },

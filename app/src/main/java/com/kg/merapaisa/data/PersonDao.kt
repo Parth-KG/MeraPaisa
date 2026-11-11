@@ -132,11 +132,13 @@ interface PersonDao {
     suspend fun setSettled(personId: Long, settled: Boolean)
 
     /**
-     * Closes a debt out: records an entry for exactly what is outstanding and marks the person
-     * settled. The balance is read inside the transaction so two fast taps cannot both act on
-     * the same stale figure. A person already at zero can still be settled; that is how you
-     * file someone away without inventing a transaction. There is no need to reorder them:
-     * isSettled is what moves them out of the active list.
+     * Closes a debt out: records an entry for exactly what is outstanding, which brings the
+     * balance to zero and so moves the person to Even. The balance is read inside the transaction
+     * so two fast taps cannot both act on the same stale figure. At zero nothing is recorded.
+     *
+     * The settled flag is still set, and lifted again by the writes below, so backups and older
+     * versions of the app see what they expect. Nothing reads it to place a person any more:
+     * the balance does that (`PersonWithBalance.isEven`).
      *
      * Direct entries only. Groups are settled inside the group, and nothing here touches them.
      */
@@ -150,14 +152,8 @@ interface PersonDao {
     }
 
     /**
-     * Puts a settled person back in the active list. The closing entry stays in their history
-     * (it happened), so reopening does not resurrect the old balance, it just unfiles them.
-     */
-    suspend fun reopen(personId: Long) = setSettled(personId, false)
-
-    /**
      * Records one entry. Money moving again means the debt is live again, so this also lifts
-     * the settled flag; otherwise the entry would land on someone hidden in the Settled tab.
+     * the settled flag, which backups and older versions of the app still carry.
      */
     @androidx.room.Transaction
     suspend fun recordEntry(transaction: Transaction) {

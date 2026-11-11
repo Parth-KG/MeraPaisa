@@ -71,7 +71,7 @@ fun NumPad(
     person: PersonWithBalance,
     input: String,
     onKey: (String) -> Unit,
-    onSettleToggle: () -> Unit,
+    onSettleUp: () -> Unit,
     onAdd: () -> Unit,
     onSubtract: () -> Unit,
     note: String,
@@ -178,18 +178,17 @@ fun NumPad(
             )
         }
 
-        // Settling files a person away and closes their balance; reopening brings them back.
-        // Someone already at zero can still be settled, which is how you file them away.
+        // Settle up records the entry that squares a balance, which takes the person to Even. At
+        // zero there is nothing to record, so there is no button: Reopen went with the Settled
+        // tab, since recording any amount brings someone back to Active by itself.
         //
         // An outlined button the width of the keypad. It was bare words under the two direction
         // buttons, with no edge or fill, and did not read as something to press. Outlined rather
         // than filled, because the two buttons above it are what the keypad is for.
-        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            SecondaryAction(
-                if (person.isSettled) "Reopen" else "Settle up",
-                enabled = true,
-                onClick = onSettleToggle
-            )
+        if (!person.isEven) {
+            Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+                SecondaryAction("Settle up", enabled = true, onClick = onSettleUp)
+            }
         }
     }
 }
