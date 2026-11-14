@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -62,7 +63,16 @@ fun ReminderDialog(
     // new one on each recomposition restarted the query every time the draft changed.
     val stream = remember(person.id) { viewModel.getTransactions(person.id) }
     val entries by stream.collectAsState(initial = emptyList())
-    ReminderSheet(person = person, entries = entries, onDismiss = onDismiss)
+    val myUpiId by viewModel.myUpiId.collectAsState()
+    val myName by produceState<String?>(null) { value = viewModel.myNameForUpi() }
+    ReminderSheet(
+        person = person,
+        entries = entries,
+        onDismiss = onDismiss,
+        myUpiId = myUpiId,
+        myName = myName,
+        onSentWithPayLink = { viewModel.rememberReminderSent(person) }
+    )
 }
 
 /** The sheet itself, given the entries, so the gallery can draw it without a database. */
@@ -71,13 +81,19 @@ fun ReminderDialog(
 fun ReminderSheet(
     person: PersonWithBalance,
     entries: List<Transaction>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** Your own UPI ID: with it, a reminder to someone who owes you rupees carries a pay link. */
+    myUpiId: String? = null,
+    myName: String? = null,
+    /** Called once a reminder went out with its pay link still in it. */
+    onSentWithPayLink: () -> Unit = {}
 ) {
     val theme = LocalAppTheme.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var message by remember(person.id) { mutableStateOf(buildReminderText(person)) }
+    val payLink = reminderPayLink(person, myUpiId, myName)
+    var message by remember(person.id, payLink) { mutableStateOf(buildReminderText(person, payLink, myUpiId)) }
     var includeLog by remember { mutableStateOf(false) }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -164,6 +180,9 @@ fun ReminderSheet(
                 // do not animate across each other.
                 scope.launch { sheetState.hide() }.invokeOnCompletion {
                     shareText(context, finalText, "Send reminder via")
+                    // Asked about on the next open ("Did Asha pay you?") only while the link is
+                    // still in the message; a reminder with the link edited out asks nothing.
+                    if (payLink != null && finalText.contains(payLink)) onSentWithPayLink()
                     onDismiss()
                 }
             }
@@ -184,11 +203,27 @@ fun ReminderSheet(
  * rather than as a run of digits. The magnitude is sent without a sign, because the sentence
  * around it already says which way the money runs.
  */
-private fun buildReminderText(person: PersonWithBalance): String {
+internal fun buildReminderText(person: PersonWithBalance, payLink: String? = null, myUpiId: String? = null): String {
     val amount = amountString(abs(person.balanceMinor), person.currency)
-    return when {
+    val text = when {
         person.balanceMinor > 0 -> "Hi ${person.name}, you owe me $amount. Send it when you can."
         person.balanceMinor < 0 -> "Hi ${person.name}, I owe you $amount. Will send it soon."
         else -> "Hi ${person.name}, we're even now."
     }
+    // The link opens their UPI app with the amount filled in (the ₹1 test found a link sent through
+    // a chat app arrives tappable). The ID and amount in plain text are for anyone whose app does
+    // not open it, or who would rather type.
+    return if (payLink != null && myUpiId != null) {
+        "$text\n\nPay by UPI: $payLink\nOr to $myUpiId, $amount"
+    } else text
+}
+
+/**
+ * The pay link a reminder carries: only to someone who owes you, in rupees (UPI is rupees only),
+ * once your own UPI ID is set. Null otherwise.
+ */
+internal fun reminderPayLink(person: PersonWithBalance, myUpiId: String?, myName: String?): String? {
+    if (myUpiId == null || !com.kg.merapaisa.data.isUpiId(myUpiId)) return null
+    if (com.kg.merapaisa.data.normaliseCurrency(person.currency) != "INR" || person.balanceMinor <= 0) return null
+    return com.kg.merapaisa.data.upiPayLink(myUpiId, myName, person.balanceMinor)
 }

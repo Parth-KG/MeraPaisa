@@ -528,6 +528,12 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "sheet-own-upi-empty" to {
         com.kg.merapaisa.ui.dialogs.OwnUpiSheet(current = null, yourName = null, onDismiss = {}, onSave = {})
     },
+    "sheet-reminder-upi" to {
+        ReminderSheet(
+            person = Fixtures.asha, entries = Fixtures.ashaHistory, onDismiss = {},
+            myUpiId = "parth.kg@okaxis", myName = "Parth"
+        )
+    },
     "sheet-reminder" to {
         ReminderSheet(person = Fixtures.chaitanya, entries = Fixtures.ashaHistory, onDismiss = {})
     },

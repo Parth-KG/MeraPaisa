@@ -8,6 +8,7 @@ import com.kg.merapaisa.CurrencyStore
 import com.kg.merapaisa.data.AppDatabase
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.QUESTION_PAY
+import com.kg.merapaisa.data.QUESTION_REMINDER
 import com.kg.merapaisa.data.PaymentQuestion
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
@@ -180,6 +181,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             )
             _uiState.update { it.copy(payAnswer = null) }
+        }
+    }
+
+    /**
+     * A reminder went to [person] with a pay link: ask "Did they pay you?" on the next open. One
+     * question per person; a newer reminder replaces an older one rather than asking twice.
+     */
+    fun rememberReminderSent(person: PersonWithBalance) {
+        if (person.balanceMinor <= 0) return
+        viewModelScope.launch {
+            repository.questionsNow()
+                .filter { it.personId == person.id && it.kind == QUESTION_REMINDER }
+                .forEach { repository.dropQuestion(it.id) }
+            repository.addQuestion(
+                PaymentQuestion(
+                    personId = person.id,
+                    amountMinor = -person.balanceMinor,
+                    kind = QUESTION_REMINDER,
+                    createdAt = System.currentTimeMillis(),
+                    balanceAtCreation = person.balanceMinor
+                )
+            )
         }
     }
 
