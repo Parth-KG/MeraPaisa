@@ -71,12 +71,14 @@ class DesignGalleryTest {
             "people-rows", "net-total-multi", "net-total-single", "net-total-multi-both-sides",
             "net-total-single-both-sides", "numpad", "group-detail",
             "split-adjustments", "split-adjustments-locked", "history", "settings",
-            "import-confirm", "import-held-back", "split-amount"
+            "import-confirm", "import-held-back", "split-amount", "numpad-pay", "settings-upi"
         )
     )
 
     private fun capture(fontScale: Float, label: String, only: Set<String>? = null) {
-        val cases = GalleryCases.filter { only == null || it.first in only }
+        val wanted = requestedGalleryCases()
+        val cases = GalleryCases.filter { (only == null || it.first in only) && (wanted == null || it.first in wanted) }
+        if (cases.isEmpty()) return
         val themeState = mutableStateOf(themes.first())
         val caseState = mutableStateOf(cases.first())
 
@@ -137,3 +139,12 @@ class DesignGalleryTest {
         return true
     }
 }
+
+/**
+ * The cases named in the `cases` instrumentation argument (comma-separated), or null for all of
+ * them, so a slow link to the phone can shoot only what changed:
+ * `am instrument -e class ... -e cases sheet-pay,numpad-pay ...`.
+ */
+internal fun requestedGalleryCases(): Set<String>? =
+    androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("cases")
+        ?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet()

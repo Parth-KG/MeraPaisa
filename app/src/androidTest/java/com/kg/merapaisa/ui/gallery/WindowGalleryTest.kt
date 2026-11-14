@@ -60,12 +60,15 @@ class WindowGalleryTest {
             "sheet-edit-entry", "dialog-delete-person", "sheet-add-person", "sheet-reminder", "sheet-settle-up",
             "sheet-theme-trying", "sheet-move-debt", "dialog-convert-currency", "sheet-edit-person",
             "sheet-create-group", "sheet-edit-group", "sheet-add-expense", "sheet-share",
-            "dialog-replace-ledger"
+            "dialog-replace-ledger", "sheet-add-person-upi", "sheet-own-upi", "sheet-pay", "sheet-pay-over",
+            "dialog-did-it-go-through", "sheet-reminder-upi", "sheet-payment-questions", "sheet-pay-qr"
         )
     )
 
     private fun capture(fontScale: Float, label: String, only: Set<String>? = null) {
-        val cases = GalleryWindowCases.filter { only == null || it.first in only }
+        val wanted = requestedGalleryCases()
+        val cases = GalleryWindowCases.filter { (only == null || it.first in only) && (wanted == null || it.first in wanted) }
+        if (cases.isEmpty()) return
         val originalScale = compose.activity.resources.configuration.fontScale
         if (fontScale != 1f) setActivityFontScale(fontScale)
         try {

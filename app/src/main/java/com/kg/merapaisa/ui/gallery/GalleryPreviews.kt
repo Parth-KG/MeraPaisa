@@ -386,7 +386,7 @@ fun SettingsUpiCase() = SettingsScreen(
     appVersion = "4.0.0",
     onDismiss = {},
     onApply = {},
-    myUpiId = "parth.kg@okaxis"
+    myUpiId = "parth@example"
 )
 
 @Composable
@@ -522,7 +522,7 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     },
     "sheet-own-upi" to {
         com.kg.merapaisa.ui.dialogs.OwnUpiSheet(
-            current = "parth.kg@okaxis", yourName = "Parth", onDismiss = {}, onSave = {}
+            current = "parth@example", yourName = "Parth", onDismiss = {}, onSave = {}
         )
     },
     "sheet-own-upi-empty" to {
@@ -531,7 +531,7 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "sheet-reminder-upi" to {
         ReminderSheet(
             person = Fixtures.asha, entries = Fixtures.ashaHistory, onDismiss = {},
-            myUpiId = "parth.kg@okaxis", myName = "Parth"
+            myUpiId = "parth@example", myName = "Parth"
         )
     },
     "sheet-reminder" to {
@@ -643,8 +643,8 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "sheet-pay-qr" to {
         com.kg.merapaisa.ui.pay.PayQrSheet(
             personName = "Asha", amountMinor = 1_200_00,
-            link = com.kg.merapaisa.data.upiPayLink("parth.kg@okaxis", "Parth", 1_200_00),
-            myUpiId = "parth.kg@okaxis", onNotYet = {}, onPaid = {}
+            link = com.kg.merapaisa.data.upiPayLink("parth@example", "Parth", 1_200_00),
+            myUpiId = "parth@example", onNotYet = {}, onPaid = {}
         )
     },
     "sheet-payment-questions" to {
