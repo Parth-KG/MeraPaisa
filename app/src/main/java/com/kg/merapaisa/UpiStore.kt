@@ -7,11 +7,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 /**
- * Your own UPI ID, the one friends pay when they use the link in a reminder or scan your QR.
+ * Your own UPI ID, the one friends pay when they scan your QR, from Show QR or a reminder.
  *
  * Kept on this phone only. Setting or changing it always goes through the phone's fingerprint, face
  * or screen lock first (Parth, 14 Nov 2026): someone who set it before you would collect the money
- * your reminders ask for.
+ * your reminders and your QR ask for.
  */
 object UpiStore {
     private val MY_UPI_ID_KEY = stringPreferencesKey("my_upi_id")

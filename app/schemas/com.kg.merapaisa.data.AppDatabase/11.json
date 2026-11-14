@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 11,
-    "identityHash": "8c019a92bc801dad34d720921016147f",
+    "identityHash": "64a3cdce1a0439ed0d96594a38301acf",
     "entities": [
       {
         "tableName": "persons",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `pfpType` TEXT NOT NULL, `pfpValue` TEXT NOT NULL, `pfpColor` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL, `isSettled` INTEGER NOT NULL, `currency` TEXT NOT NULL, `isSelf` INTEGER NOT NULL, `lastSharedAt` INTEGER NOT NULL, `upiId` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `pfpType` TEXT NOT NULL, `pfpValue` TEXT NOT NULL, `pfpColor` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL, `isSettled` INTEGER NOT NULL, `currency` TEXT NOT NULL, `isSelf` INTEGER NOT NULL, `lastSharedAt` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -67,11 +67,6 @@
             "columnName": "lastSharedAt",
             "affinity": "INTEGER",
             "notNull": true
-          },
-          {
-            "fieldPath": "upiId",
-            "columnName": "upiId",
-            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -555,83 +550,11 @@
             ]
           }
         ]
-      },
-      {
-        "tableName": "payment_questions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `personId` INTEGER NOT NULL, `amountMinor` INTEGER NOT NULL, `kind` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `balanceAtCreation` INTEGER NOT NULL, FOREIGN KEY(`personId`) REFERENCES `persons`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
-        "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "personId",
-            "columnName": "personId",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "amountMinor",
-            "columnName": "amountMinor",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "kind",
-            "columnName": "kind",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "createdAt",
-            "columnName": "createdAt",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "balanceAtCreation",
-            "columnName": "balanceAtCreation",
-            "affinity": "INTEGER",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": true,
-          "columnNames": [
-            "id"
-          ]
-        },
-        "indices": [
-          {
-            "name": "index_payment_questions_personId",
-            "unique": false,
-            "columnNames": [
-              "personId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_payment_questions_personId` ON `${TABLE_NAME}` (`personId`)"
-          }
-        ],
-        "foreignKeys": [
-          {
-            "table": "persons",
-            "onDelete": "CASCADE",
-            "onUpdate": "NO ACTION",
-            "columns": [
-              "personId"
-            ],
-            "referencedColumns": [
-              "id"
-            ]
-          }
-        ]
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8c019a92bc801dad34d720921016147f')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '64a3cdce1a0439ed0d96594a38301acf')"
     ]
   }
 }

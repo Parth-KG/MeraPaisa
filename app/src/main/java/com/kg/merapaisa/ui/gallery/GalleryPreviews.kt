@@ -174,18 +174,6 @@ fun NumPadCase() {
     )
 }
 
-/** The keypad for someone you owe who has a UPI ID: Settle up and Pay by UPI side by side. */
-@Composable
-fun NumPadPayCase() {
-    NumPad(
-        person = Fixtures.bilal.copy(person = Fixtures.bilal.person.copy(upiId = "bilal.k@ybl")),
-        input = "",
-        onKey = {}, onSettleUp = {}, onAdd = {}, onSubtract = {},
-        note = "", onNoteChange = {}, showNote = false, onToggleNote = {},
-        onPay = {}
-    )
-}
-
 /** The keypad at zero: nothing to settle, so no button under the two directions. */
 @Composable
 fun NumPadEvenCase() {
@@ -383,7 +371,7 @@ fun SettingsUpiCase() = SettingsScreen(
     onExportCsv = {},
     canExport = true,
     onCheckUpdates = {},
-    appVersion = "4.0.0",
+    appVersion = "3.6.0",
     onDismiss = {},
     onApply = {},
     myUpiId = "parth@example"
@@ -464,7 +452,6 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "net-total-single-both-sides" to { NetTotalSingleCase(bothSides = true) },
     "net-total-even" to { NetTotalEvenCase() },
     "numpad" to { NumPadCase() },
-    "numpad-pay" to { NumPadPayCase() },
     "numpad-yen" to { NumPadYenCase() },
     "numpad-even" to { NumPadEvenCase() },
     "empty-active" to { EmptyActiveCase() },
@@ -507,17 +494,14 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
  * dialog, over the scrim, over the themed background.
  */
 val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
-    "sheet-add-person" to { AddPersonDialog(onDismiss = {}, onAdd = { _, _, _, _, _, _ -> }) },
-    "sheet-add-person-upi" to {
-        AddPersonDialog(onDismiss = {}, onAdd = { _, _, _, _, _, _ -> }, initialUpiId = "asha.rao@okaxis")
-    },
+    "sheet-add-person" to { AddPersonDialog(onDismiss = {}, onAdd = { _, _, _, _, _ -> }) },
     "sheet-edit-person" to {
         EditPersonDialog(
             person = Fixtures.chaitanya.person,
             converting = false,
             conversionError = null,
             onDismiss = {},
-            onSave = { _, _, _, _, _, _, _ -> }
+            onSave = { _, _, _, _, _, _ -> }
         )
     },
     "sheet-own-upi" to {
@@ -528,7 +512,7 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "sheet-own-upi-empty" to {
         com.kg.merapaisa.ui.dialogs.OwnUpiSheet(current = null, yourName = null, onDismiss = {}, onSave = {})
     },
-    "sheet-reminder-upi" to {
+    "sheet-reminder-qr" to {
         ReminderSheet(
             person = Fixtures.asha, entries = Fixtures.ashaHistory, onDismiss = {},
             myUpiId = "parth@example", myName = "Parth"
@@ -626,52 +610,11 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
         )
     },
     // The sentences MainScreen, EditEntrySheet and GroupDetailScreen build for these cases.
-    "sheet-pay" to {
-        com.kg.merapaisa.ui.pay.PaySheet(
-            personName = "Bilal", upiId = "bilal.k@ybl", owedMinor = 340_00, amountText = "340",
-            onAmountChange = {}, recordOnlyWhatYouOwed = false, onRecordOnlyWhatYouOwedChange = {},
-            noUpiApp = false, onDismiss = {}, onPay = { _, _ -> }
-        )
-    },
-    "sheet-pay-over" to {
-        com.kg.merapaisa.ui.pay.PaySheet(
-            personName = "Bilal", upiId = "bilal.k@ybl", owedMinor = 340_00, amountText = "540",
-            onAmountChange = {}, recordOnlyWhatYouOwed = false, onRecordOnlyWhatYouOwedChange = {},
-            noUpiApp = true, onDismiss = {}, onPay = { _, _ -> }
-        )
-    },
     "sheet-pay-qr" to {
         com.kg.merapaisa.ui.pay.PayQrSheet(
             personName = "Asha", amountMinor = 1_200_00,
             link = com.kg.merapaisa.data.upiPayLink("parth@example", "Parth", 1_200_00),
             myUpiId = "parth@example", onNotYet = {}, onPaid = {}
-        )
-    },
-    "sheet-payment-questions" to {
-        val now = System.currentTimeMillis()
-        com.kg.merapaisa.ui.pay.PaymentQuestionsSheet(
-            questions = listOf(
-                com.kg.merapaisa.data.PaymentQuestion(
-                    id = 1, personId = 1, amountMinor = -500_00, kind = com.kg.merapaisa.data.QUESTION_REMINDER,
-                    createdAt = now - 2 * 24 * 60 * 60 * 1000L, balanceAtCreation = 500_00
-                ),
-                com.kg.merapaisa.data.PaymentQuestion(
-                    id = 2, personId = 2, amountMinor = 40_00, kind = com.kg.merapaisa.data.QUESTION_PAY,
-                    createdAt = now - 60 * 60 * 1000L, balanceAtCreation = -40_00
-                )
-            ),
-            nameOf = { if (it == 1L) "Asha" else "Bilal" },
-            onRecord = {}, onNotYet = {}, onDifferentAmount = {}, onStopAsking = {}, onAskLater = {}
-        )
-    },
-    "dialog-did-it-go-through" to {
-        DecisionDialog(
-            title = "Did your ${amountString(340_00, "INR")} to Bilal go through?",
-            body = "If it did, it's recorded as paid by UPI. Nothing is recorded unless you say so.",
-            confirmLabel = "Record ${amountString(340_00, "INR")}",
-            dismissLabel = "Not yet",
-            onConfirm = {},
-            onDismiss = {}
         )
     },
     "dialog-settle-up" to {

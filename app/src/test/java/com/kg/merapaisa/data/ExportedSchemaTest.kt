@@ -1,5 +1,6 @@
 package com.kg.merapaisa.data
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -57,16 +58,16 @@ class ExportedSchemaTest {
     }
 
     @Test
-    fun version11SchemaCarriesUpiAndTheQuestions() {
+    fun version11SchemaAddsOnlyTheUpiMark() {
         val json = readSchema(11)
         assertTrue("schema 11.json does not declare version 11", json.contains("\"version\": 11"))
         assertTrue(
             "schema 11 identity hash changed: regenerate and commit a new version instead",
-            json.contains("\"identityHash\": \"8c019a92bc801dad34d720921016147f\"")
+            json.contains("\"identityHash\": \"64a3cdce1a0439ed0d96594a38301acf\"")
         )
-        assertTrue("persons should carry a UPI ID", json.contains("\"columnName\": \"upiId\""))
         assertTrue("entries should carry the UPI mark", json.contains("\"columnName\": \"paidByUpi\""))
-        assertTrue("the questions table should exist", json.contains("\"tableName\": \"payment_questions\""))
+        assertFalse("people carry no UPI ID (cut 15 Nov 2026)", json.contains("\"columnName\": \"upiId\""))
+        assertFalse("no questions table (cut 15 Nov 2026)", json.contains("payment_questions"))
         assertTrue("isSettled stays in v11 (Parth, 14 Nov 2026)", json.contains("\"columnName\": \"isSettled\""))
     }
 

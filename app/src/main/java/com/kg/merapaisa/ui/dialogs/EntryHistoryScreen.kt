@@ -378,7 +378,7 @@ private fun DayHeading(text: String) {
 /**
  * What an entry is called in the history. An entry with no note is named for what made it: the
  * keypad button ("You owe them" under a "They paid for you" entry described a debt the entry had
- * not created), or a payment by UPI recorded through "Did it go through?".
+ * not created), or a payment by UPI recorded from Show QR.
  */
 internal fun entryTitle(entry: Transaction): String = entry.note.ifBlank {
     when {

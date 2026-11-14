@@ -178,7 +178,7 @@ object Fixtures {
             return listOf(
                 Transaction(id = 1, personId = 1, amountMinor = 1_200_50, timestamp = now - HOUR, note = LONG_NOTE),
                 Transaction(id = 2, personId = 1, amountMinor = -340_00, timestamp = now - 2 * HOUR),
-                // Paid by UPI through "Did it go through?": one with no note, one with its own.
+                // Paid by UPI, recorded from Show QR: one with no note, one with its own.
                 Transaction(id = 6, personId = 1, amountMinor = -250_00, timestamp = now - 3 * HOUR, paidByUpi = true),
                 Transaction(id = 7, personId = 1, amountMinor = -100_00, timestamp = now - 5 * HOUR, note = "Chai", paidByUpi = true),
                 Transaction(id = 3, personId = 1, amountMinor = 500_00, timestamp = now - DAY, note = "Cab to the airport"),

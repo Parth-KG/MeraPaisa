@@ -21,7 +21,7 @@ class QrTest {
 
     @Test
     fun `a UPI pay link makes a code small enough to scan from a screen`() {
-        val link = upiPayLink("asha.rao@okaxis", "Asha Rao", 12_345_50, "Dinner at Trishna")
+        val link = upiPayLink("first.last-1_x@oksbi", "Chaitanya Venkataraman", 12_34_567_50)
         val qr = qrFor(link)
         assertTrue("version ${qr.version} is too dense to scan comfortably", qr.version <= 8)
     }

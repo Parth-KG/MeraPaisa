@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,12 +31,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
+import android.net.Uri
+import java.io.IOException
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
 import com.kg.merapaisa.data.buildActivityLog
+import com.kg.merapaisa.data.canShowPayQr
+import com.kg.merapaisa.data.upiPayLink
 import com.kg.merapaisa.ui.MainViewModel
 import com.kg.merapaisa.ui.format.amountString
+import com.kg.merapaisa.ui.pay.shareTextWithPicture
+import com.kg.merapaisa.ui.pay.writeQrPicture
 import com.kg.merapaisa.ui.shareText
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
@@ -70,8 +77,7 @@ fun ReminderDialog(
         entries = entries,
         onDismiss = onDismiss,
         myUpiId = myUpiId,
-        myName = myName,
-        onSentWithPayLink = { viewModel.rememberReminderSent(person) }
+        myName = myName
     )
 }
 
@@ -82,19 +88,22 @@ fun ReminderSheet(
     person: PersonWithBalance,
     entries: List<Transaction>,
     onDismiss: () -> Unit,
-    /** Your own UPI ID: with it, a reminder to someone who owes you rupees carries a pay link. */
+    /** Your own UPI ID: with it, a reminder to someone who owes you rupees can attach your QR. */
     myUpiId: String? = null,
-    myName: String? = null,
-    /** Called once a reminder went out with its pay link still in it. */
-    onSentWithPayLink: () -> Unit = {}
+    /** Your name, for their UPI app to show beside your ID, if you have given one. */
+    myName: String? = null
 ) {
     val theme = LocalAppTheme.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val payLink = reminderPayLink(person, myUpiId, myName)
-    var message by remember(person.id, payLink) { mutableStateOf(buildReminderText(person, payLink, myUpiId)) }
+    var message by remember(person.id) { mutableStateOf(buildReminderText(person)) }
     var includeLog by remember { mutableStateOf(false) }
+    // Offered only where Show QR is, and on every time the sheet opens (Parth, 15 Nov 2026): not
+    // remembered from one reminder to the next.
+    val canAttachQr = canShowPayQr(person.currency, person.balanceMinor, myUpiId)
+    var attachQr by rememberSaveable(person.id) { mutableStateOf(true) }
+    var sending by remember { mutableStateOf(false) }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -135,33 +144,26 @@ fun ReminderSheet(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
             )
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .toggleable(
-                        value = includeLog,
-                        enabled = entries.isNotEmpty(),
-                        onValueChange = { includeLog = it },
-                        role = Role.Switch
-                    )
-                    .heightIn(min = 48.dp)
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Attach every entry", style = MeraPaisaType.bodyStrong, color = theme.textPrimary)
-                    Text(
-                        if (entries.isEmpty())
-                            "There is nothing recorded against ${person.name} yet, so there is " +
-                                "nothing to attach."
-                        else
-                            "Adds the full list under your message, with the balance after each one.",
-                        style = MeraPaisaType.label,
-                        color = theme.textSecondary
-                    )
-                }
-                Switch(checked = includeLog, onCheckedChange = null, enabled = entries.isNotEmpty())
+            SwitchRow(
+                title = "Attach every entry",
+                subtitle = if (entries.isEmpty())
+                    "There is nothing recorded against ${person.name} yet, so there is nothing to attach."
+                else
+                    "Adds the full list under your message, with the balance after each one.",
+                checked = includeLog,
+                enabled = entries.isNotEmpty(),
+                onCheckedChange = { includeLog = it }
+            )
+
+            if (canAttachQr && myUpiId != null) {
+                SwitchRow(
+                    title = "Attach a QR to pay you",
+                    subtitle = "A picture their UPI app can scan for " +
+                        "${amountString(person.balanceMinor, "INR")}, and a line with your UPI ID.",
+                    checked = attachQr,
+                    enabled = true,
+                    onCheckedChange = { attachQr = it }
+                )
             }
         }
 
@@ -169,20 +171,36 @@ fun ReminderSheet(
             SecondaryAction("Don't send", enabled = true) {
                 scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }
-            PrimaryAction("Send reminder", enabled = message.isNotBlank()) {
-                val finalText = if (includeLog && entries.isNotEmpty()) {
-                    message + "\n\nEvery entry so far:\n" +
-                        buildActivityLog(entries, person.currency)
-                } else {
-                    message
-                }
-                // The sheet is played out before the share sheet arrives over it, so the two
-                // do not animate across each other.
-                scope.launch { sheetState.hide() }.invokeOnCompletion {
-                    shareText(context, finalText, "Send reminder via")
-                    // Asked about on the next open ("Did Asha pay you?") only while the link is
-                    // still in the message; a reminder with the link edited out asks nothing.
-                    if (payLink != null && finalText.contains(payLink)) onSentWithPayLink()
+            PrimaryAction("Send reminder", enabled = message.isNotBlank() && !sending) {
+                sending = true
+                val qrId = myUpiId?.takeIf { attachQr && canAttachQr }
+                val log = if (includeLog && entries.isNotEmpty()) buildActivityLog(entries, person.currency) else null
+                var picture: Uri? = null
+                // The picture is drawn and the sheet played out before the share sheet arrives
+                // over it, so the two do not animate across each other. Sending leaves nothing to
+                // ask about later.
+                scope.launch {
+                    if (qrId != null) {
+                        picture = try {
+                            writeQrPicture(
+                                context,
+                                text = upiPayLink(qrId, myName, person.balanceMinor),
+                                caption = reminderQrCaption(person.balanceMinor, qrId)
+                            )
+                        } catch (e: IOException) {
+                            null
+                        }
+                    }
+                    sheetState.hide()
+                }.invokeOnCompletion {
+                    // Without the picture (it could not be written), the UPI line goes too, so
+                    // the message never points at a QR that isn't there.
+                    val shared = picture
+                    if (shared != null && qrId != null) {
+                        shareTextWithPicture(context, reminderToSend(message, log, reminderQrLine(qrId)), shared, "Send reminder via")
+                    } else {
+                        shareText(context, reminderToSend(message, log, qrLine = null), "Send reminder via")
+                    }
                     onDismiss()
                 }
             }
@@ -203,27 +221,60 @@ fun ReminderSheet(
  * rather than as a run of digits. The magnitude is sent without a sign, because the sentence
  * around it already says which way the money runs.
  */
-internal fun buildReminderText(person: PersonWithBalance, payLink: String? = null, myUpiId: String? = null): String {
+internal fun buildReminderText(person: PersonWithBalance): String {
     val amount = amountString(abs(person.balanceMinor), person.currency)
-    val text = when {
+    return when {
         person.balanceMinor > 0 -> "Hi ${person.name}, you owe me $amount. Send it when you can."
         person.balanceMinor < 0 -> "Hi ${person.name}, I owe you $amount. Will send it soon."
         else -> "Hi ${person.name}, we're even now."
     }
-    // The link opens their UPI app with the amount filled in (the ₹1 test found a link sent through
-    // a chat app arrives tappable). The ID and amount in plain text are for anyone whose app does
-    // not open it, or who would rather type.
-    return if (payLink != null && myUpiId != null) {
-        "$text\n\nPay by UPI: $payLink\nOr to $myUpiId, $amount"
-    } else text
 }
 
 /**
- * The pay link a reminder carries: only to someone who owes you, in rupees (UPI is rupees only),
- * once your own UPI ID is set. Null otherwise.
+ * What goes out: your [message] as you left it, then the UPI line when the QR is attached, then
+ * the entries. The UPI line is added here, at send time, never put in the box you edit (Parth,
+ * 15 Nov 2026), so switching the QR off can't leave a line pointing at a missing picture, and
+ * nothing rewrites what you typed.
  */
-internal fun reminderPayLink(person: PersonWithBalance, myUpiId: String?, myName: String?): String? {
-    if (myUpiId == null || !com.kg.merapaisa.data.isUpiId(myUpiId)) return null
-    if (com.kg.merapaisa.data.normaliseCurrency(person.currency) != "INR" || person.balanceMinor <= 0) return null
-    return com.kg.merapaisa.data.upiPayLink(myUpiId, myName, person.balanceMinor)
+internal fun reminderToSend(message: String, log: String?, qrLine: String?): String = buildString {
+    append(message)
+    if (qrLine != null) append("\n\n").append(qrLine)
+    if (log != null) append("\n\nEvery entry so far:\n").append(log)
+}
+
+/**
+ * The line under a reminder that attaches your QR. It names your UPI ID too, for anyone whose UPI
+ * app will not scan from a photo, or who would rather type.
+ */
+internal fun reminderQrLine(myUpiId: String): String = "Scan the QR to pay me by UPI, or pay $myUpiId."
+
+/** The words drawn under the QR picture, so it reads on its own once saved or forwarded. */
+internal fun reminderQrCaption(amountMinor: Long, myUpiId: String): String =
+    "Scan to pay ${amountString(amountMinor, "INR")} to $myUpiId"
+
+/** A titled switch the whole width of the sheet, one TalkBack stop, at least 48dp tall. */
+@Composable
+private fun SwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val theme = LocalAppTheme.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, enabled = enabled, onValueChange = onCheckedChange, role = Role.Switch)
+            .heightIn(min = 48.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MeraPaisaType.bodyStrong, color = theme.textPrimary)
+            Text(subtitle, style = MeraPaisaType.label, color = theme.textSecondary)
+        }
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
+    }
 }

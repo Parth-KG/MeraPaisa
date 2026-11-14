@@ -14,8 +14,7 @@ import androidx.room.RoomDatabase
         Expense::class,
         ExpenseShare::class,
         AppliedPayload::class,
-        RetiredUid::class,
-        PaymentQuestion::class
+        RetiredUid::class
     ],
     version = 11,
     exportSchema = true

@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only these two cache directories are shareable; nothing else in the app is exposed. -->
+<!-- Only these three cache directories are shareable; nothing else in the app is exposed. -->
 <paths>
     <cache-path name="exports" path="exports/" />
     <!-- A downloaded update, handed to the system installer as a content:// URI. -->
     <cache-path name="updates" path="updates/" />
+    <!-- The QR picture a reminder attaches (v3.6.0). -->
+    <cache-path name="qr" path="qr/" />
 </paths>

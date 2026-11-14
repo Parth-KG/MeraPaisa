@@ -7,10 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.kg.merapaisa.CurrencyStore
 import com.kg.merapaisa.data.AppDatabase
 import com.kg.merapaisa.data.Person
-import com.kg.merapaisa.data.QUESTION_PAY
-import com.kg.merapaisa.data.QUESTION_REMINDER
-import com.kg.merapaisa.data.questionsStillAsking
-import com.kg.merapaisa.data.PaymentQuestion
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
 import com.kg.merapaisa.data.appendAmountKey
@@ -105,184 +101,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { UpiStore.setMyUpiId(getApplication(), id) }
     }
 
-    // --- paying by UPI (v4.0.0) ---
-
-    /** Opens the Pay sheet for [person], the amount starting at everything you owe them. */
-    fun openPay(person: PersonWithBalance) {
-        val owed = -person.balanceMinor
-        if (owed <= 0) return
-        _uiState.update {
-            it.copy(pay = PayFlowState(person.id, com.kg.merapaisa.data.formatMinorPlain(owed, "INR").removeSuffix(".00")))
-        }
-    }
-
-    fun updatePay(transform: (PayFlowState) -> PayFlowState) = _uiState.update { it.copy(pay = it.pay?.let(transform)) }
-
-    fun closePay() = _uiState.update { it.copy(pay = null) }
-
-    /**
-     * Writes the question "did it go through?" before the UPI app opens, so a phone that closes the
-     * app while it is away still asks on the next open, then calls [open] to hand the link over. If
-     * [open] finds no UPI app, the question is taken back and the sheet says so.
-     */
-    fun startPayment(
-        person: PersonWithBalance,
-        sentMinor: Long,
-        recordMinor: Long,
-        note: String,
-        open: () -> Boolean
-    ) {
-        viewModelScope.launch {
-            val questionId = repository.addQuestion(
-                PaymentQuestion(
-                    personId = person.id,
-                    amountMinor = recordMinor,
-                    kind = QUESTION_PAY,
-                    createdAt = System.currentTimeMillis(),
-                    balanceAtCreation = person.balanceMinor
-                )
-            )
-            if (!open()) {
-                repository.dropQuestion(questionId)
-                _uiState.update { it.copy(pay = it.pay?.copy(noUpiApp = true)) }
-                return@launch
-            }
-            _uiState.update {
-                it.copy(
-                    pay = null,
-                    selectedId = null,
-                    input = "",
-                    note = "",
-                    payAnswer = PayAnswerState(questionId, person.id, person.name, sentMinor, recordMinor, note)
-                )
-            }
-        }
-    }
-
-    /**
-     * The answer to "Did it go through?". Yes records the payment, with the UPI mark, and removes
-     * the question in one transaction. Not yet leaves the question for the next open.
-     */
-    fun answerPay(wentThrough: Boolean) {
-        val answer = _uiState.value.payAnswer ?: return
-        if (answer.busy) return
-        if (!wentThrough) {
-            _uiState.update { it.copy(payAnswer = null) }
-            return
-        }
-        _uiState.update { it.copy(payAnswer = answer.copy(busy = true)) }
-        viewModelScope.launch {
-            repository.answerQuestion(
-                answer.questionId,
-                Transaction(
-                    personId = answer.personId,
-                    amountMinor = answer.recordMinor,
-                    note = answer.note,
-                    paidByUpi = true
-                )
-            )
-            _uiState.update { it.copy(payAnswer = null) }
-        }
-    }
-
-    /**
-     * A reminder went to [person] with a pay link: ask "Did they pay you?" on the next open. One
-     * question per person; a newer reminder replaces an older one rather than asking twice.
-     */
-    fun rememberReminderSent(person: PersonWithBalance) {
-        if (person.balanceMinor <= 0) return
-        viewModelScope.launch {
-            repository.questionsNow()
-                .filter { it.personId == person.id && it.kind == QUESTION_REMINDER }
-                .forEach { repository.dropQuestion(it.id) }
-            repository.addQuestion(
-                PaymentQuestion(
-                    personId = person.id,
-                    amountMinor = -person.balanceMinor,
-                    kind = QUESTION_REMINDER,
-                    createdAt = System.currentTimeMillis(),
-                    balanceAtCreation = person.balanceMinor
-                )
-            )
-        }
-    }
-
-    /**
-     * On opening: drops the questions that have lapsed and, if any are left, shows "Did these go
-     * through?". Not while "Did it go through?" is up, which already asks about its own payment.
-     */
-    fun checkPaymentQuestions() {
-        if (_uiState.value.payAnswer != null || _uiState.value.questions != null) return
-        viewModelScope.launch {
-            val all = repository.questionsNow()
-            if (all.isEmpty()) return@launch
-            val balances = repository.personsWithBalances().first().associate { it.id to it.balanceMinor }
-            val asking = questionsStillAsking(all, balances, System.currentTimeMillis())
-            (all - asking.toSet()).forEach { repository.dropQuestion(it.id) }
-            if (asking.isNotEmpty() && _uiState.value.payAnswer == null) {
-                _uiState.update { it.copy(questions = asking) }
-            }
-        }
-    }
-
-    private fun withoutQuestion(id: Long) = _uiState.update { state ->
-        val left = state.questions?.filterNot { it.id == id }
-        state.copy(questions = left?.takeIf { it.isNotEmpty() })
-    }
-
-    /** "Record ₹500": the payment, with the UPI mark, and the question go together. */
-    fun recordQuestion(question: PaymentQuestion) {
-        withoutQuestion(question.id)
-        viewModelScope.launch {
-            repository.answerQuestion(
-                question.id,
-                Transaction(personId = question.personId, amountMinor = question.amountMinor, paidByUpi = true)
-            )
-        }
-    }
-
-    /** "Not yet": off the sheet for now, asked again next time. */
-    fun notYet(question: PaymentQuestion) = withoutQuestion(question.id)
-
-    /** "Stop asking": the question goes, and nothing is recorded. */
-    fun stopAsking(question: PaymentQuestion) {
-        withoutQuestion(question.id)
-        viewModelScope.launch { repository.dropQuestion(question.id) }
-    }
-
-    /**
-     * "Paid a different amount": the keypad on that person with the asked amount typed, to change
-     * and record with the right direction. The question lapses by itself once the balance moves.
-     */
-    fun paidDifferentAmount(question: PaymentQuestion, person: PersonWithBalance) {
-        val typed = com.kg.merapaisa.data.formatMinorPlain(kotlin.math.abs(question.amountMinor), person.currency)
-            .removeSuffix(".00")
-        _uiState.update {
-            it.copy(
-                questions = null,
-                tab = if (person.isEven) Tab.Even else Tab.Active,
-                selectedId = person.id,
-                input = typed
-            )
-        }
-    }
-
-    /** "Ask me later": the sheet closes and every question stays. */
-    fun closeQuestions() = _uiState.update { it.copy(questions = null) }
+    // --- Show QR to pay you (v3.6.0) ---
 
     fun openPayQr(personId: Long) = _uiState.update { it.copy(payQrPersonId = personId) }
 
     /**
-     * Closes "Show QR to pay you". If they paid, the payment is recorded now with the UPI mark;
-     * otherwise "Did Asha pay you?" waits for the next open, as after a reminder with a link.
+     * Closes "Show QR to pay you". If they paid, the full amount is recorded now with the UPI mark;
+     * otherwise nothing is recorded and nothing is left to ask about (a part payment goes through
+     * Settle up, without the mark).
      */
     fun closePayQr(person: PersonWithBalance, paid: Boolean) {
         _uiState.update { it.copy(payQrPersonId = null) }
-        if (person.balanceMinor <= 0) return
-        if (!paid) {
-            rememberReminderSent(person)
-            return
-        }
+        if (!paid || person.balanceMinor <= 0) return
         viewModelScope.launch {
             repository.recordEntries(listOf(Transaction(personId = person.id, amountMinor = -person.balanceMinor, paidByUpi = true)))
         }
@@ -467,7 +297,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         pfpValue: String,
         pfpColor: String,
         currency: String,
-        upiId: String?,
         onAdded: (Long) -> Unit
     ) {
         viewModelScope.launch {
@@ -478,7 +307,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     pfpValue = pfpValue,
                     pfpColor = pfpColor,
                     currency = currency,
-                    upiId = upiId,
                     sortOrder = repository.nextSortOrder()
                 )
             )
@@ -529,7 +357,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         pfpColor: String,
         currency: String,
         convertBalance: Boolean,
-        upiId: String?,
         onSaved: () -> Unit
     ) {
         viewModelScope.launch {
@@ -572,8 +399,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     pfpType = pfpType,
                     pfpValue = pfpValue,
                     pfpColor = pfpColor,
-                    currency = currency,
-                    upiId = upiId
+                    currency = currency
                 )
             )
             CurrencyStore.setLastCurrency(getApplication(), currency)

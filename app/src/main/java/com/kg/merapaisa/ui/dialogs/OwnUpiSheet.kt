@@ -24,7 +24,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.isUpiId
 import com.kg.merapaisa.data.normaliseUpiId
-import com.kg.merapaisa.data.readPastedUpi
 import com.kg.merapaisa.data.upiReceiveLink
 import com.kg.merapaisa.ui.PrimaryAction
 import com.kg.merapaisa.ui.QrImage
@@ -37,7 +36,7 @@ import com.kg.merapaisa.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
 /**
- * Your own UPI ID: what friends pay when they use a reminder's link or scan your QR.
+ * Your own UPI ID: what friends pay when they scan your QR, from Show QR or a reminder.
  *
  * With an ID set, the sheet shows it as a QR with no amount, as a check of what friends will scan
  * (their UPI app asks them for the amount). Saving a new ID, or removing it, goes back to the caller,
@@ -77,7 +76,7 @@ fun OwnUpiSheet(
             )
             Spacer(Modifier.height(Spacing.xs))
             Text(
-                "Friends pay this when they use the link in a reminder or scan your QR. " +
+                "Friends pay this when they scan your QR, on your phone or in a reminder. " +
                     "Changing it asks for your fingerprint or screen lock.",
                 style = MeraPaisaType.body,
                 color = theme.textSecondary,
@@ -106,11 +105,7 @@ fun OwnUpiSheet(
             Spacer(Modifier.height(Spacing.lg))
             OutlinedTextField(
                 value = typed,
-                onValueChange = { text ->
-                    typed = if (text.trimStart().startsWith("upi://", ignoreCase = true)) {
-                        readPastedUpi(text)?.id ?: text
-                    } else text
-                },
+                onValueChange = { typed = it },
                 label = { Text("Your UPI ID") },
                 placeholder = { Text("name@bank") },
                 isError = problem != null,
@@ -135,9 +130,19 @@ fun OwnUpiSheet(
     }
 }
 
+/**
+ * What is wrong with your UPI ID as typed, in a sentence, or null when it is fine (or left empty,
+ * which removes it). It catches typos, not a wrong but valid ID.
+ */
+internal fun upiIdProblem(value: String): String? = when {
+    value.isBlank() -> null
+    isUpiId(value) -> null
+    else -> "That doesn't look like a UPI ID. It needs a name, an @ and the bank's handle, like yourname@okaxis."
+}
+
 /** The title and line the phone's prompt shows before your own UPI ID is written. */
 internal fun ownUpiPrompt(current: String?, wanted: String?): Pair<String, String> = when {
-    wanted == null -> "Remove your UPI ID" to "Reminders will stop carrying a pay link"
-    current == null -> "Set your UPI ID" to "Friends who use your reminders will pay $wanted"
-    else -> "Change your UPI ID" to "Friends who use your reminders will pay $wanted"
+    wanted == null -> "Remove your UPI ID" to "Reminders will go without your QR"
+    current == null -> "Set your UPI ID" to "Friends who scan your QR will pay $wanted"
+    else -> "Change your UPI ID" to "Friends who scan your QR will pay $wanted"
 }

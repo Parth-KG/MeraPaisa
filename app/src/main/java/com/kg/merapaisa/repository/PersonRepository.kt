@@ -5,7 +5,6 @@ import com.kg.merapaisa.data.AppliedPayload
 import com.kg.merapaisa.data.ImportOutcome
 import com.kg.merapaisa.data.MoveDebtResult
 import com.kg.merapaisa.data.normaliseCurrency
-import com.kg.merapaisa.data.PaymentQuestion
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonDao
 import com.kg.merapaisa.data.PersonLedger
@@ -191,18 +190,6 @@ class PersonRepository(
 
     /** The row that is you, created on first use. Its name is what a share link says it is from. */
     suspend fun self(): Person = dao.ensureSelf()
-
-    // --- payment questions (v4.0.0) ---
-
-    suspend fun addQuestion(question: PaymentQuestion): Long = dao.insertQuestion(question)
-
-    suspend fun questionsNow(): List<PaymentQuestion> = dao.questionsNow()
-
-    suspend fun dropQuestion(id: Long) = dao.deleteQuestion(id)
-
-    /** Records [entry] and removes the question in one transaction. False if it had already gone. */
-    suspend fun answerQuestion(id: Long, entry: Transaction): Boolean =
-        dao.answerQuestion(id, entry).also { if (it) notifier.onLedgerChanged() }
 
     /**
      * Renames the self row.

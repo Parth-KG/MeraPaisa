@@ -131,34 +131,6 @@ interface PersonDao {
     @Query("UPDATE persons SET isSettled = :settled WHERE id = :personId")
     suspend fun setSettled(personId: Long, settled: Boolean)
 
-    // --- payment questions (schema 11) ---
-
-    @androidx.room.Insert
-    suspend fun insertQuestion(question: PaymentQuestion): Long
-
-    @Query("DELETE FROM payment_questions WHERE id = :id")
-    suspend fun deleteQuestion(id: Long)
-
-    @Query("SELECT * FROM payment_questions ORDER BY createdAt")
-    suspend fun questionsNow(): List<PaymentQuestion>
-
-    @Query("SELECT * FROM payment_questions WHERE id = :id")
-    suspend fun questionNow(id: Long): PaymentQuestion?
-
-    /**
-     * A yes to a payment question: the entry is recorded and the question removed together, so a
-     * crash cannot leave a recorded payment still asking, or a question answered with nothing
-     * recorded. Records nothing if the question has already gone (answered elsewhere, or lapsed),
-     * which is what makes a second tap, or a second sheet, harmless.
-     */
-    @androidx.room.Transaction
-    suspend fun answerQuestion(id: Long, entry: Transaction): Boolean {
-        if (questionNow(id) == null) return false
-        recordEntry(entry)
-        deleteQuestion(id)
-        return true
-    }
-
     /** Points a person at a photo file, for a restore giving a photo to someone who had none. */
     @Query("UPDATE persons SET pfpType = 'photo', pfpValue = :path WHERE id = :personId")
     suspend fun setPhoto(personId: Long, path: String)

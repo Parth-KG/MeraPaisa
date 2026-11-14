@@ -71,7 +71,7 @@ class DesignGalleryTest {
             "people-rows", "net-total-multi", "net-total-single", "net-total-multi-both-sides",
             "net-total-single-both-sides", "numpad", "group-detail",
             "split-adjustments", "split-adjustments-locked", "history", "settings",
-            "import-confirm", "import-held-back", "split-amount", "numpad-pay", "settings-upi"
+            "import-confirm", "import-held-back", "split-amount", "settings-upi"
         )
     )
 
@@ -143,7 +143,7 @@ class DesignGalleryTest {
 /**
  * The cases named in the `cases` instrumentation argument (comma-separated), or null for all of
  * them, so a slow link to the phone can shoot only what changed:
- * `am instrument -e class ... -e cases sheet-pay,numpad-pay ...`.
+ * `am instrument -e class ... -e cases sheet-pay-qr,settings-upi ...`.
  */
 internal fun requestedGalleryCases(): Set<String>? =
     androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("cases")

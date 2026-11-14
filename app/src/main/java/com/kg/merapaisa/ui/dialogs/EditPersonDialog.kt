@@ -61,15 +61,13 @@ fun EditPersonDialog(
     converting: Boolean,
     conversionError: String?,
     onDismiss: () -> Unit,
-    /** Name, avatar type, avatar value, colour, currency, convert, and the UPI ID or null. */
-    onSave: (String, String, String, String, String, Boolean, String?) -> Unit
+    onSave: (String, String, String, String, String, Boolean) -> Unit
 ) {
     val theme = LocalAppTheme.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var name by remember { mutableStateOf(person.name) }
-    var upiId by remember { mutableStateOf(person.upiId.orEmpty()) }
     var pfpType by remember { mutableStateOf(person.pfpType) }
     var emoji by remember { mutableStateOf(if (person.pfpType == "emoji") person.pfpValue else "") }
     var selectedColour by remember { mutableStateOf(person.pfpColor) }
@@ -192,13 +190,6 @@ fun EditPersonDialog(
                 )
             }
 
-            UpiIdField(
-                value = upiId,
-                onValueChange = { upiId = it },
-                currency = selectedCurrency,
-                onPastedName = { if (name.isBlank()) name = it }
-            )
-
             if (conversionError != null) {
                 Spacer(Modifier.height(Spacing.sm))
                 Text(
@@ -218,7 +209,7 @@ fun EditPersonDialog(
             // leaving the amount in the old one.
             PrimaryAction(
                 "Save person",
-                enabled = name.isNotBlank() && !(selectedCurrency == "INR" && upiIdProblem(upiId) != null),
+                enabled = name.isNotBlank(),
                 busyLabel = if (converting) "Converting" else null
             ) {
                 val personName = name.trim()
@@ -227,10 +218,7 @@ fun EditPersonDialog(
                 // Saved without closing the sheet first: a conversion can come back without a
                 // rate, and the sentence saying so has to arrive somewhere the user can still
                 // see it.
-                onSave(
-                    personName, type, value, selectedColour, selectedCurrency, shouldConvert,
-                    savedUpiIdFor(upiId, selectedCurrency, previous = person.upiId)
-                )
+                onSave(personName, type, value, selectedColour, selectedCurrency, shouldConvert)
             }
         }
     }

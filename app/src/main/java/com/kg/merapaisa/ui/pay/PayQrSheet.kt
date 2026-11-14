@@ -29,8 +29,9 @@ import kotlinx.coroutines.launch
  * A QR for someone who owes you to scan and pay you, face to face: a `upi://pay` link to your UPI
  * ID for the amount they owe. Their UPI app opens with it filled in and asks for their PIN.
  *
- * Nothing is recorded from the QR itself. "Record" records it now, with the UPI mark; "Not yet"
- * leaves the question for the next open, as a reminder with a link does.
+ * Nothing is recorded from the QR itself. "Record" records the full amount now, with the UPI mark;
+ * "Not yet" only closes the sheet, recording nothing and leaving nothing to ask about. A part
+ * payment goes through Settle up, without the mark.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -2,11 +2,10 @@ package com.kg.merapaisa.data
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** UPI IDs and links: the shape check, a pasted link read as hostile input, and the pay link. */
+/** Your UPI ID's shape check, the links your QR codes carry, and when a QR is offered. */
 class UpiTest {
 
     @Test
@@ -25,80 +24,33 @@ class UpiTest {
     }
 
     @Test
-    fun `an ID pasted on its own is kept, trimmed`() {
-        assertEquals(PastedUpi("asha@okaxis", null), readPastedUpi("  asha@okaxis \n"))
+    fun `the pay link carries the amount in rupees with two decimals, and no note`() {
+        assertEquals("upi://pay?pa=parth@okaxis&pn=Parth&am=40.00&cu=INR", upiPayLink("parth@okaxis", "Parth", 40_00))
+        assertEquals("upi://pay?pa=parth@okaxis&am=1234.05&cu=INR", upiPayLink("parth@okaxis", null, 1_234_05))
+        assertEquals("upi://pay?pa=parth@okaxis&am=0.01&cu=INR", upiPayLink(" parth@okaxis ", " ", 1))
     }
 
     @Test
-    fun `a pasted link gives only its ID and name`() {
-        val link = "upi://pay?pa=asha@okaxis&pn=Asha%20Rao&am=99999.00&cu=INR&tn=send%20all"
-        assertEquals(PastedUpi("asha@okaxis", "Asha Rao"), readPastedUpi(link))
-    }
-
-    @Test
-    fun `parameter names are read in any case and order`() {
-        assertEquals(PastedUpi("asha@okaxis", "Asha"), readPastedUpi("UPI://pay?am=1&PN=Asha&PA=asha%40okaxis"))
-    }
-
-    @Test
-    fun `a second pa cannot override the first`() {
-        assertEquals("asha@okaxis", readPastedUpi("upi://pay?pa=asha@okaxis&pa=thief@ybl")?.id)
-    }
-
-    @Test
-    fun `a link with no valid ID is refused`() {
-        assertNull(readPastedUpi("upi://pay?pn=Asha&am=10"))
-        assertNull(readPastedUpi("upi://pay?pa=not-an-id&pn=Asha"))
-        assertNull(readPastedUpi("upi://pay"))
-        assertNull(readPastedUpi("https://example.com/?pa=asha@okaxis"))
-        assertNull(readPastedUpi("upi://pay?pa=asha%ZZokaxis"))
-        assertNull(readPastedUpi("upi://pay?pa=asha%4"))
-    }
-
-    @Test
-    fun `a huge paste is not read at all`() {
-        assertNull(readPastedUpi("upi://pay?pa=asha@okaxis&pn=" + "A".repeat(3_000)))
-    }
-
-    @Test
-    fun `a long name is capped and control characters flattened`() {
-        val pasted = readPastedUpi("upi://pay?pa=asha@okaxis&pn=" + "B".repeat(100) + "%0Aline")!!
-        assertEquals(UPI_NAME_MAX, pasted.name!!.length)
-        val flattened = readPastedUpi("upi://pay?pa=asha@okaxis&pn=Asha%0ARao")!!
-        assertEquals("Asha Rao", flattened.name)
-    }
-
-    @Test
-    fun `a unicode name survives`() {
-        assertEquals("आशा", readPastedUpi("upi://pay?pa=asha@okaxis&pn=%E0%A4%86%E0%A4%B6%E0%A4%BE")?.name)
-    }
-
-    @Test
-    fun `the pay link carries the amount in rupees with two decimals`() {
-        assertEquals("upi://pay?pa=bilal@ybl&pn=Bilal&am=40.00&cu=INR", upiPayLink("bilal@ybl", "Bilal", 40_00))
-        assertEquals("upi://pay?pa=bilal@ybl&am=1234.05&cu=INR", upiPayLink("bilal@ybl", null, 1_234_05))
-        assertEquals("upi://pay?pa=bilal@ybl&am=0.01&cu=INR", upiPayLink("bilal@ybl", " ", 1))
-    }
-
-    @Test
-    fun `a note is added only when one was typed`() {
-        assertEquals("upi://pay?pa=bilal@ybl&am=40.00&cu=INR&tn=Cab%20home", upiPayLink("bilal@ybl", null, 40_00, "Cab home"))
-        assertEquals("upi://pay?pa=bilal@ybl&am=40.00&cu=INR", upiPayLink("bilal@ybl", null, 40_00, "  "))
-    }
-
-    @Test
-    fun `a name or note cannot add parameters of its own`() {
-        val link = upiPayLink("bilal@ybl", "A&am=1#x", 40_00, "x&pa=thief@ybl")
-        assertEquals("upi://pay?pa=bilal@ybl&pn=A%26am%3D1%23x&am=40.00&cu=INR&tn=x%26pa%3Dthief%40ybl", link)
-        // And reading the link back finds the real ID.
-        assertEquals("bilal@ybl", readPastedUpi(link)?.id)
-        assertEquals("A&am=1#x", readPastedUpi(link)?.name)
+    fun `a name cannot add parameters of its own`() {
+        val link = upiPayLink("parth@okaxis", "A&am=1#x&pa=thief@ybl", 40_00)
+        assertEquals("upi://pay?pa=parth@okaxis&pn=A%26am%3D1%23x%26pa%3Dthief%40ybl&am=40.00&cu=INR", link)
     }
 
     @Test
     fun `a pay link refuses a bad ID or a non-positive amount`() {
         assertTrue(runCatching { upiPayLink("nope", null, 100) }.isFailure)
-        assertTrue(runCatching { upiPayLink("bilal@ybl", null, 0) }.isFailure)
-        assertTrue(runCatching { upiPayLink("bilal@ybl", null, -100) }.isFailure)
+        assertTrue(runCatching { upiPayLink("parth@okaxis", null, 0) }.isFailure)
+        assertTrue(runCatching { upiPayLink("parth@okaxis", null, -100) }.isFailure)
+    }
+
+    @Test
+    fun `a QR is offered for someone who owes you rupees, once your ID is set`() {
+        assertTrue(canShowPayQr("INR", 500_00, "me@okaxis"))
+        assertTrue("an old rupee symbol still counts as rupees", canShowPayQr("₹", 500_00, "me@okaxis"))
+        assertFalse("you owe them", canShowPayQr("INR", -500_00, "me@okaxis"))
+        assertFalse("even", canShowPayQr("INR", 0, "me@okaxis"))
+        assertFalse("no UPI ID of your own", canShowPayQr("INR", 500_00, null))
+        assertFalse("not a UPI ID", canShowPayQr("INR", 500_00, "me"))
+        assertFalse("UPI is rupees only", canShowPayQr("USD", 500_00, "me@okaxis"))
     }
 }

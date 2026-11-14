@@ -136,11 +136,11 @@ fun SettingsScreen(
 
             item { SectionHeading("UPI") }
             item {
-                // Set here once, then used by reminders' pay links and your QR. Tapping it shows the
-                // QR friends would scan, as a check, and is where it changes.
+                // Set here once, then used by Show QR and the QR a reminder attaches. Tapping it
+                // shows the QR friends would scan, as a check, and is where it changes.
                 ActionRow(
                     title = "Your UPI ID",
-                    subtitle = myUpiId ?: "Not set. With it, a reminder carries a link to pay you.",
+                    subtitle = myUpiId ?: "Not set. With it, friends can scan a QR to pay you.",
                     onClick = onMyUpiId
                 )
             }

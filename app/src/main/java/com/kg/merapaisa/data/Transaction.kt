@@ -60,9 +60,9 @@ data class Transaction(
      */
     val fromShare: Boolean = false,
     /**
-     * Recorded through "Did it go through?" after a UPI payment opened from this app, so the
-     * history can say it went by UPI. Only a mark: the money is the amount, as for any entry.
-     * Schema 11; every older entry is false.
+     * Recorded from Show QR's "Record", after they scanned your QR and paid, so the history can
+     * say it went by UPI. Only a mark: the money is the amount, as for any entry. Schema 11; every
+     * older entry is false.
      */
     @androidx.room.ColumnInfo(defaultValue = "0")
     val paidByUpi: Boolean = false

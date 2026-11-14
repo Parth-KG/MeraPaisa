@@ -2,8 +2,6 @@ package com.kg.merapaisa.ui
 
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.lifecycle.compose.LifecycleStartEffect
-import com.kg.merapaisa.data.canPayByUpi
 import com.kg.merapaisa.data.canShowPayQr
 import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.data.upiPayLink
@@ -14,9 +12,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import com.kg.merapaisa.ui.pay.PayQrSheet
-import com.kg.merapaisa.ui.pay.PaySheet
-import com.kg.merapaisa.ui.pay.PaymentQuestionsSheet
-import com.kg.merapaisa.ui.pay.openUpiApp
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -359,9 +354,6 @@ fun MainScreen(viewModel: MainViewModel) {
                     person = selectedPerson,
                     input = ui.input,
                     onSettleUp = { confirmSettle = selectedPerson },
-                    onPay = if (canPayByUpi(selectedPerson.currency, selectedPerson.person.upiId, selectedPerson.balanceMinor)) {
-                        { viewModel.openPay(selectedPerson) }
-                    } else null,
                     note = ui.note,
                     onNoteChange = viewModel::setNote,
                     showNote = ui.showNote,
@@ -430,8 +422,8 @@ fun MainScreen(viewModel: MainViewModel) {
             AddPersonDialog(
                 existingNames = persons.map { it.name },
                 onDismiss = { viewModel.showAddDialog(false) },
-                onAdd = { name, pfpType, pfpValue, pfpColor, currency, upiId ->
-                    viewModel.addPerson(name, pfpType, pfpValue, pfpColor, currency, upiId) { newId ->
+                onAdd = { name, pfpType, pfpValue, pfpColor, currency ->
+                    viewModel.addPerson(name, pfpType, pfpValue, pfpColor, currency) { newId ->
                         viewModel.showAddDialog(false)
                         // Someone new owes nothing yet, so they start on Even, picked with the
                         // keypad open. Their first amount takes them, and the tab, to Active.
@@ -453,7 +445,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     viewModel.dismissConversionError()
                     viewModel.editPerson(null)
                 },
-                onSave = { name, pfpType, pfpValue, pfpColor, currency, shouldConvert, upiId ->
+                onSave = { name, pfpType, pfpValue, pfpColor, currency, shouldConvert ->
                     viewModel.savePersonEdit(
                         snapshot = editingPerson,
                         name = name,
@@ -461,8 +453,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         pfpValue = pfpValue,
                         pfpColor = pfpColor,
                         currency = currency,
-                        convertBalance = shouldConvert,
-                        upiId = upiId
+                        convertBalance = shouldConvert
                     ) { viewModel.editPerson(null) }
                 }
             )
@@ -539,36 +530,6 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         }
     }
-    ui.pay?.let { pay ->
-        val payee = persons.find { it.id == pay.personId }
-        val payeeId = payee?.person?.upiId
-        if (payee == null || payeeId == null || payee.balanceMinor >= 0) {
-            LaunchedEffect(pay.personId) { viewModel.closePay() }
-        } else {
-            PaySheet(
-                personName = payee.name,
-                upiId = payeeId,
-                owedMinor = -payee.balanceMinor,
-                amountText = pay.amountText,
-                onAmountChange = { text -> viewModel.updatePay { it.copy(amountText = text, noUpiApp = false) } },
-                recordOnlyWhatYouOwed = pay.recordOnlyWhatYouOwed,
-                onRecordOnlyWhatYouOwedChange = { only -> viewModel.updatePay { it.copy(recordOnlyWhatYouOwed = only) } },
-                noUpiApp = pay.noUpiApp,
-                onDismiss = viewModel::closePay,
-                onPay = { sent, record ->
-                    val note = ui.note.trim()
-                    val link = upiPayLink(payeeId, payee.name, sent, note.ifEmpty { null })
-                    viewModel.startPayment(payee, sent, record, note) { openUpiApp(context, link) }
-                }
-            )
-        }
-    }
-    // On every open: payments waiting to be asked about, if any (a reminder with a pay link, or a
-    // Pay whose answer never came).
-    LifecycleStartEffect(Unit) {
-        viewModel.checkPaymentQuestions()
-        onStopOrDispose { }
-    }
     ui.payQrPersonId?.let { id ->
         val payer = persons.find { it.id == id }
         val upi = myUpiId
@@ -586,29 +547,6 @@ fun MainScreen(viewModel: MainViewModel) {
             )
         }
     }
-    ui.questions?.let { questions ->
-        PaymentQuestionsSheet(
-            questions = questions,
-            nameOf = { id -> persons.find { it.id == id }?.name },
-            onRecord = viewModel::recordQuestion,
-            onNotYet = viewModel::notYet,
-            onDifferentAmount = { question ->
-                persons.find { it.id == question.personId }?.let { viewModel.paidDifferentAmount(question, it) }
-            },
-            onStopAsking = viewModel::stopAsking,
-            onAskLater = viewModel::closeQuestions
-        )
-    }
-    ui.payAnswer?.let { answer ->
-        DecisionDialog(
-            title = "Did your ${amountString(answer.sentMinor, "INR")} to ${answer.personName} go through?",
-            body = "If it did, it's recorded as paid by UPI. Nothing is recorded unless you say so.",
-            confirmLabel = "Record ${amountString(answer.recordMinor, "INR")}",
-            dismissLabel = "Not yet",
-            onConfirm = { viewModel.answerPay(true) },
-            onDismiss = { viewModel.answerPay(false) }
-        )
-    }
     if (showOwnUpi) {
         val yourName by produceState<String?>(null) { value = viewModel.myNameForUpi() }
         OwnUpiSheet(
@@ -619,7 +557,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 val current = myUpiId
                 if (canAuthenticate(context)) {
                     // Always asked, app lock or not (Parth, 14 Nov 2026): someone who set this
-                    // before you would collect the money your reminders ask for.
+                    // before you would collect the money your reminders and your QR ask for.
                     val (title, subtitle) = ownUpiPrompt(current, wanted)
                     lock.onAskStarted()
                     askForCredential(
@@ -641,9 +579,9 @@ fun MainScreen(viewModel: MainViewModel) {
         DecisionDialog(
             title = if (wanted == null) "Remove your UPI ID?" else if (current == null) "Set your UPI ID?" else "Change your UPI ID?",
             body = when {
-                wanted == null -> "Reminders will stop carrying a pay link."
-                current == null -> "Friends who use your reminders will pay $wanted."
-                else -> "From $current to $wanted. Friends who use your reminders will pay the new one."
+                wanted == null -> "Reminders will go without your QR, and Show QR goes away."
+                current == null -> "Friends who scan your QR will pay $wanted."
+                else -> "From $current to $wanted. Friends who scan your QR will pay the new one."
             },
             warning = "This phone has no screen lock, so anyone holding it could change this. " +
                 "With one, Mera Paisa asks for it first.",

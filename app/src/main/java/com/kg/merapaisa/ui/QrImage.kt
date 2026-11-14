@@ -21,7 +21,7 @@ import com.kg.merapaisa.ui.theme.Shapes
 import io.nayuki.qrcodegen.QrCode
 
 /** The quiet zone the QR standard asks for around the code, in modules. */
-private const val QUIET_MODULES = 4
+internal const val QUIET_MODULES = 4
 
 /**
  * The modules of a QR code for [text], at medium error correction, which survives a phone screen's

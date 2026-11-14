@@ -70,19 +70,15 @@ import com.kg.merapaisa.ui.ChoiceChip
 @Composable
 fun AddPersonDialog(
     onDismiss: () -> Unit,
-    /** Name, avatar type, avatar value, colour, currency, and the UPI ID or null. */
-    onAdd: (String, String, String, String, String, String?) -> Unit,
+    onAdd: (String, String, String, String, String) -> Unit,
     /** Everyone already in the ledger, to say so when a name is taken. */
-    existingNames: List<String> = emptyList(),
-    /** A UPI ID to start with: empty in the app, filled for the gallery. */
-    initialUpiId: String = ""
+    existingNames: List<String> = emptyList()
 ) {
     val theme = LocalAppTheme.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var name by remember { mutableStateOf("") }
-    var upiId by remember { mutableStateOf(initialUpiId) }
     var pfpType by remember { mutableStateOf("initials") }
     var photoPath by remember { mutableStateOf<String?>(null) }
     var emoji by remember { mutableStateOf("") }
@@ -168,27 +164,18 @@ fun AddPersonDialog(
 
             SheetHeading("Currency")
             CurrencyChips(selected = selectedCurrency, onSelect = { selectedCurrency = it })
-
-            UpiIdField(
-                value = upiId,
-                onValueChange = { upiId = it },
-                currency = selectedCurrency,
-                onPastedName = { if (name.isBlank()) name = it }
-            )
         }
 
         SheetFoot(above = scroll) {
             SecondaryAction("Don't add", enabled = true) {
                 scope.launch { sheetState.hide() }.invokeOnCompletion { dismiss() }
             }
-            val upiProblem = selectedCurrency == "INR" && upiIdProblem(upiId) != null
-            PrimaryAction("Add person", enabled = name.isNotBlank() && !upiProblem) {
+            PrimaryAction("Add person", enabled = name.isNotBlank()) {
                 val personName = name.trim()
                 val type = avatarTypeFor(pfpType, emoji, photoPath)
                 val value = avatarValueFor(type, personName, emoji, photoPath)
-                val savedUpiId = savedUpiIdFor(upiId, selectedCurrency, previous = null)
                 scope.launch { sheetState.hide() }.invokeOnCompletion {
-                    onAdd(personName, type, value, selectedColour, selectedCurrency, savedUpiId)
+                    onAdd(personName, type, value, selectedColour, selectedCurrency)
                 }
             }
         }

@@ -512,11 +512,11 @@ class MigrationTest {
     }
 
     /**
-     * v11 only adds: a nullable UPI ID on everyone, a false UPI mark on every entry, and an empty
-     * questions table. Nothing is rewritten, so every balance and every uid comes through as it was.
+     * v11 only adds the UPI mark, false on every entry. Nothing is rewritten, so every balance and
+     * every uid comes through as it was.
      */
     @Test
-    fun migrate10To11_addsUpiAndKeepsTheLedger() {
+    fun migrate10To11_addsTheUpiMarkAndKeepsTheLedger() {
         helper.createDatabase(TEST_DB, 10).use { db ->
             db.insertV7Person(id = 1, name = "Asha", currency = "INR")
             db.insertV7Person(id = 2, name = "Diego", currency = "USD")
@@ -530,38 +530,15 @@ class MigrationTest {
             assertEquals(-4_000L, db.derivedBalance(2))
             assertEquals("uids are untouched", 2L, db.longOf("SELECT COUNT(*) FROM transactions WHERE uid IN ('abc', 'def')"))
             assertEquals(1L, db.longOf("SELECT COUNT(*) FROM retired_uids"))
-            assertEquals("nobody has a UPI ID yet", 0L, db.longOf("SELECT COUNT(*) FROM persons WHERE upiId IS NOT NULL"))
             assertEquals("no entry is marked as paid by UPI", 0L, db.longOf("SELECT COUNT(*) FROM transactions WHERE paidByUpi != 0"))
-            assertEquals(0L, db.longOf("SELECT COUNT(*) FROM payment_questions"))
 
-            // The new columns and table take what the app will write.
-            db.execSQL("UPDATE persons SET upiId = 'asha@okaxis' WHERE id = 1")
+            // The new column takes what Show QR's "Record" writes.
             db.execSQL(
                 "INSERT INTO transactions (personId, amountMinor, timestamp, note, uid, fromShare, paidByUpi) " +
-                    "VALUES (1, -5000, 3000, 'UPI', 'ghi', 0, 1)"
-            )
-            db.execSQL(
-                "INSERT INTO payment_questions (personId, amountMinor, kind, createdAt, balanceAtCreation) " +
-                    "VALUES (1, -20050, 'reminder', 4000, 20050)"
+                    "VALUES (1, -5000, 3000, '', 'ghi', 0, 1)"
             )
             assertEquals(20_050L, db.derivedBalance(1))
             assertEquals(1L, db.longOf("SELECT COUNT(*) FROM transactions WHERE paidByUpi = 1"))
-        }
-    }
-
-    /** A question goes with its person, as every other child row does. */
-    @Test
-    fun migrate10To11_aQuestionIsDeletedWithItsPerson() {
-        helper.createDatabase(TEST_DB, 10).use { db -> db.insertV7Person(id = 1, name = "Asha", currency = "INR") }
-
-        helper.runMigrationsAndValidate(TEST_DB, 11, true, MIGRATION_10_11).use { db ->
-            db.execSQL("PRAGMA foreign_keys = ON")
-            db.execSQL(
-                "INSERT INTO payment_questions (personId, amountMinor, kind, createdAt, balanceAtCreation) " +
-                    "VALUES (1, -500, 'reminder', 1, 500)"
-            )
-            db.execSQL("DELETE FROM persons WHERE id = 1")
-            assertEquals(0L, db.longOf("SELECT COUNT(*) FROM payment_questions"))
         }
     }
 
@@ -623,7 +600,6 @@ class MigrationTest {
                 0L,
                 db.longOf("SELECT COUNT(*) FROM transactions WHERE paidByUpi != 0")
             )
-            assertEquals(0L, db.longOf("SELECT COUNT(*) FROM persons WHERE upiId IS NOT NULL"))
         }
     }
 
