@@ -72,7 +72,9 @@ fun AddPersonDialog(
     onDismiss: () -> Unit,
     onAdd: (String, String, String, String, String) -> Unit,
     /** Everyone already in the ledger, to say so when a name is taken. */
-    existingNames: List<String> = emptyList()
+    existingNames: List<String> = emptyList(),
+    /** Their stored colours, so a new person starts on the one fewest of them have. */
+    existingColours: List<String> = emptyList()
 ) {
     val theme = LocalAppTheme.current
     val context = LocalContext.current
@@ -82,12 +84,14 @@ fun AddPersonDialog(
     var pfpType by remember { mutableStateOf("initials") }
     var photoPath by remember { mutableStateOf<String?>(null) }
     var emoji by remember { mutableStateOf("") }
-    // Until a colour is picked by hand, the name picks one. Defaulting to the first swatch gave
-    // every person added without opening the picker the same indigo, which is the all-green
-    // problem the eight hues were meant to end. A name always lands on the same hue, so the
-    // swatch does not flicker between visits, and two people rarely share one.
+    // Until a colour is picked by hand, a new person gets the hue fewest people have, chosen once
+    // when the sheet opens. Defaulting to the first swatch gave everyone added without opening
+    // the picker the same indigo, the all-green problem the eight hues were meant to end. Taking
+    // it from the name (from 29 Sep 2026) spread the colours but made the swatch jump with every
+    // letter typed, which looked broken (Parth, 15 Nov 2026).
+    val startColour = remember { leastUsedHue(existingColours) }
     var pickedColour by remember { mutableStateOf<String?>(null) }
-    val selectedColour = pickedColour ?: hueForName(name)
+    val selectedColour = pickedColour ?: startColour
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -400,6 +404,19 @@ private val AVATAR_HUE_NAMES = mapOf(
     "#4E39AC" to "Violet"
 )
 
-/** The hue a name lands on when nobody has picked one. Stable: String.hashCode is specified. */
+/**
+ * The hue fewest of [existingColours] have, the first in [AVATAR_HUES] order on a tie, so people
+ * added one after another without opening the picker walk through all eight before any repeats.
+ * A stored colour no longer offered (slate, before v3.3.0) counts for none of them.
+ */
+internal fun leastUsedHue(existingColours: List<String>): String {
+    val counts = existingColours.groupingBy { it.uppercase() }.eachCount()
+    return AVATAR_HUES.minBy { counts[it.uppercase()] ?: 0 }
+}
+
+/**
+ * The hue a name lands on when nobody has picked one: for someone added from an update link, with
+ * no sheet. Stable: String.hashCode is specified.
+ */
 internal fun hueForName(name: String): String =
     AVATAR_HUES[Math.floorMod(name.trim().lowercase().hashCode(), AVATAR_HUES.size)]

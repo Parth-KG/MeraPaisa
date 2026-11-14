@@ -421,6 +421,7 @@ fun MainScreen(viewModel: MainViewModel) {
         if (ui.showAddDialog) {
             AddPersonDialog(
                 existingNames = persons.map { it.name },
+                existingColours = persons.map { it.person.pfpColor },
                 onDismiss = { viewModel.showAddDialog(false) },
                 onAdd = { name, pfpType, pfpValue, pfpColor, currency ->
                     viewModel.addPerson(name, pfpType, pfpValue, pfpColor, currency) { newId ->
