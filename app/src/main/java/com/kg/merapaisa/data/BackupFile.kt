@@ -92,7 +92,11 @@ fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String)
                     "currency" to p.currency.json(),
                     "isSelf" to p.isSelf.json(),
                     "lastSharedAt" to p.lastSharedAt.json(),
-                    *listOfNotNull(photo?.let { "photo" to it.json() }).toTypedArray()
+                    *listOfNotNull(
+                        photo?.let { "photo" to it.json() },
+                        // Optional, from v4.0.0: older versions read named keys only and skip it.
+                        p.upiId?.let { "upiId" to it.json() }
+                    ).toTypedArray()
                 )
             }),
             "transactions" to jsonArray(snapshot.transactions.map { t ->
@@ -103,7 +107,9 @@ fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String)
                     "timestamp" to t.timestamp.json(),
                     "note" to t.note.json(),
                     "uid" to t.uid.json(),
-                    "fromShare" to t.fromShare.json()
+                    "fromShare" to t.fromShare.json(),
+                    // Only when set, so a backup with no UPI payments reads exactly as before.
+                    *listOfNotNull(if (t.paidByUpi) "paidByUpi" to true.json() else null).toTypedArray()
                 )
             }),
             "groups" to jsonArray(snapshot.groups.map { g ->
@@ -195,7 +201,10 @@ fun decodeBackup(text: String): BackupResult {
             isSettled = o.bool("isSettled") ?: return BackupResult.Damaged,
             currency = o.string("currency") ?: return BackupResult.Damaged,
             isSelf = o.bool("isSelf") ?: return BackupResult.Damaged,
-            lastSharedAt = o.long("lastSharedAt") ?: return BackupResult.Damaged
+            lastSharedAt = o.long("lastSharedAt") ?: return BackupResult.Damaged,
+            // Optional (v4.0.0), and read leniently like a photo: one that is not a UPI ID is
+            // dropped rather than costing the restore.
+            upiId = o.string("upiId")?.trim()?.takeIf { isUpiId(it) }
         )
     } ?: return BackupResult.Damaged
 
@@ -220,7 +229,8 @@ fun decodeBackup(text: String): BackupResult {
             // entry has never been shared under any name, so inventing a stable-looking one from
             // its contents would risk colliding with the other phone's idea of a different debt.
             uid = o.string("uid") ?: newEntryUid(),
-            fromShare = o.bool("fromShare") ?: false
+            fromShare = o.bool("fromShare") ?: false,
+            paidByUpi = o.bool("paidByUpi") ?: false
         )
     } ?: return BackupResult.Damaged
 
