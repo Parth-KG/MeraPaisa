@@ -9,6 +9,7 @@ import com.kg.merapaisa.data.AppDatabase
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.QUESTION_PAY
 import com.kg.merapaisa.data.QUESTION_REMINDER
+import com.kg.merapaisa.data.questionsStillAsking
 import com.kg.merapaisa.data.PaymentQuestion
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
@@ -205,6 +206,69 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
     }
+
+    /**
+     * On opening: drops the questions that have lapsed and, if any are left, shows "Did these go
+     * through?". Not while "Did it go through?" is up, which already asks about its own payment.
+     */
+    fun checkPaymentQuestions() {
+        if (_uiState.value.payAnswer != null || _uiState.value.questions != null) return
+        viewModelScope.launch {
+            val all = repository.questionsNow()
+            if (all.isEmpty()) return@launch
+            val balances = repository.personsWithBalances().first().associate { it.id to it.balanceMinor }
+            val asking = questionsStillAsking(all, balances, System.currentTimeMillis())
+            (all - asking.toSet()).forEach { repository.dropQuestion(it.id) }
+            if (asking.isNotEmpty() && _uiState.value.payAnswer == null) {
+                _uiState.update { it.copy(questions = asking) }
+            }
+        }
+    }
+
+    private fun withoutQuestion(id: Long) = _uiState.update { state ->
+        val left = state.questions?.filterNot { it.id == id }
+        state.copy(questions = left?.takeIf { it.isNotEmpty() })
+    }
+
+    /** "Record ₹500": the payment, with the UPI mark, and the question go together. */
+    fun recordQuestion(question: PaymentQuestion) {
+        withoutQuestion(question.id)
+        viewModelScope.launch {
+            repository.answerQuestion(
+                question.id,
+                Transaction(personId = question.personId, amountMinor = question.amountMinor, paidByUpi = true)
+            )
+        }
+    }
+
+    /** "Not yet": off the sheet for now, asked again next time. */
+    fun notYet(question: PaymentQuestion) = withoutQuestion(question.id)
+
+    /** "Stop asking": the question goes, and nothing is recorded. */
+    fun stopAsking(question: PaymentQuestion) {
+        withoutQuestion(question.id)
+        viewModelScope.launch { repository.dropQuestion(question.id) }
+    }
+
+    /**
+     * "Paid a different amount": the keypad on that person with the asked amount typed, to change
+     * and record with the right direction. The question lapses by itself once the balance moves.
+     */
+    fun paidDifferentAmount(question: PaymentQuestion, person: PersonWithBalance) {
+        val typed = com.kg.merapaisa.data.formatMinorPlain(kotlin.math.abs(question.amountMinor), person.currency)
+            .removeSuffix(".00")
+        _uiState.update {
+            it.copy(
+                questions = null,
+                tab = if (person.isEven) Tab.Even else Tab.Active,
+                selectedId = person.id,
+                input = typed
+            )
+        }
+    }
+
+    /** "Ask me later": the sheet closes and every question stays. */
+    fun closeQuestions() = _uiState.update { it.copy(questions = null) }
 
     /** Your name for a UPI app to show, or null while the self row is still just "You". */
     suspend fun myNameForUpi(): String? = repository.self().name.trim().takeUnless { it.isEmpty() || it == "You" }

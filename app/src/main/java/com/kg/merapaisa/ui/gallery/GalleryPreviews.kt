@@ -640,6 +640,23 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
             noUpiApp = true, onDismiss = {}, onPay = { _, _ -> }
         )
     },
+    "sheet-payment-questions" to {
+        val now = System.currentTimeMillis()
+        com.kg.merapaisa.ui.pay.PaymentQuestionsSheet(
+            questions = listOf(
+                com.kg.merapaisa.data.PaymentQuestion(
+                    id = 1, personId = 1, amountMinor = -500_00, kind = com.kg.merapaisa.data.QUESTION_REMINDER,
+                    createdAt = now - 2 * 24 * 60 * 60 * 1000L, balanceAtCreation = 500_00
+                ),
+                com.kg.merapaisa.data.PaymentQuestion(
+                    id = 2, personId = 2, amountMinor = 40_00, kind = com.kg.merapaisa.data.QUESTION_PAY,
+                    createdAt = now - 60 * 60 * 1000L, balanceAtCreation = -40_00
+                )
+            ),
+            nameOf = { if (it == 1L) "Asha" else "Bilal" },
+            onRecord = {}, onNotYet = {}, onDifferentAmount = {}, onStopAsking = {}, onAskLater = {}
+        )
+    },
     "dialog-did-it-go-through" to {
         DecisionDialog(
             title = "Did your ${amountString(340_00, "INR")} to Bilal go through?",

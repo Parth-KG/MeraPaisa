@@ -53,7 +53,9 @@ data class MainUiState(
     /** The Pay sheet, before a UPI app opens. */
     val pay: PayFlowState? = null,
     /** "Did it go through?", asked once you are back from the UPI app. */
-    val payAnswer: PayAnswerState? = null
+    val payAnswer: PayAnswerState? = null,
+    /** "Did these go through?": the payments waiting to be asked about, shown on opening. */
+    val questions: List<com.kg.merapaisa.data.PaymentQuestion>? = null
 )
 
 /**

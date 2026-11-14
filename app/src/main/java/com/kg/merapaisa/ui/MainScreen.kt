@@ -2,6 +2,7 @@ package com.kg.merapaisa.ui
 
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.LifecycleStartEffect
 import com.kg.merapaisa.data.canPayByUpi
 import com.kg.merapaisa.data.upiPayLink
 import com.kg.merapaisa.ui.dialogs.OwnUpiSheet
@@ -11,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import com.kg.merapaisa.ui.pay.PaySheet
+import com.kg.merapaisa.ui.pay.PaymentQuestionsSheet
 import com.kg.merapaisa.ui.pay.openUpiApp
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -552,6 +554,25 @@ fun MainScreen(viewModel: MainViewModel) {
                 }
             )
         }
+    }
+    // On every open: payments waiting to be asked about, if any (a reminder with a pay link, or a
+    // Pay whose answer never came).
+    LifecycleStartEffect(Unit) {
+        viewModel.checkPaymentQuestions()
+        onStopOrDispose { }
+    }
+    ui.questions?.let { questions ->
+        PaymentQuestionsSheet(
+            questions = questions,
+            nameOf = { id -> persons.find { it.id == id }?.name },
+            onRecord = viewModel::recordQuestion,
+            onNotYet = viewModel::notYet,
+            onDifferentAmount = { question ->
+                persons.find { it.id == question.personId }?.let { viewModel.paidDifferentAmount(question, it) }
+            },
+            onStopAsking = viewModel::stopAsking,
+            onAskLater = viewModel::closeQuestions
+        )
     }
     ui.payAnswer?.let { answer ->
         DecisionDialog(

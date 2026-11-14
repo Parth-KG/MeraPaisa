@@ -46,3 +46,18 @@ const val QUESTION_PAY = "pay"
 
 /** How long a question is asked before it lapses unanswered. */
 const val QUESTION_LIFETIME_MS = 7L * 24 * 60 * 60 * 1000
+
+/**
+ * The questions still worth asking, of [questions], given each person's balance now.
+ *
+ * A question lapses, unasked, after [QUESTION_LIFETIME_MS], or once that person's balance has
+ * changed some other way since it was left (they paid and it was recorded by hand, or more was
+ * added): asking "Did Asha pay you ₹500?" about a debt that has since moved would offer to record
+ * the wrong figure. A person who has gone takes their questions with them. The caller removes the
+ * lapsed ones.
+ */
+fun questionsStillAsking(questions: List<PaymentQuestion>, balances: Map<Long, Long>, now: Long): List<PaymentQuestion> =
+    questions.filter { q ->
+        val age = now - q.createdAt
+        age in 0..QUESTION_LIFETIME_MS && balances[q.personId] == q.balanceAtCreation
+    }
