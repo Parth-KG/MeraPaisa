@@ -55,7 +55,7 @@ Mera Paisa keeps all of that on your phone.
 | **Expense splitting** | Equal or custom shares, with lock-on-edit redistribution |
 | **Groups** | A trip or a flatshare: log who paid for what, then settle everyone in at most *n* − 1 payments for *n* members. Kept apart from your personal balances, in its own currency |
 | **Settle up** | Square a balance after one confirmation; the closing entry stays in their history |
-| **UPI payments** | Pay someone you owe from the keypad: your own UPI app opens with their UPI ID and the amount filled in, and you enter the PIN there. Show a QR to someone who owes you, and reminders carry a pay link. Nothing is paid or recorded until you say so. Rupees only |
+| **Paid by QR** | Show a QR to someone who owes you, and they scan it in their UPI app with the amount filled in. Reminders can attach the same QR as a picture. Nothing is recorded until you say they paid. Rupees only |
 | **Move a debt** | Hand part of what one person owes onto someone else, converted if they keep a different currency |
 | **History** | Notes, timestamps, edit or delete any entry, reverse an entry and everything newer, or clear the history |
 | **Export and summaries** | The whole ledger as CSV, or a plain-text summary of one person's balance |
@@ -66,7 +66,7 @@ Mera Paisa keeps all of that on your phone.
 | **In-app updates** | Checks GitHub for a newer release and installs it only if it is signed with the same key |
 | **Accessible** | TalkBack reads every figure with its direction in words, and every screen works at large text and on a phone turned sideways |
 | **Ten themes** | Diya, Jamun, Monsoon, Kaapi and Kamal by night, Tulsi, Khadi, Gulab, Kansa and Neel by day, with amounts and grey text at 7:1 in every one |
-| **Backup** | Everything in one file, profile photos and UPI IDs included, saved when you like or every week to a folder you pick, with a preview before any restore. Android's own backup also copies your ledger and settings to your Google account |
+| **Backup** | Everything in one file, profile photos included, saved when you like or every week to a folder you pick, with a preview before any restore. Android's own backup also copies your ledger and settings to your Google account |
 
 ## Worth a closer look
 
@@ -89,7 +89,7 @@ Mera Paisa keeps all of that on your phone.
 > An update link carries a stable id per entry, so the receiving app can tell a new entry from an edited one from one the sender deleted. It shows you the differences and writes nothing you have not ticked. Additions are ticked for you; an edit or a deletion never is, because nothing about a link proves who sent it. The ids of entries you delete or clear are kept, so the other phone's next link cannot quietly bring them back: a cleared entry already counts in the opening balance, and a deleted one arrives unticked for you to decide.
 
 > **No account, no backend**
-> Data lives in Room on the device and rides Android's own backup to your Google account, which is a system feature rather than anything of ours. Reinstall on a new phone that uses the same Google account and it is there. There is no account to create, no server, and nothing of yours on a machine I control. Exactly three things leave the phone: that system backup, links and messages you choose to send, and requests to Frankfurter for an exchange rate and GitHub for an update check. No names, no notes, no analytics, no crash reporting. Paying by UPI adds nothing to that list: the app hands a `upi://pay` link to the UPI app on your phone, and that app does the paying, after your PIN. The app's own manifest asks for `INTERNET` for those requests, and `REQUEST_INSTALL_PACKAGES` so the updater can hand a checked APK to Android's installer; the AndroidX libraries add their standard ones, such as `USE_BIOMETRIC` for the app lock and WorkManager's `WAKE_LOCK` and `RECEIVE_BOOT_COMPLETED` for the weekly backup. Not contacts, not storage, not location. UPI needs no permission either: a `<queries>` entry for the `upi` scheme only lets the app see whether a UPI app is installed.
+> Data lives in Room on the device and rides Android's own backup to your Google account, which is a system feature rather than anything of ours. Reinstall on a new phone that uses the same Google account and it is there. There is no account to create, no server, and nothing of yours on a machine I control. Exactly three things leave the phone: that system backup, links and messages you choose to send, and requests to Frankfurter for an exchange rate and GitHub for an update check. No names, no notes, no analytics, no crash reporting. A QR adds nothing to that list: it is drawn on the phone, and the other person's UPI app does the paying, after their PIN. The app's own manifest asks for `INTERNET` for those requests, and `REQUEST_INSTALL_PACKAGES` so the updater can hand a checked APK to Android's installer; the AndroidX libraries add their standard ones, such as `USE_BIOMETRIC` for the app lock and WorkManager's `WAKE_LOCK` and `RECEIVE_BOOT_COMPLETED` for the weekly backup. Not contacts, not storage, not location. The QR needs no permission either.
 
 <details>
 <summary><b>How each part works</b></summary>
@@ -142,17 +142,15 @@ An **update link** is different: it carries your entries so their app can record
 
 ### Reminders
 
-Long-press a name and choose **Send a reminder**. An editable message appears with the exact amount in it, and you can attach the history. It goes out through Android's share sheet, so anything that accepts text works. Once your own UPI ID is set, a reminder to someone in rupees who owes you also carries a pay link, with your UPI ID and the amount in plain text under it for anyone whose app will not open the link.
+Long-press a name and choose **Send a reminder**. An editable message appears with the exact amount in it, and you can attach the history. It goes out through Android's share sheet, so anything that accepts text works. Once your own UPI ID is set, a reminder to someone in rupees who owes you can attach your QR for the amount as a picture, which is on each time the sheet opens. The picture carries the amount and your UPI ID under the code, and a line under your message says to scan it or to pay your UPI ID. WhatsApp sends the text as the picture's caption; an app that keeps only the picture still has the amount and the UPI ID on it. Turn it off and your message goes alone.
 
-### Paying by UPI
+### Paid by QR
 
-UPI is rupees only, so all of this is for people kept in INR. Give someone a UPI ID in **Add a person** or **Edit**, by typing it or by pasting a `upi://pay` link from a QR or a message. Only the ID and the name are read from a pasted link; its amount and note are ignored, because a link is anyone's to write.
+UPI is rupees only, so this is for people kept in INR. Set your own UPI ID in Settings, under **UPI**; tapping it shows it as a QR with no amount, which is what anyone scanning it would pay. Anyone who sets it before you would collect what your reminders and your QR ask for, so setting or changing it always asks for your fingerprint, face or screen lock, whether the app lock is on or not.
 
-When you owe someone with a UPI ID, the keypad shows **Pay by UPI** beside Settle up. It opens a sheet with their full UPI ID and the amount, all you owe to start with, which you can change to pay part of it. Paying more than you owe says by how much, and asks whether to record all of it, so they owe you the extra, or only what you owed. **Open UPI app** hands the link to Android, which opens your UPI app or asks which one. Check the name it shows, then enter your PIN there. Mera Paisa never sees the PIN, and never pays anything itself.
+**Show QR to pay you**, from the menu of someone who owes you, draws a QR to your UPI ID for what they owe. They scan it with their own UPI app, which opens with the amount filled in and asks for their PIN. Mera Paisa never sees a PIN and never pays or records anything by itself: **Record** writes the full amount as an entry marked "by UPI", and **Not yet** closes the sheet and records nothing. A part payment goes in with Settle up, as before.
 
-Back in the app it asks **Did it go through?**, and records the payment only if you say it did, as an entry marked "by UPI". The same goes for money coming in: **Show QR to pay you**, from the menu of someone who owes you, draws a QR to your own UPI ID for what they owe, for them to scan with their UPI app. A payment nobody has answered for, from a reminder with a link, a QR, or a Pay whose app was closed halfway, is asked about the next time the app opens, in **Did these go through?**, with one line each: record it, not yet, a different amount, or stop asking. A question goes by itself after a week, or once that person's balance changes some other way.
-
-Your own UPI ID is in Settings, under **UPI**. Anyone who sets it before you would collect what your reminders ask for, so setting or changing it always asks for your fingerprint, face or screen lock, whether the app lock is on or not.
+Why a QR and not a link: on a real phone, Google Pay and Paytm refused a payment that another app opened, or that came from a link tapped in a chat, even for ₹1. A QR scanned inside the UPI app, from the screen or from a saved picture, paid. So Mera Paisa never opens a UPI app at all.
 
 ### Themes
 
@@ -162,7 +160,7 @@ Some start from palettes other people made, all under the MIT licence: Monsoon i
 
 ### Backup and restore
 
-Android's own backup carries the database to your Google account. That is a system feature, not something Mera Paisa runs. There is also a backup you control, under **Back up and restore** in Settings: **Save a backup** writes everything to one file, profile photos and UPI IDs included, and **Restore from a file** reads it back, either adding what is missing (and a photo for anyone here who has none) or replacing everything. **Choose a folder** and it saves one there every week, keeping the last 12. A restore is previewed before it runs, and the whole thing is one database transaction, so a failure changes nothing.
+Android's own backup carries the database to your Google account. That is a system feature, not something Mera Paisa runs. There is also a backup you control, under **Back up and restore** in Settings: **Save a backup** writes everything to one file, profile photos included, and **Restore from a file** reads it back, either adding what is missing (and a photo for anyone here who has none) or replacing everything. **Choose a folder** and it saves one there every week, keeping the last 12. A restore is previewed before it runs, and the whole thing is one database transaction, so a failure changes nothing.
 
 </details>
 
@@ -172,7 +170,7 @@ Kotlin and Jetpack Compose with Material 3. Room for storage, with exported sche
 
 Type is Anek Latin by Ek Type for amounts and titles and Figtree for everything else, shipped as static subset instances because API 24 and 25 ignore variable font axes.
 
-543 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec, exchange-rate replies, backups with photos and UPI IDs, UPI links read and built, QR codes, the payment questions and theme contrast, and 219 instrumentation tests covering every migration, the full migration chain, and the settle, rollback, edit, delete, reconcile, move-debt, backup-photo and UPI-payment paths against a real database.
+520 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec, exchange-rate replies, backups with photos and the UPI mark, UPI links, QR codes, reminders with a QR and theme contrast, and 218 instrumentation tests covering every migration, the full migration chain, the settle, rollback, edit, delete, reconcile, move-debt and backup-photo paths against a real database, and the QR picture a reminder sends.
 
 ## Repository structure
 

@@ -11,7 +11,7 @@ Two file formats, deliberately. Only one of them is a backup.
 | The row that is you | Yes | No |
 | Update link history (`applied_payloads`) | Yes | No |
 | Profile photos | Yes, from v3.4.0 | No |
-| People's UPI IDs, and which entries were paid by UPI | Yes, from v4.0.0 | No |
+| Which entries were paid by UPI | Yes, from v3.6.0 | No |
 | Opens in a spreadsheet | No | Yes |
 
 **The export is for reading, not for recovering.** It flattens to one row per entry so it opens
@@ -44,21 +44,16 @@ means nothing on another phone, so it was never enough on its own.
 - **Add what is missing** brings photos with the people it adds, and gives a photo to someone already
   here only when they have none. Their own photo always wins, and the preview says how many get one.
 
-### UPI IDs and the UPI mark
+### The UPI mark
 
-From v4.0.0 a person can carry an optional `upiId`, and an entry paid through the app an optional
-`"paidByUpi": true`. Both are left out when there is nothing to say, so a backup with no UPI in it
-reads exactly as before, and the format version is still 1: older versions skip keys they do not know
-and restore the rest.
+From v3.6.0 an entry recorded from Show QR's **Record** carries an optional `"paidByUpi": true`. It
+is left out when there is nothing to say, so a backup with no UPI payments reads exactly as before,
+and the format version is still 1: older versions skip keys they do not know and restore the rest.
 
-- **A `upiId` that is not a UPI ID is dropped**, like a photo that will not decode, rather than
-  costing the restore.
-- **Add what is missing** brings UPI IDs with the people it adds. Someone already here keeps the UPI
-  ID they have, or their lack of one.
 - **Not in a backup:** your own UPI ID, which lives with the app's settings (Android's own backup
-  carries it), and the payments waiting to be asked about in "Did these go through?". A question
-  restored from a file would be about a balance that has moved on since.
-- A UPI ID never goes into the CSV export, a summary or an update link. Tests hold that.
+  carries it). People carry no UPI ID at all.
+- Your UPI ID never goes into the CSV export, a summary or an update link, and the mark does not
+  travel in an update link either. Tests hold that.
 
 ## Restoring
 
