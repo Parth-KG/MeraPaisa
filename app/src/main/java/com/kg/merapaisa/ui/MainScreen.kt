@@ -2,12 +2,16 @@ package com.kg.merapaisa.ui
 
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
+import com.kg.merapaisa.data.canPayByUpi
+import com.kg.merapaisa.data.upiPayLink
 import com.kg.merapaisa.ui.dialogs.OwnUpiSheet
 import com.kg.merapaisa.ui.dialogs.ownUpiPrompt
 import com.kg.merapaisa.ui.format.shrinkToFit
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import com.kg.merapaisa.ui.pay.PaySheet
+import com.kg.merapaisa.ui.pay.openUpiApp
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -345,6 +349,9 @@ fun MainScreen(viewModel: MainViewModel) {
                     person = selectedPerson,
                     input = ui.input,
                     onSettleUp = { confirmSettle = selectedPerson },
+                    onPay = if (canPayByUpi(selectedPerson.currency, selectedPerson.person.upiId, selectedPerson.balanceMinor)) {
+                        { viewModel.openPay(selectedPerson) }
+                    } else null,
                     note = ui.note,
                     onNoteChange = viewModel::setNote,
                     showNote = ui.showNote,
@@ -521,6 +528,40 @@ fun MainScreen(viewModel: MainViewModel) {
             )
             }
         }
+    }
+    ui.pay?.let { pay ->
+        val payee = persons.find { it.id == pay.personId }
+        val payeeId = payee?.person?.upiId
+        if (payee == null || payeeId == null || payee.balanceMinor >= 0) {
+            LaunchedEffect(pay.personId) { viewModel.closePay() }
+        } else {
+            PaySheet(
+                personName = payee.name,
+                upiId = payeeId,
+                owedMinor = -payee.balanceMinor,
+                amountText = pay.amountText,
+                onAmountChange = { text -> viewModel.updatePay { it.copy(amountText = text, noUpiApp = false) } },
+                recordOnlyWhatYouOwed = pay.recordOnlyWhatYouOwed,
+                onRecordOnlyWhatYouOwedChange = { only -> viewModel.updatePay { it.copy(recordOnlyWhatYouOwed = only) } },
+                noUpiApp = pay.noUpiApp,
+                onDismiss = viewModel::closePay,
+                onPay = { sent, record ->
+                    val note = ui.note.trim()
+                    val link = upiPayLink(payeeId, payee.name, sent, note.ifEmpty { null })
+                    viewModel.startPayment(payee, sent, record, note) { openUpiApp(context, link) }
+                }
+            )
+        }
+    }
+    ui.payAnswer?.let { answer ->
+        DecisionDialog(
+            title = "Did your ${amountString(answer.sentMinor, "INR")} to ${answer.personName} go through?",
+            body = "If it did, it's recorded as paid by UPI. Nothing is recorded unless you say so.",
+            confirmLabel = "Record ${amountString(answer.recordMinor, "INR")}",
+            dismissLabel = "Not yet",
+            onConfirm = { viewModel.answerPay(true) },
+            onDismiss = { viewModel.answerPay(false) }
+        )
     }
     if (showOwnUpi) {
         val yourName by produceState<String?>(null) { value = viewModel.myNameForUpi() }

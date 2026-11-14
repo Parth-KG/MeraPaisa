@@ -464,7 +464,7 @@ private fun ActionRow(
  * full width and TalkBack reads the pair as one choice instead of a control and some stray text.
  */
 @Composable
-private fun ModeOption(selected: Boolean, title: String, subtitle: String, onClick: () -> Unit) {
+internal fun ModeOption(selected: Boolean, title: String, subtitle: String, onClick: () -> Unit) {
     val theme = LocalAppTheme.current
     Row(
         modifier = Modifier

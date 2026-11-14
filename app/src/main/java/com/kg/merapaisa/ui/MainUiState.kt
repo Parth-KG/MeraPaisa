@@ -49,7 +49,37 @@ data class MainUiState(
     /** An update being checked for, offered, or downloaded. Absent when nothing is in flight. */
     val update: UpdateFlowState? = null,
     /** Moving part of one person's balance onto another, absent when that sheet is closed. */
-    val moveDebt: MoveDebtFlowState? = null
+    val moveDebt: MoveDebtFlowState? = null,
+    /** The Pay sheet, before a UPI app opens. */
+    val pay: PayFlowState? = null,
+    /** "Did it go through?", asked once you are back from the UPI app. */
+    val payAnswer: PayAnswerState? = null
+)
+
+/**
+ * Paying someone by UPI, before the UPI app opens. The amount is text, as in every amount field,
+ * and starts at everything you owe.
+ */
+data class PayFlowState(
+    val personId: Long,
+    val amountText: String,
+    val recordOnlyWhatYouOwed: Boolean = false,
+    /** Set when no app on the phone opens `upi://` links. */
+    val noUpiApp: Boolean = false
+)
+
+/**
+ * The one question after a UPI app was opened from here: did it go through? [questionId] is the
+ * pending question already written, so an answer here and one on the next open cannot both record.
+ */
+data class PayAnswerState(
+    val questionId: Long,
+    val personId: Long,
+    val personName: String,
+    val sentMinor: Long,
+    val recordMinor: Long,
+    val note: String,
+    val busy: Boolean = false
 )
 
 /** The multi-step split flow, absent when it is not running. */

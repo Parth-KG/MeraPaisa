@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.kg.merapaisa.CurrencyStore
 import com.kg.merapaisa.data.AppDatabase
 import com.kg.merapaisa.data.Person
+import com.kg.merapaisa.data.QUESTION_PAY
+import com.kg.merapaisa.data.PaymentQuestion
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.Transaction
 import com.kg.merapaisa.data.appendAmountKey
@@ -99,6 +101,86 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun setMyUpiId(id: String?) {
         viewModelScope.launch { UpiStore.setMyUpiId(getApplication(), id) }
+    }
+
+    // --- paying by UPI (v4.0.0) ---
+
+    /** Opens the Pay sheet for [person], the amount starting at everything you owe them. */
+    fun openPay(person: PersonWithBalance) {
+        val owed = -person.balanceMinor
+        if (owed <= 0) return
+        _uiState.update {
+            it.copy(pay = PayFlowState(person.id, com.kg.merapaisa.data.formatMinorPlain(owed, "INR").removeSuffix(".00")))
+        }
+    }
+
+    fun updatePay(transform: (PayFlowState) -> PayFlowState) = _uiState.update { it.copy(pay = it.pay?.let(transform)) }
+
+    fun closePay() = _uiState.update { it.copy(pay = null) }
+
+    /**
+     * Writes the question "did it go through?" before the UPI app opens, so a phone that closes the
+     * app while it is away still asks on the next open, then calls [open] to hand the link over. If
+     * [open] finds no UPI app, the question is taken back and the sheet says so.
+     */
+    fun startPayment(
+        person: PersonWithBalance,
+        sentMinor: Long,
+        recordMinor: Long,
+        note: String,
+        open: () -> Boolean
+    ) {
+        viewModelScope.launch {
+            val questionId = repository.addQuestion(
+                PaymentQuestion(
+                    personId = person.id,
+                    amountMinor = recordMinor,
+                    kind = QUESTION_PAY,
+                    createdAt = System.currentTimeMillis(),
+                    balanceAtCreation = person.balanceMinor
+                )
+            )
+            if (!open()) {
+                repository.dropQuestion(questionId)
+                _uiState.update { it.copy(pay = it.pay?.copy(noUpiApp = true)) }
+                return@launch
+            }
+            _uiState.update {
+                it.copy(
+                    pay = null,
+                    selectedId = null,
+                    input = "",
+                    note = "",
+                    payAnswer = PayAnswerState(questionId, person.id, person.name, sentMinor, recordMinor, note)
+                )
+            }
+        }
+    }
+
+    /**
+     * The answer to "Did it go through?". Yes records the payment, with the UPI mark, and removes
+     * the question in one transaction. Not yet leaves the question for the next open.
+     */
+    fun answerPay(wentThrough: Boolean) {
+        val answer = _uiState.value.payAnswer ?: return
+        if (answer.busy) return
+        if (!wentThrough) {
+            _uiState.update { it.copy(payAnswer = null) }
+            return
+        }
+        _uiState.update { it.copy(payAnswer = answer.copy(busy = true)) }
+        viewModelScope.launch {
+            repository.answerQuestion(
+                answer.questionId,
+                Transaction(
+                    personId = answer.personId,
+                    amountMinor = answer.recordMinor,
+                    note = answer.note,
+                    paidByUpi = true
+                )
+            )
+            _uiState.update { it.copy(payAnswer = null) }
+        }
     }
 
     /** Your name for a UPI app to show, or null while the self row is still just "You". */

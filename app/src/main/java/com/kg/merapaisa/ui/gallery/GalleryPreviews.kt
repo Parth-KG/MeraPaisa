@@ -174,6 +174,18 @@ fun NumPadCase() {
     )
 }
 
+/** The keypad for someone you owe who has a UPI ID: Settle up and Pay by UPI side by side. */
+@Composable
+fun NumPadPayCase() {
+    NumPad(
+        person = Fixtures.bilal.copy(person = Fixtures.bilal.person.copy(upiId = "bilal.k@ybl")),
+        input = "",
+        onKey = {}, onSettleUp = {}, onAdd = {}, onSubtract = {},
+        note = "", onNoteChange = {}, showNote = false, onToggleNote = {},
+        onPay = {}
+    )
+}
+
 /** The keypad at zero: nothing to settle, so no button under the two directions. */
 @Composable
 fun NumPadEvenCase() {
@@ -452,6 +464,7 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "net-total-single-both-sides" to { NetTotalSingleCase(bothSides = true) },
     "net-total-even" to { NetTotalEvenCase() },
     "numpad" to { NumPadCase() },
+    "numpad-pay" to { NumPadPayCase() },
     "numpad-yen" to { NumPadYenCase() },
     "numpad-even" to { NumPadEvenCase() },
     "empty-active" to { EmptyActiveCase() },
@@ -607,6 +620,30 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
         )
     },
     // The sentences MainScreen, EditEntrySheet and GroupDetailScreen build for these cases.
+    "sheet-pay" to {
+        com.kg.merapaisa.ui.pay.PaySheet(
+            personName = "Bilal", upiId = "bilal.k@ybl", owedMinor = 340_00, amountText = "340",
+            onAmountChange = {}, recordOnlyWhatYouOwed = false, onRecordOnlyWhatYouOwedChange = {},
+            noUpiApp = false, onDismiss = {}, onPay = { _, _ -> }
+        )
+    },
+    "sheet-pay-over" to {
+        com.kg.merapaisa.ui.pay.PaySheet(
+            personName = "Bilal", upiId = "bilal.k@ybl", owedMinor = 340_00, amountText = "540",
+            onAmountChange = {}, recordOnlyWhatYouOwed = false, onRecordOnlyWhatYouOwedChange = {},
+            noUpiApp = true, onDismiss = {}, onPay = { _, _ -> }
+        )
+    },
+    "dialog-did-it-go-through" to {
+        DecisionDialog(
+            title = "Did your ${amountString(340_00, "INR")} to Bilal go through?",
+            body = "If it did, it's recorded as paid by UPI. Nothing is recorded unless you say so.",
+            confirmLabel = "Record ${amountString(340_00, "INR")}",
+            dismissLabel = "Not yet",
+            onConfirm = {},
+            onDismiss = {}
+        )
+    },
     "dialog-settle-up" to {
         DecisionDialog(
             title = "Settle up with Asha?",

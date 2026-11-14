@@ -78,7 +78,12 @@ fun NumPad(
     onNoteChange: (String) -> Unit,
     showNote: Boolean,
     onToggleNote: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * Pay by UPI, beside Settle up. Null hides it: offered only for someone kept in rupees, with a
+     * UPI ID, whom you owe (see `canPayByUpi`).
+     */
+    onPay: (() -> Unit)? = null
 ) {
     val theme = LocalAppTheme.current
     val amountIsUsable = isUsableAmount(input)
@@ -185,9 +190,16 @@ fun NumPad(
         // An outlined button the width of the keypad. It was bare words under the two direction
         // buttons, with no edge or fill, and did not read as something to press. Outlined rather
         // than filled, because the two buttons above it are what the keypad is for.
+        //
+        // Pay by UPI sits beside it when it is offered: the same weight, since neither is what the
+        // keypad is mainly for, and Pay only opens a sheet that asks before anything happens.
         if (!person.isEven) {
-            Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
                 SecondaryAction("Settle up", enabled = true, onClick = onSettleUp)
+                if (onPay != null) SecondaryAction("Pay by UPI", enabled = true, onClick = onPay)
             }
         }
     }
