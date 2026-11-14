@@ -3,7 +3,7 @@ package com.kg.merapaisa.ui.pay
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 
 /**
  * Hands a `upi://pay` link to the phone's UPI apps: Android's picker, or the one set as default
@@ -12,7 +12,7 @@ import android.net.Uri
  * the payer's PIN; nothing here pays.
  */
 fun openUpiApp(context: Context, link: String): Boolean {
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
+    val intent = Intent(Intent.ACTION_VIEW, link.toUri())
     if (context.packageManager.queryIntentActivities(intent, 0).isEmpty()) return false
     return try {
         context.startActivity(intent)
