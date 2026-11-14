@@ -475,14 +475,17 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
  * dialog, over the scrim, over the themed background.
  */
 val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
-    "sheet-add-person" to { AddPersonDialog(onDismiss = {}, onAdd = { _, _, _, _, _ -> }) },
+    "sheet-add-person" to { AddPersonDialog(onDismiss = {}, onAdd = { _, _, _, _, _, _ -> }) },
+    "sheet-add-person-upi" to {
+        AddPersonDialog(onDismiss = {}, onAdd = { _, _, _, _, _, _ -> }, initialUpiId = "asha.rao@okaxis")
+    },
     "sheet-edit-person" to {
         EditPersonDialog(
             person = Fixtures.chaitanya.person,
             converting = false,
             conversionError = null,
             onDismiss = {},
-            onSave = { _, _, _, _, _, _ -> }
+            onSave = { _, _, _, _, _, _, _ -> }
         )
     },
     "sheet-reminder" to {

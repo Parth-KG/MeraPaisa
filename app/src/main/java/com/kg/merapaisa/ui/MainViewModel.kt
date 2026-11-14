@@ -264,6 +264,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         pfpValue: String,
         pfpColor: String,
         currency: String,
+        upiId: String?,
         onAdded: (Long) -> Unit
     ) {
         viewModelScope.launch {
@@ -274,6 +275,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     pfpValue = pfpValue,
                     pfpColor = pfpColor,
                     currency = currency,
+                    upiId = upiId,
                     sortOrder = repository.nextSortOrder()
                 )
             )
@@ -324,6 +326,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         pfpColor: String,
         currency: String,
         convertBalance: Boolean,
+        upiId: String?,
         onSaved: () -> Unit
     ) {
         viewModelScope.launch {
@@ -366,7 +369,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     pfpType = pfpType,
                     pfpValue = pfpValue,
                     pfpColor = pfpColor,
-                    currency = currency
+                    currency = currency,
+                    upiId = upiId
                 )
             )
             CurrencyStore.setLastCurrency(getApplication(), currency)

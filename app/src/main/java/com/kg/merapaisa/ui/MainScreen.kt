@@ -405,8 +405,8 @@ fun MainScreen(viewModel: MainViewModel) {
             AddPersonDialog(
                 existingNames = persons.map { it.name },
                 onDismiss = { viewModel.showAddDialog(false) },
-                onAdd = { name, pfpType, pfpValue, pfpColor, currency ->
-                    viewModel.addPerson(name, pfpType, pfpValue, pfpColor, currency) { newId ->
+                onAdd = { name, pfpType, pfpValue, pfpColor, currency, upiId ->
+                    viewModel.addPerson(name, pfpType, pfpValue, pfpColor, currency, upiId) { newId ->
                         viewModel.showAddDialog(false)
                         // Someone new owes nothing yet, so they start on Even, picked with the
                         // keypad open. Their first amount takes them, and the tab, to Active.
@@ -428,7 +428,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     viewModel.dismissConversionError()
                     viewModel.editPerson(null)
                 },
-                onSave = { name, pfpType, pfpValue, pfpColor, currency, shouldConvert ->
+                onSave = { name, pfpType, pfpValue, pfpColor, currency, shouldConvert, upiId ->
                     viewModel.savePersonEdit(
                         snapshot = editingPerson,
                         name = name,
@@ -436,7 +436,8 @@ fun MainScreen(viewModel: MainViewModel) {
                         pfpValue = pfpValue,
                         pfpColor = pfpColor,
                         currency = currency,
-                        convertBalance = shouldConvert
+                        convertBalance = shouldConvert,
+                        upiId = upiId
                     ) { viewModel.editPerson(null) }
                 }
             )
