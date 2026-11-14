@@ -19,6 +19,7 @@ import com.kg.merapaisa.data.MoveDebtResult
 import com.kg.merapaisa.data.buildShareLink
 import com.kg.merapaisa.data.claimedNameForDisplay
 import com.kg.merapaisa.AppPhotoStore
+import com.kg.merapaisa.UpiStore
 import com.kg.merapaisa.BackupStore
 import com.kg.merapaisa.BuildConfig
 import com.kg.merapaisa.backup.AutoExportWorker
@@ -87,6 +88,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         photos = AppPhotoStore(application)
     )
     private val exchangeRates = ExchangeRateApi()
+
+    /** Your own UPI ID, from Settings, or null when it is not set. */
+    val myUpiId = UpiStore.myUpiId(application)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /**
+     * Writes your own UPI ID. Only called once the phone's fingerprint, face or screen lock has
+     * been passed, or, on a phone with no screen lock, once the change has been confirmed.
+     */
+    fun setMyUpiId(id: String?) {
+        viewModelScope.launch { UpiStore.setMyUpiId(getApplication(), id) }
+    }
+
+    /** Your name for a UPI app to show, or null while the self row is still just "You". */
+    suspend fun myNameForUpi(): String? = repository.self().name.trim().takeUnless { it.isEmpty() || it == "You" }
     private val updates = UpdateCheck()
 
     // null until the first read comes back, so the screen can tell "nobody here" from "not

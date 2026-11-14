@@ -359,6 +359,24 @@ fun SettingsCase() = SettingsScreen(
     onApply = {}
 )
 
+/** Settings with your own UPI ID set. */
+@Composable
+fun SettingsUpiCase() = SettingsScreen(
+    people = Fixtures.mixedPeople,
+    appLockEnabled = true,
+    appLockAvailable = true,
+    onAppLockChange = {},
+    onImportLink = {},
+    onBackupRestore = {},
+    onExportCsv = {},
+    canExport = true,
+    onCheckUpdates = {},
+    appVersion = "4.0.0",
+    onDismiss = {},
+    onApply = {},
+    myUpiId = "parth.kg@okaxis"
+)
+
 @Composable
 private fun Backup(state: com.kg.merapaisa.ui.BackupFlowState) = BackupDialog(
     state = state,
@@ -451,6 +469,7 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "history" to { HistoryCase() },
     "history-empty" to { HistoryEmptyCase() },
     "settings" to { SettingsCase() },
+    "settings-upi" to { SettingsUpiCase() },
     "backup-menu" to { BackupMenuCase() },
     "backup-review" to { BackupReviewCase() },
     "backup-review-merge" to { BackupReviewMergeCase() },
@@ -487,6 +506,14 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
             onDismiss = {},
             onSave = { _, _, _, _, _, _, _ -> }
         )
+    },
+    "sheet-own-upi" to {
+        com.kg.merapaisa.ui.dialogs.OwnUpiSheet(
+            current = "parth.kg@okaxis", yourName = "Parth", onDismiss = {}, onSave = {}
+        )
+    },
+    "sheet-own-upi-empty" to {
+        com.kg.merapaisa.ui.dialogs.OwnUpiSheet(current = null, yourName = null, onDismiss = {}, onSave = {})
     },
     "sheet-reminder" to {
         ReminderSheet(person = Fixtures.chaitanya, entries = Fixtures.ashaHistory, onDismiss = {})

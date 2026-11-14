@@ -1,5 +1,9 @@
 package com.kg.merapaisa.ui
 
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.kg.merapaisa.ui.dialogs.OwnUpiSheet
+import com.kg.merapaisa.ui.dialogs.ownUpiPrompt
 import com.kg.merapaisa.ui.format.shrinkToFit
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -86,6 +90,10 @@ fun MainScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     // The activity's own lock: the same instance MainActivity holds.
     val lock: AppLockViewModel = viewModel()
+    val myUpiId by viewModel.myUpiId.collectAsState()
+    var showOwnUpi by rememberSaveable { mutableStateOf(false) }
+    // A change to your own UPI ID waiting on a confirm, on a phone with no screen lock to ask with.
+    var ownUpiUnlockedChange by remember { mutableStateOf<Pair<String?, String?>?>(null) }
     val theme = LocalAppTheme.current
     val scope = rememberCoroutineScope()
     val persons by viewModel.persons.collectAsState()
@@ -497,6 +505,8 @@ fun MainScreen(viewModel: MainViewModel) {
                         }
                     )
                 },
+                myUpiId = myUpiId,
+                onMyUpiId = { showOwnUpi = true },
                 onDismiss = { viewModel.showSettingsDialog(false) },
                 // Settings stays open, now in the theme just chosen, so you see it at once on a
                 // screen you know and can try another without finding your way back.
@@ -511,6 +521,54 @@ fun MainScreen(viewModel: MainViewModel) {
             )
             }
         }
+    }
+    if (showOwnUpi) {
+        val yourName by produceState<String?>(null) { value = viewModel.myNameForUpi() }
+        OwnUpiSheet(
+            current = myUpiId,
+            yourName = yourName,
+            onDismiss = { showOwnUpi = false },
+            onSave = { wanted ->
+                val current = myUpiId
+                if (canAuthenticate(context)) {
+                    // Always asked, app lock or not (Parth, 14 Nov 2026): someone who set this
+                    // before you would collect the money your reminders ask for.
+                    val (title, subtitle) = ownUpiPrompt(current, wanted)
+                    lock.onAskStarted()
+                    askForCredential(
+                        context as FragmentActivity, title, subtitle,
+                        onConfirmed = {
+                            viewModel.setMyUpiId(wanted)
+                            showOwnUpi = false
+                        },
+                        onEnded = lock::onAskEnded
+                    )
+                } else {
+                    ownUpiUnlockedChange = current to wanted
+                }
+            }
+        )
+    }
+    ownUpiUnlockedChange?.let { (current, wanted) ->
+        // Nothing to ask with: say what changes, and that a screen lock would guard it.
+        DecisionDialog(
+            title = if (wanted == null) "Remove your UPI ID?" else if (current == null) "Set your UPI ID?" else "Change your UPI ID?",
+            body = when {
+                wanted == null -> "Reminders will stop carrying a pay link."
+                current == null -> "Friends who use your reminders will pay $wanted."
+                else -> "From $current to $wanted. Friends who use your reminders will pay the new one."
+            },
+            warning = "This phone has no screen lock, so anyone holding it could change this. " +
+                "With one, Mera Paisa asks for it first.",
+            confirmLabel = if (wanted == null) "Remove it" else "Save it",
+            dismissLabel = "Keep it as it was",
+            onConfirm = {
+                viewModel.setMyUpiId(wanted)
+                ownUpiUnlockedChange = null
+                showOwnUpi = false
+            },
+            onDismiss = { ownUpiUnlockedChange = null }
+        )
     }
     val openGroupId = ui.openGroupId
     if (openGroupId != null) {

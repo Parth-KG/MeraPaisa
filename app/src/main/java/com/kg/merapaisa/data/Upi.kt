@@ -93,6 +93,21 @@ fun upiPayLink(payeeId: String, payeeName: String?, amountMinor: Long, note: Str
     }
 }
 
+/**
+ * A `upi://pay` link to [payeeId] with no amount: what your own QR carries, so whoever scans it
+ * types the amount in their own UPI app.
+ */
+fun upiReceiveLink(payeeId: String, payeeName: String?): String {
+    require(isUpiId(payeeId)) { "not a UPI ID" }
+    return buildString {
+        append("upi://pay?pa=").append(percentEncode(normaliseUpiId(payeeId), keep = "@"))
+        payeeName?.trim()?.take(UPI_NAME_MAX)?.takeIf { it.isNotEmpty() }?.let {
+            append("&pn=").append(percentEncode(it))
+        }
+        append("&cu=INR")
+    }
+}
+
 /** RFC 3986 unreserved characters pass; everything else, as UTF-8 bytes, becomes `%XX`. */
 private fun percentEncode(value: String, keep: String = ""): String = buildString {
     for (byte in value.toByteArray(Charsets.UTF_8)) {

@@ -71,7 +71,10 @@ fun SettingsScreen(
     onCheckUpdates: () -> Unit,
     appVersion: String,
     onDismiss: () -> Unit,
-    onApply: (String) -> Unit
+    onApply: (String) -> Unit,
+    /** Your own UPI ID, or null when it is not set. */
+    myUpiId: String? = null,
+    onMyUpiId: () -> Unit = {}
 ) {
     val theme = LocalAppTheme.current
     // Turning the phone keeps the sheet open, and the sheet keeps the theme being tried.
@@ -128,6 +131,17 @@ fun SettingsScreen(
                     enabled = appLockEnabled,
                     available = appLockAvailable,
                     onChange = onAppLockChange
+                )
+            }
+
+            item { SectionHeading("UPI") }
+            item {
+                // Set here once, then used by reminders' pay links and your QR. Tapping it shows the
+                // QR friends would scan, as a check, and is where it changes.
+                ActionRow(
+                    title = "Your UPI ID",
+                    subtitle = myUpiId ?: "Not set. With it, a reminder carries a link to pay you.",
+                    onClick = onMyUpiId
                 )
             }
 
