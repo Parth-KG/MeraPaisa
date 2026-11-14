@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The QR code generator under io/nayuki is vendored unchanged from its project (see
+  third_party/qrcodegen), so its own style is not this app's to fix. It formats one exception
+  message with the default locale, which can never reach a screen.
+-->
+<lint>
+    <issue id="DefaultLocale">
+        <ignore path="src/main/java/io/nayuki/**" />
+    </issue>
+</lint>

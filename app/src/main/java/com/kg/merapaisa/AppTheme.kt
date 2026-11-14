@@ -14,6 +14,14 @@ import androidx.compose.ui.graphics.luminance
  */
 val LocalAppTheme = staticCompositionLocalOf { themes[0] }
 
+/**
+ * A QR code's own two colours, the same in every theme. Scanners expect dark modules on a light
+ * ground, and a QR drawn in a dark theme's off-white ink on its dark page fails to scan in several
+ * UPI apps, so the code sits on its own light card wherever it is shown (v4.0.0).
+ */
+val QrInk = Color(0xFF121212)
+val QrPaper = Color(0xFFFFFFFF)
+
 data class AppTheme(
     val name: String,
     val background: Color,
