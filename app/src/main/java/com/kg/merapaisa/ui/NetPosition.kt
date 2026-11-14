@@ -34,8 +34,6 @@ import com.kg.merapaisa.ui.format.amountSpoken
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Motion
 import com.kg.merapaisa.ui.theme.Spacing
-import com.kg.merapaisa.ui.format.columnShowsFraction
-import com.kg.merapaisa.ui.format.fractionSlots
 
 /**
  * Where you stand overall, set the way a ledger closes a page.
@@ -149,13 +147,11 @@ private fun Net(totals: List<CurrencyTotal>) {
 
         else -> {
             Spacer(Modifier.height(Spacing.sm))
-            val reserve = fractionSlots(totals.map { it.amountMinor to it.currency })
             totals.forEach { total ->
                 TotalLine(
                     words = if (total.amountMinor > 0) "owed to you" else "you owe",
                     amountMinor = total.amountMinor,
-                    currency = total.currency,
-                    reserveFraction = reserve(total.currency)
+                    currency = total.currency
                 )
             }
         }
@@ -166,21 +162,18 @@ private fun Net(totals: List<CurrencyTotal>) {
 @Composable
 private fun BothSides(sides: List<CurrencySides>) {
     Spacer(Modifier.height(Spacing.sm))
-    val reserve = fractionSlots(
-        sides.flatMap { listOf(it.owedToYouMinor to it.currency, it.youOweMinor to it.currency) }
-    )
     sides.forEach { side ->
         if (side.owedToYouMinor != 0L) {
-            TotalLine("owed to you", side.owedToYouMinor, side.currency, reserveFraction = reserve(side.currency))
+            TotalLine("owed to you", side.owedToYouMinor, side.currency)
         }
         if (side.youOweMinor != 0L) {
-            TotalLine("you owe", side.youOweMinor, side.currency, reserveFraction = reserve(side.currency))
+            TotalLine("you owe", side.youOweMinor, side.currency)
         }
     }
 }
 
 @Composable
-private fun TotalLine(words: String, amountMinor: Long, currency: String, reserveFraction: Boolean) {
+private fun TotalLine(words: String, amountMinor: Long, currency: String) {
     val theme = LocalAppTheme.current
     LabelAndAmount(
         modifier = Modifier
@@ -196,13 +189,12 @@ private fun TotalLine(words: String, amountMinor: Long, currency: String, reserv
         label = {
             Text(words, style = MeraPaisaType.body, color = theme.textSecondary)
         },
-        // Aligned as a column, so several currencies line their decimal points up.
+        // Flush right, so several currencies line up on their last digit.
         amount = {
             AmountText(
                 amountMinor = amountMinor,
                 currencyCode = currency,
-                style = MeraPaisaType.amount,
-                reserveFraction = reserveFraction
+                style = MeraPaisaType.amount
             )
         }
     )

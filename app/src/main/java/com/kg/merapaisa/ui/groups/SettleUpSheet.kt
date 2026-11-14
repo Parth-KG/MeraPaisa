@@ -45,7 +45,6 @@ import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.SheetFrame
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.PaddingValues
-import com.kg.merapaisa.ui.format.columnShowsFraction
 
 /**
  * The payments that make everyone in the group even, worked out the way the group is set to: the
@@ -101,7 +100,6 @@ fun SettleUpSheet(
         // tap in that gap wrote the payment twice, flipping the debt the other way. Reset whenever
         // the plan changes.
         var recorded by remember(transfers) { mutableStateOf(emptySet<String>()) }
-        val reserve = remember(transfers) { columnShowsFraction(transfers.map { it.amountMinor }, currency) }
         LazyColumn(state = list, modifier = Modifier.weight(1f, fill = false)) {
             itemsIndexed(
                 transfers,
@@ -111,8 +109,7 @@ fun SettleUpSheet(
                 TransferRow(
                     line = names.pays(t.fromPersonId, t.toPersonId),
                     amountMinor = t.amountMinor,
-                    currency = currency,
-                    reserveFraction = reserve
+                    currency = currency
                 ) {
                     // Recording leaves the sheet open on purpose: the plan shrinks as each payment
                     // is written down, and closing after the first one would hide the rest.
@@ -159,8 +156,6 @@ internal fun TransferRow(
     line: String,
     amountMinor: Long,
     currency: String,
-    /** Whether another payment in the plan shows paise. From [columnShowsFraction], by the list. */
-    reserveFraction: Boolean,
     action: (@Composable () -> Unit)? = null
 ) {
     val theme = LocalAppTheme.current
@@ -188,8 +183,7 @@ internal fun TransferRow(
                     currencyCode = currency,
                     style = MeraPaisaType.amount,
                     signStyle = SignStyle.None,
-                    colourByDirection = false,
-                    reserveFraction = reserveFraction
+                    colourByDirection = false
                 )
             }
         }

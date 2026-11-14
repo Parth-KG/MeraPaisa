@@ -13,7 +13,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.material3.Text
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.ui.theme.MeraPaisaType
-import com.kg.merapaisa.ui.theme.amountBlankFractionSpan
 import com.kg.merapaisa.ui.theme.amountSymbolSpan
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.unit.sp
@@ -33,9 +32,9 @@ import com.kg.merapaisa.data.currencySymbol
  *    fails anyone who cannot separate the two inks.
  *  - The symbol is set smaller and quieter than the digits, on the same baseline, so reading a
  *    column means reading figures rather than a row of rupee signs.
- *  - Figures are tabular, so a column lines up, and [reserveFraction] keeps the decimal slot open
- *    on whole amounts when another figure in the column shows paise, so the decimal points line up
- *    too.
+ *  - Figures are tabular and sit flush right, so a column lines up on its last digit. A whole
+ *    amount keeps no empty slot for paise: ₹150 sat in from the edge beside $1.59, and ₹1,200
+ *    beside ₹75.50, for a decimal point nobody reads (Parth, 15 Nov 2026).
  *  - TalkBack is given words instead of glyphs, since it has no name for U+2212 and will either
  *    skip it or read "minus sign" in the middle of a figure.
  */
@@ -48,11 +47,6 @@ fun AmountText(
     signStyle: SignStyle = SignStyle.Always,
     /** Colour the figure by direction. Off where a row already carries the meaning some other way. */
     colourByDirection: Boolean = true,
-    /**
-     * Keep the decimal slot open on a whole amount, because another figure in its column shows
-     * paise. From [columnShowsFraction], worked out by the list rather than the row.
-     */
-    reserveFraction: Boolean = false,
     /** The person or member this belongs to, so TalkBack can say whose it is. */
     spokenOwner: String? = null,
     textAlign: TextAlign = TextAlign.End
@@ -71,14 +65,7 @@ fun AmountText(
         append(parts.sign)
         withStyle(amountSymbolSpan(theme.textSecondary)) { append(parts.symbol) }
         append(parts.integer)
-        when {
-            parts.fraction.isNotEmpty() -> append(".${parts.fraction}")
-            // Same width as a real fraction, drawn in nothing, so the column stays square.
-            // Every currency, the yen included: a yen figure has no decimals to show, but in a column
-            // beside rupees and dollars it still has to stop where their decimal points are.
-            reserveFraction ->
-                withStyle(amountBlankFractionSpan()) { append(".00") }
-        }
+        if (parts.fraction.isNotEmpty()) append(".${parts.fraction}")
     }
 
     Text(

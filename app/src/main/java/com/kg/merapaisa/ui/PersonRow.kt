@@ -38,7 +38,6 @@ import com.kg.merapaisa.ui.format.amountSpoken
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
-import com.kg.merapaisa.ui.format.columnShowsFraction
 
 /**
  * One person in the list: a row on the background, not a tile.
@@ -65,8 +64,6 @@ fun PersonRow(
     onShareSummary: () -> Unit,
     onShareLedger: () -> Unit,
     onMoveDebt: () -> Unit,
-    /** Whether another row in this list shows paise. From [columnShowsFraction], by the list. */
-    reserveFraction: Boolean = false,
     /** Show a QR they can scan to pay you. Null hides it (see `canShowPayQr`). */
     onShowQr: (() -> Unit)? = null,
     /** True for someone who owes you outside rupees, once your UPI ID is set: say why there's no QR. */
@@ -124,7 +121,6 @@ fun PersonRow(
                     amountMinor = person.balanceMinor,
                     currencyCode = person.currency,
                     style = MeraPaisaType.amount,
-                    reserveFraction = reserveFraction,
                     spokenOwner = person.name
                 )
             }

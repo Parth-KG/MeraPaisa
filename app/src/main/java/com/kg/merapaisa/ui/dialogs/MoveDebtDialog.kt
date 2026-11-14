@@ -51,7 +51,6 @@ import com.kg.merapaisa.ui.SheetFrame
 import com.kg.merapaisa.ui.SheetFoot
 import com.kg.merapaisa.ui.PrimaryAction
 import com.kg.merapaisa.ui.SecondaryAction
-import com.kg.merapaisa.ui.format.fractionSlots
 import com.kg.merapaisa.ui.KeyLabel
 
 /**
@@ -82,7 +81,6 @@ fun MoveDebtDialog(
     val theme = LocalAppTheme.current
     val scope = rememberCoroutineScope()
     val eligible = people.filter { it.id != state.fromPersonId }
-    val eligibleShowFraction = fractionSlots(eligible.map { it.balanceMinor to it.currency })
     val target = eligible.firstOrNull { it.id == state.toPersonId }
     val converting = target != null && normaliseCurrency(target.currency) != state.currency
     val typed = state.amountMinor
@@ -170,8 +168,7 @@ fun MoveDebtDialog(
                 TargetRow(
                     person = person,
                     selected = state.toPersonId == person.id,
-                    onSelect = { onTargetChange(person.id) },
-                    reserveFraction = eligibleShowFraction(person.currency)
+                    onSelect = { onTargetChange(person.id) }
                 )
             }
 
@@ -239,8 +236,7 @@ fun MoveDebtDialog(
 private fun TargetRow(
     person: PersonWithBalance,
     selected: Boolean,
-    onSelect: () -> Unit,
-    reserveFraction: Boolean
+    onSelect: () -> Unit
 ) {
     val theme = LocalAppTheme.current
     val direction = when {
@@ -281,8 +277,7 @@ private fun TargetRow(
             AmountText(
                 amountMinor = person.balanceMinor,
                 currencyCode = person.currency,
-                style = MeraPaisaType.amount,
-                reserveFraction = reserveFraction
+                style = MeraPaisaType.amount
             )
         }
     }

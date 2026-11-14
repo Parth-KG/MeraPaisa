@@ -28,7 +28,6 @@ import com.kg.merapaisa.ui.format.amountSpoken
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
-import com.kg.merapaisa.ui.format.columnShowsFraction
 
 /**
  * One group in the list: a row on the background, the same line a person gets.
@@ -44,8 +43,6 @@ fun GroupRow(
     summary: GroupSummary,
     onClick: () -> Unit,
     onDelete: () -> Unit,
-    /** Whether another group in the list shows paise. From [columnShowsFraction], by the list. */
-    reserveFraction: Boolean = false
 ) {
     val theme = LocalAppTheme.current
     var showMenu by remember { mutableStateOf(false) }
@@ -93,8 +90,7 @@ fun GroupRow(
             AmountText(
                 amountMinor = balance,
                 currencyCode = summary.group.currency,
-                style = MeraPaisaType.amount,
-                reserveFraction = reserveFraction
+                style = MeraPaisaType.amount
             )
             DropdownMenu(
                 expanded = showMenu,

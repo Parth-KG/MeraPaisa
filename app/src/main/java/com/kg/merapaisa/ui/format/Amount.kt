@@ -8,9 +8,7 @@ import com.kg.merapaisa.data.normaliseCurrency
  * How an amount is broken up for the screen.
  *
  * Kept as parts rather than one string because the parts are set differently: the symbol is
- * smaller and quieter than the digits, and a column has to be able to reserve the decimal slot
- * even for a whole number so the decimal points line up down the page. A single string cannot
- * express either, which is why `formatMinor` is not used on screen.
+ * smaller and quieter than the digits. A single string cannot express that, which is why `formatMinor` is not used on screen.
  *
  * [sign] is the real minus, U+2212, not a hyphen. A hyphen is a word-joiner: it is drawn shorter
  * and higher than the minus in most faces, and next to a tabular digit it reads as a dash rather
@@ -32,36 +30,6 @@ data class AmountParts(
     /** The digits alone, for laying out a column. */
     val digits: String get() = integer + if (fraction.isEmpty()) "" else ".$fraction"
 }
-
-/**
- * True when this amount draws paise: a currency with a minor unit, and something in it. A yen
- * figure never does, though it is kept in hundredths.
- */
-fun showsFraction(amountMinor: Long, currencyCode: String): Boolean =
-    currencyDecimals(normaliseCurrency(currencyCode)) != 0 && amountMinor % 100 != 0L
-
-/**
- * For a column of amounts in mixed currencies: whether a row in [currencyCode] keeps its decimal
- * slot open, which it does only when another amount in the same currency draws paise, so their
- * decimal points line up. A column of whole amounts keeps no slot: an empty ".00" on every row
- * pushed each figure in from the edge for nothing. Nor does a currency beside another one's paise:
- * ₹150 beside $1.59 sat in from the edge for a decimal point it shared with nothing (Parth, 15 Nov
- * 2026), since points only line up usefully between figures of one currency.
- *
- * Worked out once by whoever owns the list and handed to every row, since a row cannot see the
- * others.
- */
-fun fractionSlots(amounts: Iterable<Pair<Long, String>>): (currencyCode: String) -> Boolean {
-    val withPaise = amounts
-        .filter { (amountMinor, currencyCode) -> showsFraction(amountMinor, currencyCode) }
-        .map { (_, currencyCode) -> normaliseCurrency(currencyCode) }
-        .toSet()
-    return { currencyCode -> normaliseCurrency(currencyCode) in withPaise }
-}
-
-/** The same for a column in one currency, a group's or a person's. */
-fun columnShowsFraction(amountsMinor: Iterable<Long>, currencyCode: String): Boolean =
-    amountsMinor.any { showsFraction(it, currencyCode) }
 
 /** How much of the sign to show. */
 enum class SignStyle {

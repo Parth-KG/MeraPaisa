@@ -170,7 +170,7 @@ Kotlin and Jetpack Compose with Material 3. Room for storage, with exported sche
 
 Type is Anek Latin by Ek Type for amounts and titles and Figtree for everything else, shipped as static subset instances because API 24 and 25 ignore variable font axes.
 
-525 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec, exchange-rate replies, backups with photos and the UPI mark, UPI links, QR codes, reminders with a QR and theme contrast, and 219 instrumentation tests covering every migration, the full migration chain, the settle, rollback, edit, delete, reconcile, move-debt and backup-photo paths against a real database, and the QR picture a reminder sends.
+520 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec, exchange-rate replies, backups with photos and the UPI mark, UPI links, QR codes, reminders with a QR and theme contrast, and 219 instrumentation tests covering every migration, the full migration chain, the settle, rollback, edit, delete, reconcile, move-debt and backup-photo paths against a real database, and the QR picture a reminder sends.
 
 ## Repository structure
 

@@ -37,7 +37,6 @@ import com.kg.merapaisa.ui.format.AmountText
 import com.kg.merapaisa.ui.format.amountSpoken
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Spacing
-import com.kg.merapaisa.ui.format.fractionSlots
 
 /**
  * Step two of a split: who it is between.
@@ -65,7 +64,6 @@ fun SplitPickerScreen(
 ) {
     val theme = LocalAppTheme.current
     val list = rememberLazyListState()
-    val reserve = remember(allPersons) { fractionSlots(allPersons.map { it.balanceMinor to it.currency }) }
     val chosen = selectedIds.size + if (includeMe) 1 else 0
     val enoughPeople = chosen >= 2
 
@@ -99,8 +97,7 @@ fun SplitPickerScreen(
                     name = "You",
                     person = null,
                     selected = includeMe,
-                    onToggle = onToggleMe,
-                    reserveFraction = false
+                    onToggle = onToggleMe
                 )
             }
 
@@ -110,8 +107,7 @@ fun SplitPickerScreen(
                     name = person.name,
                     person = person,
                     selected = person.id in selectedIds,
-                    onToggle = { onTogglePerson(person.id) },
-                    reserveFraction = reserve(person.currency)
+                    onToggle = { onTogglePerson(person.id) }
                 )
             }
         }
@@ -171,8 +167,7 @@ private fun SplitPickerRow(
     name: String,
     person: PersonWithBalance?,
     selected: Boolean,
-    onToggle: () -> Unit,
-    reserveFraction: Boolean
+    onToggle: () -> Unit
 ) {
     val theme = LocalAppTheme.current
     val direction = when {
@@ -228,7 +223,6 @@ private fun SplitPickerRow(
                 amountMinor = person.balanceMinor,
                 currencyCode = person.currency,
                 style = MeraPaisaType.amount,
-                reserveFraction = reserveFraction,
                 spokenOwner = person.name
             )
         }
