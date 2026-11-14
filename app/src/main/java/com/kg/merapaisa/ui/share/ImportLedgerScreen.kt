@@ -239,7 +239,7 @@ private fun ConfirmingScreen(
     // Only people in the payload's currency: importing into another would mean inventing an
     // exchange rate the sender never agreed to, so those are not offered at all.
     val eligible = persons.filter { normaliseCurrency(it.currency) == payload.currency }
-    val eligibleShowFraction = columnShowsFraction(eligible.map { it.balanceMinor to it.currency })
+    val eligibleShowFraction = columnShowsFraction(eligible.map { it.balanceMinor }, payload.currency)
     val entriesShowFraction = columnShowsFraction(payload.entries.map { it.amountMinor }, payload.currency)
 
     // Ticked deletions take entries out of this ledger. That is the one destructive thing on the

@@ -214,13 +214,25 @@ class AmountTest {
     @Test
     fun `a column of whole amounts keeps no slot`() {
         assertEquals(false, columnShowsFraction(listOf(1_200_00L, -40_00L, 0L), "INR"))
-        assertEquals(false, columnShowsFraction(listOf(1_200_00L to "INR", 33_34L to "JPY")))
+        assertEquals(false, fractionSlots(listOf(1_200_00L to "INR", 33_34L to "JPY"))("INR"))
         assertEquals(false, columnShowsFraction(emptyList<Long>(), "INR"))
     }
 
     @Test
     fun `one amount with paise opens the slot for the whole column`() {
         assertEquals(true, columnShowsFraction(listOf(1_200_00L, 75_50L), "INR"))
-        assertEquals(true, columnShowsFraction(listOf(-12_000_00L to "JPY", 1_050_25L to "USD")))
+        assertEquals(true, fractionSlots(listOf(-12_000_00L to "JPY", 1_050_25L to "USD"))("USD"))
+    }
+
+    @Test
+    fun `paise in one currency open the slot only for that currency`() {
+        // Parth's screen, 15 Nov 2026: ₹150 sat in from the edge beside $1.59.
+        val slots = fractionSlots(listOf(150_00L to "INR", 1_59L to "USD"))
+        assertEquals(false, slots("INR"))
+        assertEquals(true, slots("USD"))
+        // Two rupee figures still line up on the decimal point.
+        assertEquals(true, fractionSlots(listOf(150_00L to "INR", 2_50L to "INR"))("INR"))
+        // An old rupee symbol counts as rupees.
+        assertEquals(true, fractionSlots(listOf(2_50L to "₹"))("INR"))
     }
 }

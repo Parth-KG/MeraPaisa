@@ -87,7 +87,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewModelScope
 import com.kg.merapaisa.widget.WidgetLedgerNotifier
-import com.kg.merapaisa.ui.format.columnShowsFraction
+import com.kg.merapaisa.ui.format.fractionSlots
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
@@ -129,7 +129,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val activePersons = persons.filter { !it.isEven }
     val evenPersons = persons.filter { it.isEven }
     val list = if (ui.tab == Tab.Active) activePersons else evenPersons
-    val listShowsFraction = remember(list) { columnShowsFraction(list.map { it.balanceMinor to it.currency }) }
+    val listShowsFraction = remember(list) { fractionSlots(list.map { it.balanceMinor to it.currency }) }
     val peopleListState = rememberLazyListState()
     // The keypad takes the bottom of the screen when someone is picked, and the list shrinks to
     // make room. A row low in the list then sat half under the keypad, the name cut off at the
@@ -291,14 +291,14 @@ fun MainScreen(viewModel: MainViewModel) {
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
                         contentPadding = PaddingValues(bottom = ListClearance)
                     ) {
-                        val reserve = columnShowsFraction(groups.map { it.yourBalanceMinor to it.group.currency })
+                        val reserve = fractionSlots(groups.map { it.yourBalanceMinor to it.group.currency })
                         itemsIndexed(groups, key = { _, it -> it.group.id }) { index, summary ->
                             if (index > 0) RowDivider(TextRowInset)
                             GroupRow(
                                 summary = summary,
                                 onClick = { viewModel.openGroup(summary.group.id) },
                                 onDelete = { viewModel.confirmDeleteGroup(summary.group.id) },
-                                reserveFraction = reserve
+                                reserveFraction = reserve(summary.group.currency)
                             )
                         }
                     }
@@ -337,7 +337,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             }
                         },
                         onShareLedger = { viewModel.openShareSheet(person.id) },
-                        reserveFraction = listShowsFraction,
+                        reserveFraction = listShowsFraction(person.currency),
                         onMoveDebt = { viewModel.openMoveDebt(person.id) },
                         onShowQr = if (canShowPayQr(person.currency, person.balanceMinor, myUpiId)) {
                             { viewModel.openPayQr(person.id) }

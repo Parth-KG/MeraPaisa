@@ -35,6 +35,7 @@ import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Motion
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.format.columnShowsFraction
+import com.kg.merapaisa.ui.format.fractionSlots
 
 /**
  * Where you stand overall, set the way a ledger closes a page.
@@ -148,13 +149,13 @@ private fun Net(totals: List<CurrencyTotal>) {
 
         else -> {
             Spacer(Modifier.height(Spacing.sm))
-            val reserve = columnShowsFraction(totals.map { it.amountMinor to it.currency })
+            val reserve = fractionSlots(totals.map { it.amountMinor to it.currency })
             totals.forEach { total ->
                 TotalLine(
                     words = if (total.amountMinor > 0) "owed to you" else "you owe",
                     amountMinor = total.amountMinor,
                     currency = total.currency,
-                    reserveFraction = reserve
+                    reserveFraction = reserve(total.currency)
                 )
             }
         }
@@ -165,15 +166,15 @@ private fun Net(totals: List<CurrencyTotal>) {
 @Composable
 private fun BothSides(sides: List<CurrencySides>) {
     Spacer(Modifier.height(Spacing.sm))
-    val reserve = columnShowsFraction(
+    val reserve = fractionSlots(
         sides.flatMap { listOf(it.owedToYouMinor to it.currency, it.youOweMinor to it.currency) }
     )
     sides.forEach { side ->
         if (side.owedToYouMinor != 0L) {
-            TotalLine("owed to you", side.owedToYouMinor, side.currency, reserveFraction = reserve)
+            TotalLine("owed to you", side.owedToYouMinor, side.currency, reserveFraction = reserve(side.currency))
         }
         if (side.youOweMinor != 0L) {
-            TotalLine("you owe", side.youOweMinor, side.currency, reserveFraction = reserve)
+            TotalLine("you owe", side.youOweMinor, side.currency, reserveFraction = reserve(side.currency))
         }
     }
 }

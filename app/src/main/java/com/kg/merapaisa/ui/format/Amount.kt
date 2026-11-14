@@ -41,15 +41,23 @@ fun showsFraction(amountMinor: Long, currencyCode: String): Boolean =
     currencyDecimals(normaliseCurrency(currencyCode)) != 0 && amountMinor % 100 != 0L
 
 /**
- * True when some amount in a column draws paise, so the whole ones beside it keep their decimal
- * slot open and the decimal points line up. A column of whole amounts keeps no slot: an empty
- * ".00" on every row pushed each figure in from the edge for nothing.
+ * For a column of amounts in mixed currencies: whether a row in [currencyCode] keeps its decimal
+ * slot open, which it does only when another amount in the same currency draws paise, so their
+ * decimal points line up. A column of whole amounts keeps no slot: an empty ".00" on every row
+ * pushed each figure in from the edge for nothing. Nor does a currency beside another one's paise:
+ * ₹150 beside $1.59 sat in from the edge for a decimal point it shared with nothing (Parth, 15 Nov
+ * 2026), since points only line up usefully between figures of one currency.
  *
  * Worked out once by whoever owns the list and handed to every row, since a row cannot see the
  * others.
  */
-fun columnShowsFraction(amounts: Iterable<Pair<Long, String>>): Boolean =
-    amounts.any { (amountMinor, currencyCode) -> showsFraction(amountMinor, currencyCode) }
+fun fractionSlots(amounts: Iterable<Pair<Long, String>>): (currencyCode: String) -> Boolean {
+    val withPaise = amounts
+        .filter { (amountMinor, currencyCode) -> showsFraction(amountMinor, currencyCode) }
+        .map { (_, currencyCode) -> normaliseCurrency(currencyCode) }
+        .toSet()
+    return { currencyCode -> normaliseCurrency(currencyCode) in withPaise }
+}
 
 /** The same for a column in one currency, a group's or a person's. */
 fun columnShowsFraction(amountsMinor: Iterable<Long>, currencyCode: String): Boolean =

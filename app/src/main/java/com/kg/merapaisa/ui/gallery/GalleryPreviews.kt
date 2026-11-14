@@ -50,7 +50,7 @@ import com.kg.merapaisa.ui.share.ImportLedgerDialog
 import com.kg.merapaisa.ui.share.ShareLedgerSheet
 import com.kg.merapaisa.ui.theme.MeraPaisaTheme
 import com.kg.merapaisa.ui.update.UpdateScreen
-import com.kg.merapaisa.ui.format.columnShowsFraction
+import com.kg.merapaisa.ui.format.fractionSlots
 import com.kg.merapaisa.data.PersonWithBalance
 
 /**
@@ -85,7 +85,7 @@ fun PeopleRowsWholeCase() = PeopleRows(Fixtures.wholePeople)
 
 @Composable
 private fun PeopleRows(people: List<PersonWithBalance>) {
-    val reserve = columnShowsFraction(people.map { it.balanceMinor to it.currency })
+    val reserve = fractionSlots(people.map { it.balanceMinor to it.currency })
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
         people.forEachIndexed { index, person ->
             if (index > 0) RowDivider()
@@ -95,7 +95,7 @@ private fun PeopleRows(people: List<PersonWithBalance>) {
                 onHistoryClick = {}, onClick = {}, onSendReminder = {}, onDelete = {},
                 onEditClick = {}, onSettleUp = {}, onShareSummary = {},
                 onShareLedger = {}, onMoveDebt = {},
-                reserveFraction = reserve
+                reserveFraction = reserve(person.currency)
             )
         }
     }
@@ -104,7 +104,7 @@ private fun PeopleRows(people: List<PersonWithBalance>) {
 /** Long enough to scroll: catches a row that only looks right in isolation. */
 @Composable
 fun PeopleListLongCase() {
-    val reserve = columnShowsFraction(Fixtures.manyPeople.map { it.balanceMinor to it.currency })
+    val reserve = fractionSlots(Fixtures.manyPeople.map { it.balanceMinor to it.currency })
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
         Fixtures.manyPeople.forEachIndexed { index, person ->
             if (index > 0) RowDivider()
@@ -114,7 +114,7 @@ fun PeopleListLongCase() {
                 onHistoryClick = {}, onClick = {}, onSendReminder = {}, onDelete = {},
                 onEditClick = {}, onSettleUp = {}, onShareSummary = {},
                 onShareLedger = {}, onMoveDebt = {},
-                reserveFraction = reserve
+                reserveFraction = reserve(person.currency)
             )
         }
     }

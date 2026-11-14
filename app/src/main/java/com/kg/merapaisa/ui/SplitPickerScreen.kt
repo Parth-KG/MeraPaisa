@@ -37,7 +37,7 @@ import com.kg.merapaisa.ui.format.AmountText
 import com.kg.merapaisa.ui.format.amountSpoken
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Spacing
-import com.kg.merapaisa.ui.format.columnShowsFraction
+import com.kg.merapaisa.ui.format.fractionSlots
 
 /**
  * Step two of a split: who it is between.
@@ -65,7 +65,7 @@ fun SplitPickerScreen(
 ) {
     val theme = LocalAppTheme.current
     val list = rememberLazyListState()
-    val reserve = remember(allPersons) { columnShowsFraction(allPersons.map { it.balanceMinor to it.currency }) }
+    val reserve = remember(allPersons) { fractionSlots(allPersons.map { it.balanceMinor to it.currency }) }
     val chosen = selectedIds.size + if (includeMe) 1 else 0
     val enoughPeople = chosen >= 2
 
@@ -111,7 +111,7 @@ fun SplitPickerScreen(
                     person = person,
                     selected = person.id in selectedIds,
                     onToggle = { onTogglePerson(person.id) },
-                    reserveFraction = reserve
+                    reserveFraction = reserve(person.currency)
                 )
             }
         }
