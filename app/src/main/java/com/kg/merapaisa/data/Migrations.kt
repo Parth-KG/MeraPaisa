@@ -284,3 +284,32 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_retired_uids_personId` ON `retired_uids` (`personId`)")
     }
 }
+
+/**
+ * v11: UPI payments (v4.0.0).
+ *
+ *  - `persons.upiId`, a friend's UPI ID for paying them, null for everyone until it is added.
+ *  - `transactions.paidByUpi`, the mark on an entry recorded through "Did it go through?"; every
+ *    entry before this version is false.
+ *  - `payment_questions`, the payments the app asks about on its next open. Starts empty.
+ *
+ * Only additions: no row is rewritten, so every balance comes through as it was. `isSettled` stays
+ * (Parth, 14 Nov 2026); it goes later in a release of its own.
+ */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `persons` ADD COLUMN `upiId` TEXT")
+        db.execSQL("ALTER TABLE `transactions` ADD COLUMN `paidByUpi` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `payment_questions` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `personId` INTEGER NOT NULL, " +
+                "`amountMinor` INTEGER NOT NULL, `kind` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, " +
+                "`balanceAtCreation` INTEGER NOT NULL, FOREIGN KEY(`personId`) REFERENCES `persons`(`id`) " +
+                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_payment_questions_personId` ON `payment_questions` (`personId`)"
+        )
+    }
+}

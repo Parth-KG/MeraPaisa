@@ -30,7 +30,13 @@ data class Person(
      * why it defaults to 0 rather than to now: a fresh person's first link should offer their
      * whole history, not an empty payload.
      */
-    val lastSharedAt: Long = 0
+    val lastSharedAt: Long = 0,
+    /**
+     * Their UPI ID (`name@handle`), for paying them from the keypad. Optional, and INR people only
+     * ever use it. Never sent anywhere but to the UPI app this phone opens: not in an update
+     * link, the CSV, a summary or the widget. A backup carries it as an optional key. Schema 11.
+     */
+    val upiId: String? = null
 )
 
 /**

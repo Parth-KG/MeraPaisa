@@ -58,7 +58,14 @@ data class Transaction(
      * seen it. Offering to delete in the second case would throw away your own record because
      * somebody else had not heard about it yet.
      */
-    val fromShare: Boolean = false
+    val fromShare: Boolean = false,
+    /**
+     * Recorded through "Did it go through?" after a UPI payment opened from this app, so the
+     * history can say it went by UPI. Only a mark: the money is the amount, as for any entry.
+     * Schema 11; every older entry is false.
+     */
+    @androidx.room.ColumnInfo(defaultValue = "0")
+    val paidByUpi: Boolean = false
 )
 
 /**

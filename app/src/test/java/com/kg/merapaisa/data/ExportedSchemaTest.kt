@@ -56,6 +56,20 @@ class ExportedSchemaTest {
         )
     }
 
+    @Test
+    fun version11SchemaCarriesUpiAndTheQuestions() {
+        val json = readSchema(11)
+        assertTrue("schema 11.json does not declare version 11", json.contains("\"version\": 11"))
+        assertTrue(
+            "schema 11 identity hash changed: regenerate and commit a new version instead",
+            json.contains("\"identityHash\": \"8c019a92bc801dad34d720921016147f\"")
+        )
+        assertTrue("persons should carry a UPI ID", json.contains("\"columnName\": \"upiId\""))
+        assertTrue("entries should carry the UPI mark", json.contains("\"columnName\": \"paidByUpi\""))
+        assertTrue("the questions table should exist", json.contains("\"tableName\": \"payment_questions\""))
+        assertTrue("isSettled stays in v11 (Parth, 14 Nov 2026)", json.contains("\"columnName\": \"isSettled\""))
+    }
+
     private fun readSchema(version: Int): String {
         val relative = "schemas/com.kg.merapaisa.data.AppDatabase/$version.json"
         // Unit tests run with the module dir as working dir, but tolerate the repo root too.

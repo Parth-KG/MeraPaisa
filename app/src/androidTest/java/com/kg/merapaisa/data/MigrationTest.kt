@@ -511,6 +511,60 @@ class MigrationTest {
         }
     }
 
+    /**
+     * v11 only adds: a nullable UPI ID on everyone, a false UPI mark on every entry, and an empty
+     * questions table. Nothing is rewritten, so every balance and every uid comes through as it was.
+     */
+    @Test
+    fun migrate10To11_addsUpiAndKeepsTheLedger() {
+        helper.createDatabase(TEST_DB, 10).use { db ->
+            db.insertV7Person(id = 1, name = "Asha", currency = "INR")
+            db.insertV7Person(id = 2, name = "Diego", currency = "USD")
+            db.insertV10Transaction(personId = 1, amountMinor = 25_050, uid = "abc")
+            db.insertV10Transaction(personId = 2, amountMinor = -4_000, uid = "def")
+            db.execSQL("INSERT INTO retired_uids (personId, uid, reason, retiredAt) VALUES (1, 'old', 'deleted', 5)")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 11, true, MIGRATION_10_11).use { db ->
+            assertEquals(25_050L, db.derivedBalance(1))
+            assertEquals(-4_000L, db.derivedBalance(2))
+            assertEquals("uids are untouched", 2L, db.longOf("SELECT COUNT(*) FROM transactions WHERE uid IN ('abc', 'def')"))
+            assertEquals(1L, db.longOf("SELECT COUNT(*) FROM retired_uids"))
+            assertEquals("nobody has a UPI ID yet", 0L, db.longOf("SELECT COUNT(*) FROM persons WHERE upiId IS NOT NULL"))
+            assertEquals("no entry is marked as paid by UPI", 0L, db.longOf("SELECT COUNT(*) FROM transactions WHERE paidByUpi != 0"))
+            assertEquals(0L, db.longOf("SELECT COUNT(*) FROM payment_questions"))
+
+            // The new columns and table take what the app will write.
+            db.execSQL("UPDATE persons SET upiId = 'asha@okaxis' WHERE id = 1")
+            db.execSQL(
+                "INSERT INTO transactions (personId, amountMinor, timestamp, note, uid, fromShare, paidByUpi) " +
+                    "VALUES (1, -5000, 3000, 'UPI', 'ghi', 0, 1)"
+            )
+            db.execSQL(
+                "INSERT INTO payment_questions (personId, amountMinor, kind, createdAt, balanceAtCreation) " +
+                    "VALUES (1, -20050, 'reminder', 4000, 20050)"
+            )
+            assertEquals(20_050L, db.derivedBalance(1))
+            assertEquals(1L, db.longOf("SELECT COUNT(*) FROM transactions WHERE paidByUpi = 1"))
+        }
+    }
+
+    /** A question goes with its person, as every other child row does. */
+    @Test
+    fun migrate10To11_aQuestionIsDeletedWithItsPerson() {
+        helper.createDatabase(TEST_DB, 10).use { db -> db.insertV7Person(id = 1, name = "Asha", currency = "INR") }
+
+        helper.runMigrationsAndValidate(TEST_DB, 11, true, MIGRATION_10_11).use { db ->
+            db.execSQL("PRAGMA foreign_keys = ON")
+            db.execSQL(
+                "INSERT INTO payment_questions (personId, amountMinor, kind, createdAt, balanceAtCreation) " +
+                    "VALUES (1, -500, 'reminder', 1, 500)"
+            )
+            db.execSQL("DELETE FROM persons WHERE id = 1")
+            assertEquals(0L, db.longOf("SELECT COUNT(*) FROM payment_questions"))
+        }
+    }
+
     // -----------------------------------------------------------------------------------------
     // The whole chain, which is what a real upgrade actually runs
     // -----------------------------------------------------------------------------------------
@@ -538,9 +592,9 @@ class MigrationTest {
         }
 
         helper.runMigrationsAndValidate(
-            TEST_DB, 10, true,
+            TEST_DB, 11, true,
             MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-            MIGRATION_9_10
+            MIGRATION_9_10, MIGRATION_10_11
         ).use { db ->
             // The money survives, in minor units, with the paise intact.
             assertEquals("Asha's balance must survive six migrations", 25_050L, db.derivedBalance(1))
@@ -564,6 +618,12 @@ class MigrationTest {
                 0L,
                 db.longOf("SELECT COUNT(*) FROM transactions WHERE fromShare != 0")
             )
+            assertEquals(
+                "and none of them marked as paid by UPI",
+                0L,
+                db.longOf("SELECT COUNT(*) FROM transactions WHERE paidByUpi != 0")
+            )
+            assertEquals(0L, db.longOf("SELECT COUNT(*) FROM persons WHERE upiId IS NOT NULL"))
         }
     }
 
@@ -576,9 +636,9 @@ class MigrationTest {
         helper.createDatabase(TEST_DB, 3).use { }
 
         helper.runMigrationsAndValidate(
-            TEST_DB, 10, true,
+            TEST_DB, 11, true,
             MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-            MIGRATION_9_10
+            MIGRATION_9_10, MIGRATION_10_11
         ).use { db ->
             assertEquals(0L, db.longOf("SELECT COUNT(*) FROM transactions"))
             // Exactly one person, and it is the row that is you: migration 5 -> 6 creates it, and
@@ -650,6 +710,13 @@ class MigrationTest {
         "INSERT INTO persons (id, name, pfpType, pfpValue, pfpColor, sortOrder, isSettled, currency, isSelf) " +
             "VALUES ($id, '$name', 'initials', '${name.take(2)}', '#4CAF50', 0, 0, '$currency', $isSelf)"
     )
+
+    /** An entry in the v9 and v10 shape: uid and fromShare, no UPI mark. */
+    private fun SupportSQLiteDatabase.insertV10Transaction(personId: Long, amountMinor: Long, uid: String) =
+        execSQL(
+            "INSERT INTO transactions (personId, amountMinor, timestamp, note, uid, fromShare) " +
+                "VALUES ($personId, $amountMinor, 2000, 'dinner', '$uid', 0)"
+        )
 
     private fun SupportSQLiteDatabase.insertV4Person(id: Long, name: String, currency: String) =
         execSQL(
