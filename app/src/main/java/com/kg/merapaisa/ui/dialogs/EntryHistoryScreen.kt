@@ -376,6 +376,27 @@ private fun DayHeading(text: String) {
 }
 
 /**
+ * What an entry is called in the history. An entry with no note is named for what made it: the
+ * keypad button ("You owe them" under a "They paid for you" entry described a debt the entry had
+ * not created), or a payment by UPI recorded through "Did it go through?".
+ */
+internal fun entryTitle(entry: Transaction): String = entry.note.ifBlank {
+    when {
+        entry.paidByUpi && entry.amountMinor > 0 -> "You paid by UPI"
+        entry.paidByUpi -> "They paid by UPI"
+        entry.amountMinor > 0 -> "You paid for them"
+        else -> "They paid for you"
+    }
+}
+
+/**
+ * The quieter line under it: when, and for a UPI payment with a note of its own, that it went by
+ * UPI. Said in words rather than an icon, so it reads the same to everyone and to TalkBack.
+ */
+internal fun entryDetail(entry: Transaction, time: String): String =
+    if (entry.paidByUpi && entry.note.isNotBlank()) "$time, by UPI" else time
+
+/**
  * One line of the ledger: a row on the background, not a tile.
  *
  * The figure keeps its sign and its ink, because an entry is money running one way or the other
@@ -398,11 +419,8 @@ private fun EntryRow(
 ) {
     val theme = LocalAppTheme.current
     var menuOpen by remember { mutableStateOf(false) }
-    // An entry with no note is named for the keypad button that made it. "You owe them" under a
-    // "They paid for you" entry described a debt the entry had not created.
-    val title = entry.note.ifBlank {
-        if (entry.amountMinor > 0) "You paid for them" else "They paid for you"
-    }
+    val title = entryTitle(entry)
+    val detail = entryDetail(entry, time)
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(end = Spacing.xs),
@@ -425,7 +443,7 @@ private fun EntryRow(
                 // button beside it stays a stop of its own.
                 .semantics(mergeDescendants = true) {
                     contentDescription =
-                        "$title, $time, ${entrySpoken(entry.amountMinor, person.currency)}"
+                        "$title, $detail, ${entrySpoken(entry.amountMinor, person.currency)}"
                 }
         ) {
             // At large type the figure goes under the words rather than squeezing the note to a
@@ -443,7 +461,7 @@ private fun EntryRow(
                                 maxLines = listTitleMaxLines(),
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Text(time, style = MeraPaisaType.label, color = theme.textSecondary)
+                            Text(detail, style = MeraPaisaType.label, color = theme.textSecondary)
                         }
                         DropdownMenu(
                             expanded = menuOpen,
