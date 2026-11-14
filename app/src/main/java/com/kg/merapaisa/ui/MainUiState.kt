@@ -55,7 +55,9 @@ data class MainUiState(
     /** "Did it go through?", asked once you are back from the UPI app. */
     val payAnswer: PayAnswerState? = null,
     /** "Did these go through?": the payments waiting to be asked about, shown on opening. */
-    val questions: List<com.kg.merapaisa.data.PaymentQuestion>? = null
+    val questions: List<com.kg.merapaisa.data.PaymentQuestion>? = null,
+    /** The person whose "Show QR to pay you" is open, if any. */
+    val payQrPersonId: Long? = null
 )
 
 /**

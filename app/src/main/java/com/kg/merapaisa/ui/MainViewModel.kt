@@ -270,6 +270,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** "Ask me later": the sheet closes and every question stays. */
     fun closeQuestions() = _uiState.update { it.copy(questions = null) }
 
+    fun openPayQr(personId: Long) = _uiState.update { it.copy(payQrPersonId = personId) }
+
+    /**
+     * Closes "Show QR to pay you". If they paid, the payment is recorded now with the UPI mark;
+     * otherwise "Did Asha pay you?" waits for the next open, as after a reminder with a link.
+     */
+    fun closePayQr(person: PersonWithBalance, paid: Boolean) {
+        _uiState.update { it.copy(payQrPersonId = null) }
+        if (person.balanceMinor <= 0) return
+        if (!paid) {
+            rememberReminderSent(person)
+            return
+        }
+        viewModelScope.launch {
+            repository.recordEntries(listOf(Transaction(personId = person.id, amountMinor = -person.balanceMinor, paidByUpi = true)))
+        }
+    }
+
     /** Your name for a UPI app to show, or null while the self row is still just "You". */
     suspend fun myNameForUpi(): String? = repository.self().name.trim().takeUnless { it.isEmpty() || it == "You" }
     private val updates = UpdateCheck()

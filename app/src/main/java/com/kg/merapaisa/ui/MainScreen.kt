@@ -4,6 +4,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.kg.merapaisa.data.canPayByUpi
+import com.kg.merapaisa.data.canShowPayQr
+import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.data.upiPayLink
 import com.kg.merapaisa.ui.dialogs.OwnUpiSheet
 import com.kg.merapaisa.ui.dialogs.ownUpiPrompt
@@ -11,6 +13,7 @@ import com.kg.merapaisa.ui.format.shrinkToFit
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import com.kg.merapaisa.ui.pay.PayQrSheet
 import com.kg.merapaisa.ui.pay.PaySheet
 import com.kg.merapaisa.ui.pay.PaymentQuestionsSheet
 import com.kg.merapaisa.ui.pay.openUpiApp
@@ -340,7 +343,12 @@ fun MainScreen(viewModel: MainViewModel) {
                         },
                         onShareLedger = { viewModel.openShareSheet(person.id) },
                         reserveFraction = listShowsFraction,
-                        onMoveDebt = { viewModel.openMoveDebt(person.id) }
+                        onMoveDebt = { viewModel.openMoveDebt(person.id) },
+                        onShowQr = if (canShowPayQr(person.currency, person.balanceMinor, myUpiId)) {
+                            { viewModel.openPayQr(person.id) }
+                        } else null,
+                        qrOnlyInRupees = myUpiId != null && person.balanceMinor > 0 &&
+                            normaliseCurrency(person.currency) != "INR"
                     )
                 }
             }
@@ -560,6 +568,23 @@ fun MainScreen(viewModel: MainViewModel) {
     LifecycleStartEffect(Unit) {
         viewModel.checkPaymentQuestions()
         onStopOrDispose { }
+    }
+    ui.payQrPersonId?.let { id ->
+        val payer = persons.find { it.id == id }
+        val upi = myUpiId
+        if (payer == null || upi == null || !canShowPayQr(payer.currency, payer.balanceMinor, upi)) {
+            LaunchedEffect(id) { if (payer != null) viewModel.closePayQr(payer, paid = false) }
+        } else {
+            val yourName by produceState<String?>(null) { value = viewModel.myNameForUpi() }
+            PayQrSheet(
+                personName = payer.name,
+                amountMinor = payer.balanceMinor,
+                link = upiPayLink(upi, yourName, payer.balanceMinor),
+                myUpiId = upi,
+                onNotYet = { viewModel.closePayQr(payer, paid = false) },
+                onPaid = { viewModel.closePayQr(payer, paid = true) }
+            )
+        }
     }
     ui.questions?.let { questions ->
         PaymentQuestionsSheet(

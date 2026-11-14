@@ -22,3 +22,10 @@ fun amountToRecord(owedMinor: Long, sentMinor: Long, recordOnlyWhatYouOwed: Bool
  */
 fun canPayByUpi(currency: String, upiId: String?, balanceMinor: Long): Boolean =
     normaliseCurrency(currency) == "INR" && upiId != null && isUpiId(upiId) && balanceMinor < 0
+
+/**
+ * Whether "Show QR to pay you" is offered: someone who owes you, kept in rupees, once your own UPI
+ * ID is set.
+ */
+fun canShowPayQr(currency: String, balanceMinor: Long, myUpiId: String?): Boolean =
+    normaliseCurrency(currency) == "INR" && balanceMinor > 0 && myUpiId != null && isUpiId(myUpiId)

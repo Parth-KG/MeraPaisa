@@ -640,6 +640,13 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
             noUpiApp = true, onDismiss = {}, onPay = { _, _ -> }
         )
     },
+    "sheet-pay-qr" to {
+        com.kg.merapaisa.ui.pay.PayQrSheet(
+            personName = "Asha", amountMinor = 1_200_00,
+            link = com.kg.merapaisa.data.upiPayLink("parth.kg@okaxis", "Parth", 1_200_00),
+            myUpiId = "parth.kg@okaxis", onNotYet = {}, onPaid = {}
+        )
+    },
     "sheet-payment-questions" to {
         val now = System.currentTimeMillis()
         com.kg.merapaisa.ui.pay.PaymentQuestionsSheet(

@@ -66,7 +66,11 @@ fun PersonRow(
     onShareLedger: () -> Unit,
     onMoveDebt: () -> Unit,
     /** Whether another row in this list shows paise. From [columnShowsFraction], by the list. */
-    reserveFraction: Boolean = false
+    reserveFraction: Boolean = false,
+    /** Show a QR they can scan to pay you. Null hides it (see `canShowPayQr`). */
+    onShowQr: (() -> Unit)? = null,
+    /** True for someone who owes you outside rupees, once your UPI ID is set: say why there's no QR. */
+    qrOnlyInRupees: Boolean = false
 ) {
     val theme = LocalAppTheme.current
     var showMenu by remember { mutableStateOf(false) }
@@ -148,7 +152,9 @@ fun PersonRow(
                 onShareLedger = onShareLedger,
                 onMoveDebt = onMoveDebt,
                 onEditClick = onEditClick,
-                onDelete = onDelete
+                onDelete = onDelete,
+                onShowQr = onShowQr,
+                qrOnlyInRupees = qrOnlyInRupees
             )
         }
     }
@@ -166,7 +172,9 @@ private fun PersonMenu(
     onShareLedger: () -> Unit,
     onMoveDebt: () -> Unit,
     onEditClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onShowQr: (() -> Unit)?,
+    qrOnlyInRupees: Boolean
 ) {
     val theme = LocalAppTheme.current
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss, shape = Shapes.medium) {
@@ -175,6 +183,16 @@ private fun PersonMenu(
             MenuRow("Settle up", theme.textPrimary) { onDismiss(); onSettleUp() }
         }
         MenuRow("Send a reminder", theme.textPrimary) { onDismiss(); onSendReminder() }
+        // For paying you face to face: their UPI app scans it with the amount filled in.
+        if (onShowQr != null) {
+            MenuRow("Show QR to pay you", theme.textPrimary) { onDismiss(); onShowQr() }
+        } else if (qrOnlyInRupees) {
+            DropdownMenuItem(
+                text = { Text("Show QR (UPI is rupees only)", style = MeraPaisaType.body, color = theme.textSecondary) },
+                enabled = false,
+                onClick = {}
+            )
+        }
         MenuRow("Share a summary", theme.textPrimary) { onDismiss(); onShareSummary() }
         // Distinct from a summary: that sends text a human reads, this sends a link their app
         // records, so both ledgers end up agreeing. Marked (beta) wherever it is named: a long
