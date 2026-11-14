@@ -55,6 +55,7 @@ Mera Paisa keeps all of that on your phone.
 | **Expense splitting** | Equal or custom shares, with lock-on-edit redistribution |
 | **Groups** | A trip or a flatshare: log who paid for what, then settle everyone in at most *n* − 1 payments for *n* members. Kept apart from your personal balances, in its own currency |
 | **Settle up** | Square a balance after one confirmation; the closing entry stays in their history |
+| **UPI payments** | Pay someone you owe from the keypad: your own UPI app opens with their UPI ID and the amount filled in, and you enter the PIN there. Show a QR to someone who owes you, and reminders carry a pay link. Nothing is paid or recorded until you say so. Rupees only |
 | **Move a debt** | Hand part of what one person owes onto someone else, converted if they keep a different currency |
 | **History** | Notes, timestamps, edit or delete any entry, reverse an entry and everything newer, or clear the history |
 | **Export and summaries** | The whole ledger as CSV, or a plain-text summary of one person's balance |
@@ -65,7 +66,7 @@ Mera Paisa keeps all of that on your phone.
 | **In-app updates** | Checks GitHub for a newer release and installs it only if it is signed with the same key |
 | **Accessible** | TalkBack reads every figure with its direction in words, and every screen works at large text and on a phone turned sideways |
 | **Ten themes** | Diya, Jamun, Monsoon, Kaapi and Kamal by night, Tulsi, Khadi, Gulab, Kansa and Neel by day, with amounts and grey text at 7:1 in every one |
-| **Backup** | Everything in one file, profile photos included, saved when you like or every week to a folder you pick, with a preview before any restore. Android's own backup also copies your ledger and settings to your Google account |
+| **Backup** | Everything in one file, profile photos and UPI IDs included, saved when you like or every week to a folder you pick, with a preview before any restore. Android's own backup also copies your ledger and settings to your Google account |
 
 ## Worth a closer look
 
@@ -76,7 +77,7 @@ Mera Paisa keeps all of that on your phone.
 > There is no balance column to drift out of step with the history. A balance is the sum of that person's entries, derived on read, so the figure on screen and the entries behind it cannot disagree.
 
 > **An update never changes what you are owed**
-> The database has been through ten schema versions with seven hand-written migrations, each tested against a seeded database before release. There is no destructive fallback anywhere, so no update can wipe a ledger. The version that removed the stored balance column had to prove first that the entries summed to it, and wrote a reconciling entry where they did not.
+> The database has been through eleven schema versions with eight hand-written migrations, each tested against a seeded database before release. There is no destructive fallback anywhere, so no update can wipe a ledger. The version that removed the stored balance column had to prove first that the entries summed to it, and wrote a reconciling entry where they did not.
 
 > **Lock-on-edit redistribution**
 > Change one person's share and that row locks, and the remaining unlocked rows split what is left. Leftover paise go to the first person rather than quietly disappearing. If the locked shares leave nothing that adds up, the screen says by how much and why, and the split cannot be saved until it does, because a split that does not add up records money nobody spent.
@@ -88,7 +89,7 @@ Mera Paisa keeps all of that on your phone.
 > An update link carries a stable id per entry, so the receiving app can tell a new entry from an edited one from one the sender deleted. It shows you the differences and writes nothing you have not ticked. Additions are ticked for you; an edit or a deletion never is, because nothing about a link proves who sent it. The ids of entries you delete or clear are kept, so the other phone's next link cannot quietly bring them back: a cleared entry already counts in the opening balance, and a deleted one arrives unticked for you to decide.
 
 > **No account, no backend**
-> Data lives in Room on the device and rides Android's own backup to your Google account, which is a system feature rather than anything of ours. Reinstall on a new phone that uses the same Google account and it is there. There is no account to create, no server, and nothing of yours on a machine I control. Exactly three things leave the phone: that system backup, links and messages you choose to send, and requests to Frankfurter for an exchange rate and GitHub for an update check. No names, no notes, no analytics, no crash reporting. The app's own manifest asks for `INTERNET` for those requests, and `REQUEST_INSTALL_PACKAGES` so the updater can hand a checked APK to Android's installer; the AndroidX libraries add their standard ones, such as `USE_BIOMETRIC` for the app lock and WorkManager's `WAKE_LOCK` and `RECEIVE_BOOT_COMPLETED` for the weekly backup. Not contacts, not storage, not location.
+> Data lives in Room on the device and rides Android's own backup to your Google account, which is a system feature rather than anything of ours. Reinstall on a new phone that uses the same Google account and it is there. There is no account to create, no server, and nothing of yours on a machine I control. Exactly three things leave the phone: that system backup, links and messages you choose to send, and requests to Frankfurter for an exchange rate and GitHub for an update check. No names, no notes, no analytics, no crash reporting. Paying by UPI adds nothing to that list: the app hands a `upi://pay` link to the UPI app on your phone, and that app does the paying, after your PIN. The app's own manifest asks for `INTERNET` for those requests, and `REQUEST_INSTALL_PACKAGES` so the updater can hand a checked APK to Android's installer; the AndroidX libraries add their standard ones, such as `USE_BIOMETRIC` for the app lock and WorkManager's `WAKE_LOCK` and `RECEIVE_BOOT_COMPLETED` for the weekly backup. Not contacts, not storage, not location. UPI needs no permission either: a `<queries>` entry for the `upi` scheme only lets the app see whether a UPI app is installed.
 
 <details>
 <summary><b>How each part works</b></summary>
@@ -141,7 +142,17 @@ An **update link** is different: it carries your entries so their app can record
 
 ### Reminders
 
-Long-press a name and choose **Send a reminder**. An editable message appears with the exact amount in it, and you can attach the history. It goes out through Android's share sheet, so anything that accepts text works.
+Long-press a name and choose **Send a reminder**. An editable message appears with the exact amount in it, and you can attach the history. It goes out through Android's share sheet, so anything that accepts text works. Once your own UPI ID is set, a reminder to someone in rupees who owes you also carries a pay link, with your UPI ID and the amount in plain text under it for anyone whose app will not open the link.
+
+### Paying by UPI
+
+UPI is rupees only, so all of this is for people kept in INR. Give someone a UPI ID in **Add a person** or **Edit**, by typing it or by pasting a `upi://pay` link from a QR or a message. Only the ID and the name are read from a pasted link; its amount and note are ignored, because a link is anyone's to write.
+
+When you owe someone with a UPI ID, the keypad shows **Pay by UPI** beside Settle up. It opens a sheet with their full UPI ID and the amount, all you owe to start with, which you can change to pay part of it. Paying more than you owe says by how much, and asks whether to record all of it, so they owe you the extra, or only what you owed. **Open UPI app** hands the link to Android, which opens your UPI app or asks which one. Check the name it shows, then enter your PIN there. Mera Paisa never sees the PIN, and never pays anything itself.
+
+Back in the app it asks **Did it go through?**, and records the payment only if you say it did, as an entry marked "by UPI". The same goes for money coming in: **Show QR to pay you**, from the menu of someone who owes you, draws a QR to your own UPI ID for what they owe, for them to scan with their UPI app. A payment nobody has answered for, from a reminder with a link, a QR, or a Pay whose app was closed halfway, is asked about the next time the app opens, in **Did these go through?**, with one line each: record it, not yet, a different amount, or stop asking. A question goes by itself after a week, or once that person's balance changes some other way.
+
+Your own UPI ID is in Settings, under **UPI**. Anyone who sets it before you would collect what your reminders ask for, so setting or changing it always asks for your fingerprint, face or screen lock, whether the app lock is on or not.
 
 ### Themes
 
@@ -151,7 +162,7 @@ Some start from palettes other people made, all under the MIT licence: Monsoon i
 
 ### Backup and restore
 
-Android's own backup carries the database to your Google account. That is a system feature, not something Mera Paisa runs. There is also a backup you control, under **Back up and restore** in Settings: **Save a backup** writes everything to one file, profile photos included, and **Restore from a file** reads it back, either adding what is missing (and a photo for anyone here who has none) or replacing everything. **Choose a folder** and it saves one there every week, keeping the last 12. A restore is previewed before it runs, and the whole thing is one database transaction, so a failure changes nothing.
+Android's own backup carries the database to your Google account. That is a system feature, not something Mera Paisa runs. There is also a backup you control, under **Back up and restore** in Settings: **Save a backup** writes everything to one file, profile photos and UPI IDs included, and **Restore from a file** reads it back, either adding what is missing (and a photo for anyone here who has none) or replacing everything. **Choose a folder** and it saves one there every week, keeping the last 12. A restore is previewed before it runs, and the whole thing is one database transaction, so a failure changes nothing.
 
 </details>
 
@@ -161,7 +172,7 @@ Kotlin and Jetpack Compose with Material 3. Room for storage, with exported sche
 
 Type is Anek Latin by Ek Type for amounts and titles and Figtree for everything else, shipped as static subset instances because API 24 and 25 ignore variable font axes.
 
-494 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec, exchange-rate replies, backups with photos and theme contrast, and 206 instrumentation tests covering every migration, the full migration chain, and the settle, rollback, edit, delete, reconcile, move-debt and backup-photo paths against a real database.
+543 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec, exchange-rate replies, backups with photos and UPI IDs, UPI links read and built, QR codes, the payment questions and theme contrast, and 219 instrumentation tests covering every migration, the full migration chain, and the settle, rollback, edit, delete, reconcile, move-debt, backup-photo and UPI-payment paths against a real database.
 
 ## Repository structure
 
@@ -186,7 +197,7 @@ scripts/
   ui-lint.sh                checks the UI rules: no em dashes, emoji, raw sizes or colours, vague buttons
   run-gallery.sh            screenshots every case in every theme on a connected phone
   build-fonts.sh            rebuilds the bundled font subsets
-third_party/                licences for the fonts and for the palettes some themes start from
+third_party/                licences for the fonts, the palettes some themes start from, and the QR code generator
 settings.gradle.kts         the project, its one module and where dependencies come from
 ```
 
@@ -234,4 +245,4 @@ Working and in daily use. Built for me and a few friends, so the roadmap is what
 
 ## License
 
-MIT. See [LICENSE](LICENSE). The fonts (SIL Open Font License) and the Catppuccin, Flexoki and Pastelón de Amarillos palettes (MIT) keep their own licences, in [third_party](third_party).
+MIT. See [LICENSE](LICENSE). The fonts (SIL Open Font License), the Catppuccin, Flexoki and Pastelón de Amarillos palettes (MIT) and Nayuki's [QR Code generator](https://github.com/nayuki/QR-Code-generator) (MIT), whose Java source is vendored unchanged under `app/src/main/java/io/nayuki`, keep their own licences, in [third_party](third_party).
