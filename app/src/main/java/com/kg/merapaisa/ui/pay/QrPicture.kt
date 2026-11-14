@@ -13,6 +13,8 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withTranslation
 import androidx.compose.ui.graphics.toArgb
 import com.kg.merapaisa.QrInk
 import com.kg.merapaisa.QrPaper
@@ -55,7 +57,7 @@ internal fun drawQrPicture(text: String, caption: String, typeface: Typeface?): 
         .build()
 
     // The code's own quiet zone sits above the caption; the same again closes the picture.
-    val bitmap = Bitmap.createBitmap(side, side + captionLayout.height + quiet, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(side, side + captionLayout.height + quiet)
     val canvas = Canvas(bitmap)
     canvas.drawColor(QrPaper.toArgb())
     val ink = Paint().apply { color = QrInk.toArgb() }
@@ -68,10 +70,7 @@ internal fun drawQrPicture(text: String, caption: String, typeface: Typeface?): 
             }
         }
     }
-    canvas.save()
-    canvas.translate(quiet.toFloat(), side.toFloat())
-    captionLayout.draw(canvas)
-    canvas.restore()
+    canvas.withTranslation(quiet.toFloat(), side.toFloat()) { captionLayout.draw(this) }
     return bitmap
 }
 
