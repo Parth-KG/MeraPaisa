@@ -51,8 +51,38 @@ data class MainUiState(
     /** Moving part of one person's balance onto another, absent when that sheet is closed. */
     val moveDebt: MoveDebtFlowState? = null,
     /** The person whose "Show QR to pay you" is open, if any. */
-    val payQrPersonId: Long? = null
+    val payQrPersonId: Long? = null,
+    /** Moving your part of the open group to your ledger: the confirm sheet, while it is open. */
+    val moveToLedger: MoveFlowState? = null,
+    /** The move just made, while its Undo is offered. */
+    val lastMove: com.kg.merapaisa.data.MoveReceipt? = null
 )
+
+/** One person in the move's confirm sheet. */
+data class MoveLineState(
+    val personId: Long,
+    val name: String,
+    /** Their ledger's currency, which may differ from the group's. */
+    val currency: String,
+    /** The pair in the group's currency, positive when they owe you. */
+    val groupAmountMinor: Long,
+    /** The entry their ledger gets, in [currency]; null while its rate is missing. */
+    val ledgerAmountMinor: Long?
+)
+
+/** Moving your part of a group to your ledger, before anything is written (v3.7.0). */
+data class MoveFlowState(
+    val groupId: Long,
+    val lines: List<MoveLineState>,
+    /** Rates are being fetched for people kept in another currency. */
+    val converting: Boolean = false,
+    /** The group changed while the sheet was open, so the figures were worked out again. */
+    val groupChanged: Boolean = false,
+    val busy: Boolean = false
+) {
+    val rateMissing: Boolean get() = !converting && lines.any { it.ledgerAmountMinor == null }
+    val ready: Boolean get() = !converting && !busy && lines.isNotEmpty() && lines.all { it.ledgerAmountMinor != null }
+}
 
 /** The multi-step split flow, absent when it is not running. */
 data class SplitFlowState(

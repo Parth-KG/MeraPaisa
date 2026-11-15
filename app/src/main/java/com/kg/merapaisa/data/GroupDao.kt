@@ -246,6 +246,63 @@ interface GroupDao {
         return true
     }
 
+    // --- Moving your part of a group to your ledger (v3.7.0) ---
+
+    @Query("SELECT * FROM expenses WHERE groupId = :groupId")
+    suspend fun expensesNow(groupId: Long): List<Expense>
+
+    @Query(
+        "SELECT s.* FROM expense_shares s JOIN expenses e ON e.id = s.expenseId WHERE e.groupId = :groupId"
+    )
+    suspend fun sharesNow(groupId: Long): List<ExpenseShare>
+
+    @Insert
+    suspend fun insertLedgerEntries(entries: List<Transaction>)
+
+    /** Money moving again means the debt is live again, as [PersonDao.recordEntries] does. */
+    @Query("UPDATE persons SET isSettled = 0 WHERE id IN (:personIds)")
+    suspend fun unsettle(personIds: List<Long>)
+
+    @Query("DELETE FROM expenses WHERE id IN (:expenseIds)")
+    suspend fun deleteExpenses(expenseIds: List<Long>)
+
+    @Query("DELETE FROM transactions WHERE uid IN (:uids)")
+    suspend fun deleteLedgerEntries(uids: List<String>)
+
+    /**
+     * Moves your part of a group to your ledger: for each pair, a payment row in the group that
+     * cancels it and an entry in that person's ledger, all in one transaction, so neither side can
+     * exist without the other.
+     *
+     * The pairs are read again here and must still be the ones the confirm sheet showed; if the
+     * group changed meanwhile, nothing is written and null comes back, so a stale sheet can never
+     * move a figure that is no longer true.
+     */
+    @androidx.room.Transaction
+    suspend fun moveToLedger(groupId: Long, selfId: Long, lines: List<MoveLine>, note: String, now: Long): MoveReceipt? {
+        val pairs = pairsWithYou(expensesNow(groupId), sharesNow(groupId), selfId)
+        if (lines.isEmpty() || pairs != lines.associate { it.personId to it.groupAmountMinor }) return null
+        val expenseIds = lines.map { line ->
+            val (row, share) = cancellingPayment(groupId, selfId, line, now)
+            val id = insertExpense(row)
+            insertShares(listOf(ExpenseShare(expenseId = id, personId = share.first, shareMinor = share.second)))
+            id
+        }
+        val entries = lines.filter { it.ledgerAmountMinor != 0L }.map {
+            Transaction(personId = it.personId, amountMinor = it.ledgerAmountMinor, timestamp = now, note = note)
+        }
+        insertLedgerEntries(entries)
+        unsettle(entries.map { it.personId }.distinct())
+        return MoveReceipt(groupId, expenseIds, entries.map { it.uid })
+    }
+
+    /** Takes a move back out, both sides together. */
+    @androidx.room.Transaction
+    suspend fun undoMove(receipt: MoveReceipt) {
+        if (receipt.expenseIds.isNotEmpty()) deleteExpenses(receipt.expenseIds)
+        if (receipt.entryUids.isNotEmpty()) deleteLedgerEntries(receipt.entryUids)
+    }
+
     // -----------------------------------------------------------------------------------------
     // Backup and restore
     //

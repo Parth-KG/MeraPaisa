@@ -35,6 +35,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import com.kg.merapaisa.data.isMovedToLedger
+import com.kg.merapaisa.data.ExpenseShare
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.Snackbar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -96,7 +104,15 @@ fun GroupDetailScreen(
     /** Rename the group or add people to it. Null hides the button. */
     onEdit: (() -> Unit)? = null,
     /** Open an expense (not a payment) in the expense sheet to change it. */
-    onEditExpense: (Expense) -> Unit = {}
+    onEditExpense: (Expense) -> Unit = {},
+    /** Every share in the group, to name who a moved payment was with. */
+    shares: List<ExpenseShare> = emptyList(),
+    /** Move your part of the group to your ledger (v3.7.0). Null hides the button. */
+    onMoveToLedger: (() -> Unit)? = null,
+    /** The move just made, while its Undo is offered; null when there is none. */
+    lastMove: com.kg.merapaisa.data.MoveReceipt? = null,
+    onUndoMove: () -> Unit = {},
+    onMoveNoticeGone: () -> Unit = {}
 ) {
     val theme = LocalAppTheme.current
     val list = rememberLazyListState()
@@ -106,6 +122,20 @@ fun GroupDetailScreen(
     // made a 500 dinner and a 500 repayment look identical.
     val purchases = expenses.filterNot { it.isSettlement }
     val settlements = expenses.filter { it.isSettlement }
+    // Some of this group already went to your ledger, so a position you hold now is only what
+    // changed since: a new expense, or one edited or deleted after it was moved.
+    val movedBefore = settlements.any { it.isMovedToLedger }
+    val snackbar = remember { SnackbarHostState() }
+    if (lastMove != null) {
+        LaunchedEffect(lastMove) {
+            val result = snackbar.showSnackbar(
+                message = if (lastMove.people == 1) "1 entry added to your ledger." else "${lastMove.people} entries added to your ledger.",
+                actionLabel = "Undo",
+                duration = SnackbarDuration.Long
+            )
+            if (result == SnackbarResult.ActionPerformed) onUndoMove() else onMoveNoticeGone()
+        }
+    }
     // Each list is its own column, so each decides for itself whether whole amounts keep a slot.
 
     val memberCount = if (members.size == 1) "1 member" else "${members.size} members"
@@ -221,12 +251,31 @@ fun GroupDetailScreen(
             // throws. The prefix keeps the two ranges apart.
             itemsIndexed(balances, key = { _, b -> "balance-${b.personId}" }) { index, b ->
                 if (index > 0) RowDivider(TextRowInset)
+                val isYou = names.isYou(b.personId)
                 MemberBalanceRow(
                     name = names.subject(b.personId),
-                    isYou = names.isYou(b.personId),
+                    isYou = isYou,
                     amountMinor = b.amountMinor,
                     currency = group.currency
                 )
+                if (isYou && b.amountMinor != 0L) {
+                    if (movedBefore) {
+                        Text(
+                            "Part of this group is already in your ledger. This is what's changed since.",
+                            style = MeraPaisaType.label,
+                            color = theme.textSecondary,
+                            modifier = Modifier.padding(horizontal = Spacing.lg)
+                        )
+                    }
+                    if (onMoveToLedger != null) {
+                        TextButton(
+                            onClick = onMoveToLedger,
+                            modifier = Modifier.padding(horizontal = Spacing.sm).heightIn(min = 48.dp)
+                        ) {
+                            Text("Move to your ledger", style = MeraPaisaType.bodyStrong, color = theme.primary)
+                        }
+                    }
+                }
             }
 
             item { SectionHeading("Expenses") }
@@ -260,19 +309,47 @@ fun GroupDetailScreen(
                 item { SectionHeading("Payments between members") }
                 itemsIndexed(settlements, key = { _, e -> "settlement-${e.id}" }) { index, e ->
                     if (index > 0) RowDivider(TextRowInset)
-                    EntryRow(
-                        title = "${names.subject(e.paidByPersonId)} paid back",
-                        subtitle = null,
-                        amountMinor = e.amountMinor,
-                        currency = group.currency,
-                        deleteLabel = "Delete payment",
-                        onDelete = { onDeleteExpense(e.id) },
-                        quiet = true
-                    )
+                    if (e.isMovedToLedger) {
+                        // Who the pair was with: the payer if they owed you, else whoever the
+                        // payment was shared with.
+                        val payerIsYou = names.isYou(e.paidByPersonId)
+                        val other = if (payerIsYou) shares.firstOrNull { it.expenseId == e.id }?.personId else e.paidByPersonId
+                        val otherName = other?.let { names.subject(it) } ?: "Someone"
+                        EntryRow(
+                            title = "Moved to your ledger",
+                            subtitle = if (payerIsYou) "you owed ${other?.let { names.objectOf(it) } ?: "someone"}" else "$otherName owed you",
+                            amountMinor = e.amountMinor,
+                            currency = group.currency,
+                            deleteLabel = "Delete payment",
+                            onDelete = { onDeleteExpense(e.id) },
+                            quiet = true,
+                            deleteNote = "$otherName's entry in your ledger stays. Delete it there too if this move was a mistake."
+                        )
+                    } else {
+                        EntryRow(
+                            title = "${names.subject(e.paidByPersonId)} paid back",
+                            subtitle = null,
+                            amountMinor = e.amountMinor,
+                            currency = group.currency,
+                            deleteLabel = "Delete payment",
+                            onDelete = { onDeleteExpense(e.id) },
+                            quiet = true
+                        )
+                    }
                 }
             }
         }
         FootEdge(visible = list.canScrollForward)
+        SnackbarHost(snackbar) { data ->
+            Snackbar(
+                snackbarData = data,
+                containerColor = theme.textPrimary,
+                contentColor = theme.background,
+                actionColor = theme.background,
+                shape = Shapes.medium,
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)
+            )
+        }
 
         // Both actions named, side by side, the way the people list carries its own two. Settling
         // up is the second one because it is what you reach for once, at the end of a trip.
@@ -376,7 +453,9 @@ private fun EntryRow(
     onDelete: () -> Unit,
     quiet: Boolean = false,
     /** "Edit expense" above Delete. Null for a payment, which is deleted and recorded again. */
-    onEdit: (() -> Unit)? = null
+    onEdit: (() -> Unit)? = null,
+    /** A sentence added to the delete question, for a payment that has a twin in your ledger. */
+    deleteNote: String? = null
 ) {
     val theme = LocalAppTheme.current
     var showMenu by remember { mutableStateOf(false) }
@@ -456,6 +535,7 @@ private fun EntryRow(
             title = if (quiet) "Delete this payment?" else "Delete $title?",
             body = (if (quiet) "Removes this $figure payment" else "Removes this $figure expense") +
                 " from the group, and what its members owe each other changes to match. " +
+                (deleteNote?.let { "$it " } ?: "") +
                 "This can't be undone.",
             confirmLabel = "Delete",
             dismissLabel = "Keep it",

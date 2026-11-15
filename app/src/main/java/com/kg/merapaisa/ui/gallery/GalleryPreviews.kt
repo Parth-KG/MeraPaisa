@@ -251,6 +251,46 @@ fun GroupDetailCase() {
     )
 }
 
+/**
+ * A group after part of it was moved to your ledger (v3.7.0): a moved payment under "Payments
+ * between members", and a new expense since, so you hold a position again, with the line saying
+ * so and the button to move it too.
+ */
+@Composable
+fun GroupDetailMovedCase() {
+    val you = com.kg.merapaisa.data.Person(id = 7, name = "You", currency = "INR", isSelf = true)
+    val members = listOf(you) + Fixtures.groupMembers.take(2)
+    GroupDetailScreen(
+        group = Fixtures.group,
+        members = members,
+        expenses = listOf(
+            com.kg.merapaisa.data.Expense(id = 1, groupId = 1, description = "Hotel, two nights", amountMinor = 9_000_00, paidByPersonId = 7),
+            com.kg.merapaisa.data.Expense(id = 2, groupId = 1, description = "Boat", amountMinor = 1_800_00, paidByPersonId = 7),
+            com.kg.merapaisa.data.Expense(id = 3, groupId = 1, description = com.kg.merapaisa.data.MOVED_TO_LEDGER,
+                amountMinor = 3_000_00, paidByPersonId = 1, isSettlement = true),
+            com.kg.merapaisa.data.Expense(id = 4, groupId = 1, description = com.kg.merapaisa.data.MOVED_TO_LEDGER,
+                amountMinor = 3_000_00, paidByPersonId = 2, isSettlement = true)
+        ),
+        shares = listOf(
+            com.kg.merapaisa.data.ExpenseShare(3, 7, 3_000_00),
+            com.kg.merapaisa.data.ExpenseShare(4, 7, 3_000_00)
+        ),
+        balances = listOf(
+            com.kg.merapaisa.data.MemberBalance(7, 1_200_00),
+            com.kg.merapaisa.data.MemberBalance(1, -600_00),
+            com.kg.merapaisa.data.MemberBalance(2, -600_00)
+        ),
+        transfers = listOf(
+            com.kg.merapaisa.data.Transfer(1, 7, 600_00),
+            com.kg.merapaisa.data.Transfer(2, 7, 600_00)
+        ),
+        simplifyDebts = true,
+        onBack = {}, onAddExpense = {}, onSettleUp = {},
+        onDeleteExpense = {}, onSimplifyChange = {},
+        onMoveToLedger = {}
+    )
+}
+
 /** The same group with nothing outstanding, which is a different sentence on screen. */
 @Composable
 fun GroupDetailEvenCase() {
@@ -475,6 +515,7 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "empty-groups" to { EmptyGroupsCase() },
     "group-rows" to { GroupRowsCase() },
     "groups-archived" to { GroupsArchivedCase() },
+    "group-detail-moved" to { GroupDetailMovedCase() },
     "groups-all-archived" to { GroupsAllArchivedCase() },
     "group-detail" to { GroupDetailCase() },
     "group-detail-even" to { GroupDetailEvenCase() },
@@ -631,6 +672,35 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
                 paidByPersonId = ids[1],
                 shares = com.kg.merapaisa.data.evenShares(4_200_00, ids.take(3))
             )
+        )
+    },
+    // Moving your part of a group to your ledger (v3.7.0): an INR and a USD person, then the
+    // same with the dollar rate missing.
+    "sheet-move-to-ledger" to {
+        com.kg.merapaisa.ui.groups.MoveToLedgerSheet(
+            groupName = "Goa, October", groupCurrency = "INR",
+            flow = com.kg.merapaisa.ui.MoveFlowState(
+                groupId = 1,
+                lines = listOf(
+                    com.kg.merapaisa.ui.MoveLineState(1, "Asha", "INR", 3_000_00, 3_000_00),
+                    com.kg.merapaisa.ui.MoveLineState(2, "Diego Hernández", "USD", -1_250_00, -14_92),
+                    com.kg.merapaisa.ui.MoveLineState(3, "Chaitanya Venkataraman", "INR", 618_92, 618_92)
+                )
+            ),
+            onRetry = {}, onDismiss = {}, onMove = {}
+        )
+    },
+    "sheet-move-to-ledger-no-rate" to {
+        com.kg.merapaisa.ui.groups.MoveToLedgerSheet(
+            groupName = "Goa, October", groupCurrency = "INR",
+            flow = com.kg.merapaisa.ui.MoveFlowState(
+                groupId = 1,
+                lines = listOf(
+                    com.kg.merapaisa.ui.MoveLineState(1, "Asha", "INR", 3_000_00, 3_000_00),
+                    com.kg.merapaisa.ui.MoveLineState(2, "Diego Hernández", "USD", -1_250_00, null)
+                )
+            ),
+            onRetry = {}, onDismiss = {}, onMove = {}
         )
     },
     "sheet-settle-up" to {

@@ -48,6 +48,7 @@ import com.kg.merapaisa.ui.groups.EditGroupSheet
 import com.kg.merapaisa.ui.groups.SettleUpSheet
 import com.kg.merapaisa.ui.groups.GroupsEmptyState
 import com.kg.merapaisa.ui.groups.GroupsList
+import com.kg.merapaisa.ui.groups.MoveToLedgerSheet
 import com.kg.merapaisa.ui.dialogs.EntryHistoryScreen
 import com.kg.merapaisa.ui.share.ImportLedgerDialog
 import com.kg.merapaisa.ui.share.ShareLedgerSheet
@@ -617,8 +618,23 @@ fun MainScreen(viewModel: MainViewModel) {
                 onDeleteExpense = viewModel::deleteExpense,
                 onSimplifyChange = viewModel::setSimplifyDebts,
                 onEdit = { editingGroup = true },
-                onEditExpense = { editingExpenseId = it.id }
+                onEditExpense = { editingExpenseId = it.id },
+                shares = loaded.shares,
+                onMoveToLedger = viewModel::openMoveToLedger,
+                lastMove = ui.lastMove?.takeIf { it.groupId == openGroupId },
+                onUndoMove = viewModel::undoLastMove,
+                onMoveNoticeGone = viewModel::forgetLastMove
             )
+            ui.moveToLedger?.takeIf { it.groupId == openGroupId }?.let { flow ->
+                MoveToLedgerSheet(
+                    groupName = summary.group.name,
+                    groupCurrency = summary.group.currency,
+                    flow = flow,
+                    onRetry = viewModel::retryMoveRates,
+                    onDismiss = viewModel::closeMoveToLedger,
+                    onMove = { viewModel.confirmMoveToLedger(summary.group.name) }
+                )
+            }
 
             if (editingGroup) {
                 EditGroupSheet(

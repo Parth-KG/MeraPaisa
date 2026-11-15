@@ -212,7 +212,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openGroup(groupId: Long?) = _uiState.update {
-        it.copy(openGroupId = groupId, showAddExpenseDialog = false, showSettleUp = false)
+        it.copy(openGroupId = groupId, showAddExpenseDialog = false, showSettleUp = false, moveToLedger = null, lastMove = null)
     }
 
     fun showAddExpenseDialog(show: Boolean) = _uiState.update { it.copy(showAddExpenseDialog = show) }
@@ -237,6 +237,99 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val groupId = _uiState.value.openGroupId ?: return
         viewModelScope.launch { groupRepository.recordTransfer(groupId, fromPersonId, toPersonId, amountMinor) }
     }
+
+    // --- Moving your part of a group to your ledger (v3.7.0) ---
+
+    /**
+     * Opens the confirm sheet for the open group: one line per person you have a pair with, in
+     * the group's currency, and, for anyone kept in another currency, the entry their ledger would
+     * get at today's rate. Nothing is written yet.
+     */
+    fun openMoveToLedger() {
+        val detail = openGroup.value ?: return
+        val groupId = _uiState.value.openGroupId ?: return
+        val self = _selfId.value
+        val pairs = com.kg.merapaisa.data.pairsWithYou(detail.expenses, detail.shares, self)
+        if (pairs.isEmpty()) return
+        val people = persons.value.associateBy { it.id }
+        val lines = pairs.map { (id, amount) ->
+            val person = people[id]
+            MoveLineState(
+                personId = id,
+                name = person?.name ?: detail.members.firstOrNull { it.id == id }?.name ?: "Someone",
+                currency = com.kg.merapaisa.data.normaliseCurrency(person?.currency ?: groupCurrency(groupId)),
+                groupAmountMinor = amount,
+                ledgerAmountMinor = null
+            )
+        }
+        _uiState.update { it.copy(moveToLedger = MoveFlowState(groupId, lines, converting = true)) }
+        convertMoveLines()
+    }
+
+    private fun groupCurrency(groupId: Long): String =
+        (groups.value + archivedGroups.value).firstOrNull { it.group.id == groupId }?.group?.currency ?: "INR"
+
+    /** Works out each ledger entry, at today's rate where the currencies differ. */
+    private fun convertMoveLines() {
+        val flow = _uiState.value.moveToLedger ?: return
+        val from = com.kg.merapaisa.data.normaliseCurrency(groupCurrency(flow.groupId))
+        viewModelScope.launch {
+            val converted = flow.lines.map { line ->
+                if (line.ledgerAmountMinor != null) return@map line
+                val magnitude = if (line.currency == from) {
+                    kotlin.math.abs(line.groupAmountMinor)
+                } else {
+                    convertCurrency(kotlin.math.abs(line.groupAmountMinor), from, line.currency)
+                }
+                line.copy(ledgerAmountMinor = magnitude?.let { if (line.groupAmountMinor < 0) -it else it })
+            }
+            _uiState.update { state ->
+                val current = state.moveToLedger
+                if (current == null || current.groupId != flow.groupId) state
+                else state.copy(moveToLedger = current.copy(lines = converted, converting = false))
+            }
+        }
+    }
+
+    /** "Try again" after a rate didn't come. */
+    fun retryMoveRates() {
+        _uiState.update { it.copy(moveToLedger = it.moveToLedger?.copy(converting = true)) }
+        convertMoveLines()
+    }
+
+    fun closeMoveToLedger() = _uiState.update { it.copy(moveToLedger = null) }
+
+    /**
+     * Writes the move, both sides in one transaction, and offers Undo. If the group changed while
+     * the sheet was open, nothing is written and the sheet works its figures out again.
+     */
+    fun confirmMoveToLedger(groupName: String) {
+        val flow = _uiState.value.moveToLedger ?: return
+        if (!flow.ready) return
+        _uiState.update { it.copy(moveToLedger = flow.copy(busy = true)) }
+        viewModelScope.launch {
+            val lines = flow.lines.map {
+                com.kg.merapaisa.data.MoveLine(it.personId, it.groupAmountMinor, it.ledgerAmountMinor ?: 0L)
+            }
+            val receipt = groupRepository.moveToLedger(flow.groupId, groupName, lines)
+            if (receipt == null) {
+                _uiState.update { it.copy(moveToLedger = null) }
+                openMoveToLedger()
+                _uiState.update { it.copy(moveToLedger = it.moveToLedger?.copy(groupChanged = true)) }
+            } else {
+                _uiState.update { it.copy(moveToLedger = null, lastMove = receipt) }
+            }
+        }
+    }
+
+    /** Undo in the snackbar: the move's payment rows and ledger entries go together. */
+    fun undoLastMove() {
+        val receipt = _uiState.value.lastMove ?: return
+        _uiState.update { it.copy(lastMove = null) }
+        viewModelScope.launch { groupRepository.undoMove(receipt) }
+    }
+
+    fun forgetLastMove() = _uiState.update { it.copy(lastMove = null) }
 
     fun deleteExpense(expenseId: Long) {
         viewModelScope.launch { groupRepository.deleteExpense(expenseId) }

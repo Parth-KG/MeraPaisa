@@ -8,6 +8,8 @@ import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonDao
 import com.kg.merapaisa.data.Expense
 import com.kg.merapaisa.data.MemberBalance
+import com.kg.merapaisa.data.MoveLine
+import com.kg.merapaisa.data.MoveReceipt
 import com.kg.merapaisa.data.evenShares
 import com.kg.merapaisa.data.Transfer
 import com.kg.merapaisa.data.directTransfers
@@ -209,6 +211,23 @@ class GroupRepository(
             ),
             sharesByPerson = mapOf(toPersonId to amountMinor)
         )
+        notifier.onLedgerChanged()
+    }
+
+    /**
+     * Moves your part of a group to your ledger (v3.7.0): one cancelling payment per pair in the
+     * group, one entry per person in the ledger noted "From <group>". Null when the group changed
+     * since [lines] were worked out, in which case nothing was written.
+     */
+    suspend fun moveToLedger(groupId: Long, groupName: String, lines: List<MoveLine>): MoveReceipt? {
+        val receipt = groupDao.moveToLedger(groupId, self().id, lines, "From ${groupName.trim()}", System.currentTimeMillis())
+        if (receipt != null) notifier.onLedgerChanged()
+        return receipt
+    }
+
+    /** Undo for a move: its payment rows and its ledger entries go together. */
+    suspend fun undoMove(receipt: MoveReceipt) {
+        groupDao.undoMove(receipt)
         notifier.onLedgerChanged()
     }
 
