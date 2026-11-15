@@ -91,4 +91,17 @@ class GroupEditExpenseTest {
         assertEquals(0, repo.groupDetail(group).first().expenses.size)
         assertEquals(0, repo.groupDetail(group).first().shares.size)
     }
+
+    @Test
+    fun sharesThatMissTheAmountAreRefused() = runBlocking {
+        val asha = person("Asha")
+        val group = repo.createGroup("Goa", "INR", listOf(asha))
+        val me = repo.self().id
+        repo.addExpense(group, "Cab", 100_00, me, mapOf(me to 50_00L, asha to 40_00L))
+        assertEquals(0, repo.groupDetail(group).first().expenses.size)
+        repo.addExpense(group, "Cab", 100_00, me, listOf(me, asha))
+        val id = repo.groupDetail(group).first().expenses.single().id
+        repo.editExpense(id, "Cab", 100_00, me, mapOf(me to 10_00L))
+        assertEquals(mapOf(me to 50_00L, asha to 50_00L), repo.groupDetail(group).first().shares.associate { it.personId to it.shareMinor })
+    }
 }

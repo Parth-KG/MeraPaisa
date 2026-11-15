@@ -153,7 +153,9 @@ class GroupRepository(
         paidByPersonId: Long,
         sharesByPerson: Map<Long, Long>
     ) {
-        require(sharesByPerson.values.sum() == amountMinor) { "shares must add up to the expense" }
+        // Shares that miss the amount would stop the group netting to zero. The sheets never send
+        // them, and a write refused here is better than a crash or a group that no longer adds up.
+        if (sharesByPerson.values.sum() != amountMinor || sharesByPerson.isEmpty()) return
         groupDao.recordExpense(
             expense = Expense(
                 groupId = groupId,
@@ -187,7 +189,9 @@ class GroupRepository(
         paidByPersonId: Long,
         sharesByPerson: Map<Long, Long>
     ) {
-        require(sharesByPerson.values.sum() == amountMinor) { "shares must add up to the expense" }
+        // Shares that miss the amount would stop the group netting to zero. The sheets never send
+        // them, and a write refused here is better than a crash or a group that no longer adds up.
+        if (sharesByPerson.values.sum() != amountMinor || sharesByPerson.isEmpty()) return
         if (groupDao.updateExpense(expenseId, description, amountMinor, paidByPersonId, sharesByPerson)) {
             notifier.onLedgerChanged()
         }
