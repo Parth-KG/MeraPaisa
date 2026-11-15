@@ -131,6 +131,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val groups = groupsOrNull.map { it.orEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /** Archived groups, for the collapsed section at the bottom of the Groups tab (v3.7.0). */
+    val archivedGroups = groupRepository.archivedGroupSummaries()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun setGroupArchived(groupId: Long, archived: Boolean) {
+        viewModelScope.launch { groupRepository.setArchived(groupId, archived) }
+    }
+
     private val personsOrNull = repository.personsWithBalances()
         .map<List<PersonWithBalance>, List<PersonWithBalance>?> { it }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)

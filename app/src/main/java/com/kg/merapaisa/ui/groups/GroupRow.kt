@@ -43,6 +43,8 @@ fun GroupRow(
     summary: GroupSummary,
     onClick: () -> Unit,
     onDelete: () -> Unit,
+    /** Archive the group, or bring an archived one back (v3.7.0). */
+    onArchive: () -> Unit = {},
 ) {
     val theme = LocalAppTheme.current
     var showMenu by remember { mutableStateOf(false) }
@@ -97,6 +99,16 @@ fun GroupRow(
                 onDismissRequest = { showMenu = false },
                 shape = Shapes.medium
             ) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            if (summary.group.archived) "Unarchive" else "Archive group",
+                            style = MeraPaisaType.body,
+                            color = theme.textPrimary
+                        )
+                    },
+                    onClick = { showMenu = false; onArchive() }
+                )
                 DropdownMenuItem(
                     text = { Text("Delete group", style = MeraPaisaType.body, color = theme.textPrimary) },
                     onClick = { showMenu = false; onDelete() }

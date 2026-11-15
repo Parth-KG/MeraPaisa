@@ -216,6 +216,26 @@ fun GroupRowsCase() {
     }
 }
 
+/** The Groups tab with its Archived section open: two in use, one archived (v3.7.0). */
+@Composable
+fun GroupsArchivedCase() = com.kg.merapaisa.ui.groups.GroupsList(
+    groups = Fixtures.groupSummaries.take(2),
+    archived = Fixtures.groupSummaries.drop(2).map { it.copy(group = it.group.copy(archived = true)) },
+    showArchived = true,
+    onToggleArchived = {}, onOpen = {}, onDelete = {}, onArchive = { _, _ -> }, onCreateGroup = {},
+    modifier = Modifier.fillMaxSize()
+)
+
+/** Every group archived: the line says so, the section stays below, closed. */
+@Composable
+fun GroupsAllArchivedCase() = com.kg.merapaisa.ui.groups.GroupsList(
+    groups = emptyList(),
+    archived = Fixtures.groupSummaries.map { it.copy(group = it.group.copy(archived = true)) },
+    showArchived = false,
+    onToggleArchived = {}, onOpen = {}, onDelete = {}, onArchive = { _, _ -> }, onCreateGroup = {},
+    modifier = Modifier.fillMaxSize()
+)
+
 /** Six members, unequal expenses, so the settle-up plan has something real to reduce. */
 @Composable
 fun GroupDetailCase() {
@@ -454,6 +474,8 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "empty-active-everyone-even" to { EmptyActiveEveryoneEvenCase() },
     "empty-groups" to { EmptyGroupsCase() },
     "group-rows" to { GroupRowsCase() },
+    "groups-archived" to { GroupsArchivedCase() },
+    "groups-all-archived" to { GroupsAllArchivedCase() },
     "group-detail" to { GroupDetailCase() },
     "group-detail-even" to { GroupDetailEvenCase() },
     "split-amount" to { SplitAmountCase() },

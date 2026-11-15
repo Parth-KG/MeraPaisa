@@ -44,6 +44,31 @@ interface GroupDao {
     )
     fun getGroupSummaries(selfId: Long): Flow<List<GroupSummary>>
 
+    /**
+     * Every archived group with your position in it (v3.7.0), for the
+     * Groups tab's Archived section. The same figures as the live list, computed rather than stored: what you paid
+     * into the group, less what you were assigned.
+     */
+    @Query(
+        """
+        SELECT expense_groups.*,
+            (SELECT COUNT(*) FROM group_members WHERE group_members.groupId = expense_groups.id) AS memberCount,
+            COALESCE((SELECT SUM(e.amountMinor) FROM expenses e
+                      WHERE e.groupId = expense_groups.id AND e.paidByPersonId = :selfId), 0)
+            - COALESCE((SELECT SUM(s.shareMinor) FROM expense_shares s
+                        JOIN expenses e2 ON e2.id = s.expenseId
+                        WHERE e2.groupId = expense_groups.id AND s.personId = :selfId), 0) AS yourBalanceMinor
+        FROM expense_groups
+        WHERE archived = 1
+        ORDER BY createdAt DESC
+        """
+    )
+    fun getArchivedGroupSummaries(selfId: Long): Flow<List<GroupSummary>>
+
+    /** Archives a group or brings it back (v3.7.0). Nothing in it changes. */
+    @Query("UPDATE expense_groups SET archived = :archived WHERE id = :groupId")
+    suspend fun setArchived(groupId: Long, archived: Boolean)
+
     @Query("SELECT * FROM expense_groups WHERE id = :groupId")
     fun getGroup(groupId: Long): Flow<Group?>
 

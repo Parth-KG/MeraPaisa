@@ -27,14 +27,19 @@ import com.kg.merapaisa.ui.theme.Spacing
  * where the first group row will start.
  */
 @Composable
-fun GroupsEmptyState(modifier: Modifier = Modifier, onCreateGroup: () -> Unit = {}) {
+fun GroupsEmptyState(
+    modifier: Modifier = Modifier,
+    onCreateGroup: () -> Unit = {},
+    /** "No groups yet.", or, with every group archived, a line that says so instead (v3.7.0). */
+    title: String = "No groups yet."
+) {
     val theme = LocalAppTheme.current
     Column(
         modifier = modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
-        Text("No groups yet.", style = MeraPaisaType.screenTitle, color = theme.textPrimary)
+        Text(title, style = MeraPaisaType.screenTitle, color = theme.textPrimary)
         Button(
             onClick = onCreateGroup,
             shape = Shapes.small,

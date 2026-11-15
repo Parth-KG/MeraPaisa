@@ -71,7 +71,7 @@ class DesignGalleryTest {
             "people-rows", "net-total-multi", "net-total-single", "net-total-multi-both-sides",
             "net-total-single-both-sides", "numpad", "group-detail",
             "split-adjustments", "split-adjustments-locked", "history", "settings",
-            "import-confirm", "import-held-back", "split-amount", "settings-upi"
+            "import-confirm", "import-held-back", "split-amount", "settings-upi", "groups-archived", "groups-all-archived"
         )
     )
 

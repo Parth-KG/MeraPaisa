@@ -45,9 +45,9 @@ import com.kg.merapaisa.ui.dialogs.SettingsScreen
 import com.kg.merapaisa.ui.groups.AddExpenseDialog
 import com.kg.merapaisa.ui.groups.GroupDetailScreen
 import com.kg.merapaisa.ui.groups.EditGroupSheet
-import com.kg.merapaisa.ui.groups.GroupRow
 import com.kg.merapaisa.ui.groups.SettleUpSheet
 import com.kg.merapaisa.ui.groups.GroupsEmptyState
+import com.kg.merapaisa.ui.groups.GroupsList
 import com.kg.merapaisa.ui.dialogs.EntryHistoryScreen
 import com.kg.merapaisa.ui.share.ImportLedgerDialog
 import com.kg.merapaisa.ui.share.ShareLedgerSheet
@@ -101,6 +101,9 @@ fun MainScreen(viewModel: MainViewModel) {
     val scope = rememberCoroutineScope()
     val persons by viewModel.persons.collectAsState()
     val groups by viewModel.groups.collectAsState()
+    val archivedGroups by viewModel.archivedGroups.collectAsState()
+    // The Archived section starts closed, and stays as it was across a turn of the phone.
+    var showArchivedGroups by rememberSaveable { mutableStateOf(false) }
     val ui by viewModel.uiState.collectAsState()
     val ledgerReady by viewModel.ledgerReady.collectAsState()
     // Landscape on a phone. The keypad alone is taller than the screen there, so while someone is
@@ -173,7 +176,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val editingPerson = persons.find { it.id == ui.editingPersonId }
     val historyPerson = persons.find { it.id == ui.historyPersonId }
     val pendingDelete = persons.find { it.id == ui.pendingDeleteId }
-    val pendingGroupDelete = groups.find { it.group.id == ui.pendingGroupDeleteId }
+    val pendingGroupDelete = (groups + archivedGroups).find { it.group.id == ui.pendingGroupDeleteId }
     val pendingReminder = persons.find { it.id == ui.pendingReminderId }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -273,7 +276,7 @@ fun MainScreen(viewModel: MainViewModel) {
             if (!ledgerReady || keypadTakesScreen) {
                 if (!keypadTakesScreen) Spacer(Modifier.weight(1f))
             } else if (ui.tab == Tab.Groups) {
-                if (groups.isEmpty()) {
+                if (groups.isEmpty() && archivedGroups.isEmpty()) {
                     GroupsEmptyState(
                         modifier = Modifier
                             .weight(1f)
@@ -281,23 +284,19 @@ fun MainScreen(viewModel: MainViewModel) {
                         onCreateGroup = { viewModel.showCreateGroupDialog(true) }
                     )
                 } else {
-                    LazyColumn(
-                        // No horizontal padding here: GroupRow pads to the gutter itself, as
-                        // PersonRow does, and RowDivider measures its inset from the list edge.
+                    GroupsList(
+                        groups = groups,
+                        archived = archivedGroups,
+                        showArchived = showArchivedGroups,
+                        onToggleArchived = { showArchivedGroups = !showArchivedGroups },
+                        onOpen = { viewModel.openGroup(it) },
+                        onDelete = { viewModel.confirmDeleteGroup(it) },
+                        onArchive = { id, archive -> viewModel.setGroupArchived(id, archive) },
+                        onCreateGroup = { viewModel.showCreateGroupDialog(true) },
                         modifier = Modifier
                             .weight(1f)
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
-                        contentPadding = PaddingValues(bottom = ListClearance)
-                    ) {
-                        itemsIndexed(groups, key = { _, it -> it.group.id }) { index, summary ->
-                            if (index > 0) RowDivider(TextRowInset)
-                            GroupRow(
-                                summary = summary,
-                                onClick = { viewModel.openGroup(summary.group.id) },
-                                onDelete = { viewModel.confirmDeleteGroup(summary.group.id) }
-                            )
-                        }
-                    }
+                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                    )
                 }
             } else if (list.isEmpty()) {
                 EmptyState(
@@ -596,7 +595,8 @@ fun MainScreen(viewModel: MainViewModel) {
     if (openGroupId != null) {
         val detail by viewModel.openGroup.collectAsState()
         val selfId by viewModel.selfId.collectAsState()
-        val summary = groups.firstOrNull { it.group.id == openGroupId }
+        // An archived group opens and edits like any other.
+        val summary = (groups + archivedGroups).firstOrNull { it.group.id == openGroupId }
         var editingGroup by remember(openGroupId) { mutableStateOf(false) }
         var editingExpenseId by remember(openGroupId) { mutableStateOf<Long?>(null) }
 
@@ -963,7 +963,7 @@ fun MainScreen(viewModel: MainViewModel) {
  * Room under the last row for the bottom-right buttons: 56dp tall with padding either side. A
  * list that stopped short of this put its last row's amount and history button behind them.
  */
-private val ListClearance = 56.dp + Spacing.md * 2 + Spacing.sm
+internal val ListClearance = 56.dp + Spacing.md * 2 + Spacing.sm
 
 /** Below this height the screen is a phone on its side. */
 private const val SHORT_SCREEN_DP = 480

@@ -38,6 +38,20 @@ class GroupRepository(
     fun groupSummaries(): Flow<List<GroupSummary>> =
         selfIds().flatMapLatest { groupDao.getGroupSummaries(it) }
 
+    /** The archived groups, with your position in each, for the Groups tab's Archived section. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun archivedGroupSummaries(): Flow<List<GroupSummary>> =
+        selfIds().flatMapLatest { groupDao.getArchivedGroupSummaries(it) }
+
+    /**
+     * Archives a group, or brings it back (v3.7.0). An archived group leaves the main list for a
+     * section of its own and stays openable and editable; its rows and balances are untouched.
+     */
+    suspend fun setArchived(groupId: Long, archived: Boolean) {
+        groupDao.setArchived(groupId, archived)
+        notifier.onLedgerChanged()
+    }
+
     /** Your own row's id, created if missing, and followed across a restore. */
     fun selfIds(): Flow<Long> =
         flow { personDao.ensureSelf(); emitAll(personDao.selfIdFlow().filterNotNull().distinctUntilChanged()) }
