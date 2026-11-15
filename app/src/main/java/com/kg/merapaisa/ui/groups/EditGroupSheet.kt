@@ -62,11 +62,14 @@ fun EditGroupSheet(
      * exists so the gallery can show the sheet with people chosen, which is otherwise only
      * reachable by tapping and therefore never appears in a screenshot.
      */
-    initiallySelectedIds: Set<Long> = emptySet()
+    initiallySelectedIds: Set<Long> = emptySet(),
+    /** Adds someone new to the ledger without leaving the sheet. No-op in the gallery. */
+    onCreatePerson: CreatePerson = { _, _, _, _, _, _ -> }
 ) {
     val theme = LocalAppTheme.current
     var name by remember(group.id) { mutableStateOf(group.name) }
     var selected by remember(group.id) { mutableStateOf(initiallySelectedIds) }
+    var addingPerson by remember { mutableStateOf(false) }
 
     val memberIds = members.map { it.id }.toSet()
     val candidates = people.filter { it.id !in memberIds }
@@ -145,7 +148,9 @@ fun EditGroupSheet(
                         )
                     }
                 }
+                RowDivider()
             }
+            AddNewPersonRow(onClick = { addingPerson = true })
 
             Text(
                 "New members owe nothing for what was spent before they joined.",
@@ -168,5 +173,18 @@ fun EditGroupSheet(
                 scope.launch { sheetState.hide() }.invokeOnCompletion { onSave(newName, added) }
             }
         }
+    }
+
+    if (addingPerson) {
+        AddPersonOverGroup(
+            people = people,
+            currency = group.currency,
+            onCreate = onCreatePerson,
+            onDismiss = { addingPerson = false },
+            onAdded = { id ->
+                selected = selected + id
+                addingPerson = false
+            }
+        )
     }
 }

@@ -74,7 +74,9 @@ fun AddPersonDialog(
     /** Everyone already in the ledger, to say so when a name is taken. */
     existingNames: List<String> = emptyList(),
     /** Their stored colours, so a new person starts on the one fewest of them have. */
-    existingColours: List<String> = emptyList()
+    existingColours: List<String> = emptyList(),
+    /** The currency to start on, a group's when added from inside one; else the last one used. */
+    initialCurrency: String? = null
 ) {
     val theme = LocalAppTheme.current
     val context = LocalContext.current
@@ -106,8 +108,8 @@ fun AddPersonDialog(
     }
 
     val lastCurrency by CurrencyStore.getLastCurrency(context).collectAsState(initial = "INR")
-    var selectedCurrency by remember { mutableStateOf("INR") }
-    LaunchedEffect(lastCurrency) { selectedCurrency = lastCurrency }
+    var selectedCurrency by remember { mutableStateOf(initialCurrency ?: "INR") }
+    LaunchedEffect(lastCurrency) { if (initialCurrency == null) selectedCurrency = lastCurrency }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 

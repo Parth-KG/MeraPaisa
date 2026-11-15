@@ -60,7 +60,7 @@ class WindowGalleryTest {
             "sheet-edit-entry", "dialog-delete-person", "sheet-add-person", "sheet-reminder", "sheet-settle-up",
             "sheet-theme-trying", "sheet-move-debt", "dialog-convert-currency", "sheet-edit-person",
             "sheet-create-group", "sheet-edit-group", "sheet-add-expense", "sheet-share",
-            "dialog-replace-ledger", "sheet-own-upi", "sheet-reminder-qr", "sheet-pay-qr"
+            "dialog-replace-ledger", "sheet-own-upi", "sheet-reminder-qr", "sheet-pay-qr", "sheet-create-group-empty"
         )
     )
 

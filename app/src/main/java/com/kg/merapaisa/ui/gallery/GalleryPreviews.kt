@@ -551,6 +551,10 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
             onCreate = { _, _, _, _ -> }
         )
     },
+    // Nobody in the ledger yet: the "Add a new person" row is the whole list (v3.7.0).
+    "sheet-create-group-empty" to {
+        CreateGroupDialog(people = emptyList(), defaultCurrency = "INR", onDismiss = {}, onCreate = { _, _, _, _ -> })
+    },
     // Everyone in a long ledger to choose from, so the list runs on under the foot and its edge shows.
     "sheet-create-group-long" to {
         CreateGroupDialog(

@@ -53,7 +53,9 @@ fun CreateGroupDialog(
     people: List<PersonWithBalance>,
     defaultCurrency: String,
     onDismiss: () -> Unit,
-    onCreate: (name: String, currency: String, memberIds: List<Long>, simplifyDebts: Boolean) -> Unit
+    onCreate: (name: String, currency: String, memberIds: List<Long>, simplifyDebts: Boolean) -> Unit,
+    /** Adds someone new to the ledger without leaving the sheet. No-op in the gallery. */
+    onCreatePerson: com.kg.merapaisa.ui.groups.CreatePerson = { _, _, _, _, _, _ -> }
 ) {
     val theme = LocalAppTheme.current
     var name by remember { mutableStateOf("") }
@@ -61,6 +63,7 @@ fun CreateGroupDialog(
     var selected by remember { mutableStateOf(setOf<Long>()) }
     // Defaults to on, which is what every group has done since groups shipped.
     var simplifyDebts by remember { mutableStateOf(true) }
+    var addingPerson by remember { mutableStateOf(false) }
 
     // Anyone can join, whatever currency their own balance is kept in. A group is its own
     // ledger in its own currency and moves nothing on the main screen. Filtered against the list
@@ -133,14 +136,9 @@ fun CreateGroupDialog(
                 else "${chosen.size} selected, plus you"
             )
 
-            if (people.isEmpty()) {
-                Text(
-                    "Add some people first. A group needs somebody to split with.",
-                    style = MeraPaisaType.body,
-                    color = theme.textSecondary,
-                    modifier = Modifier.padding(horizontal = Spacing.lg)
-                )
-            } else {
+            // With nobody in the ledger this row is the whole list: it used to be a dead end,
+            // "Add some people first", with no way to add anyone from here.
+            run {
                 people.forEachIndexed { index, person ->
                     if (index > 0) RowDivider()
                     val isIn = person.id in chosen
@@ -171,6 +169,8 @@ fun CreateGroupDialog(
                         )
                     }
                 }
+                if (people.isNotEmpty()) RowDivider()
+                com.kg.merapaisa.ui.groups.AddNewPersonRow(onClick = { addingPerson = true })
             }
         }
 
@@ -186,6 +186,19 @@ fun CreateGroupDialog(
                 }
             }
         }
+    }
+
+    if (addingPerson) {
+        com.kg.merapaisa.ui.groups.AddPersonOverGroup(
+            people = people,
+            currency = currency,
+            onCreate = onCreatePerson,
+            onDismiss = { addingPerson = false },
+            onAdded = { id ->
+                selected = selected + id
+                addingPerson = false
+            }
+        )
     }
 }
 

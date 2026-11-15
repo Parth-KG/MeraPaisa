@@ -410,7 +410,8 @@ fun MainScreen(viewModel: MainViewModel) {
                 people = persons,
                 defaultCurrency = lastCurrency,
                 onDismiss = { viewModel.showCreateGroupDialog(false) },
-                onCreate = viewModel::createGroup
+                onCreate = viewModel::createGroup,
+                onCreatePerson = viewModel::addPerson
             )
         }
         if (ui.showAddDialog) {
@@ -626,7 +627,8 @@ fun MainScreen(viewModel: MainViewModel) {
                     onSave = { name, added ->
                         editingGroup = false
                         viewModel.editGroup(summary.group.id, name, added)
-                    }
+                    },
+                    onCreatePerson = viewModel::addPerson
                 )
             }
 
