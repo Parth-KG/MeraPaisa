@@ -65,15 +65,24 @@ class GroupRepository(
     fun expensesSharedBy(personId: Long): Flow<Int> = groupDao.expenseCountSharedBy(personId)
 
     /**
-     * Renames a group and adds people to it. Adding someone moves no balance: they owe nothing for
-     * expenses recorded before they joined, because their share of those does not exist.
+     * Renames a group, adds people to it and takes out people nothing in it involves. Adding
+     * someone moves no balance: they owe nothing for expenses recorded before they joined, because
+     * their share of those does not exist. Removing is refused, person by person, for anyone who
+     * paid or holds a share of anything in the group, and never touches you (v3.7.0).
      */
-    suspend fun editGroup(groupId: Long, name: String, newMemberIds: List<Long>) {
+    suspend fun editGroup(
+        groupId: Long,
+        name: String,
+        newMemberIds: List<Long>,
+        removedMemberIds: List<Long> = emptyList()
+    ) {
         val group = groupDao.getGroup(groupId).first() ?: return
         if (name.isNotBlank() && name != group.name) groupDao.updateGroup(group.copy(name = name))
         if (newMemberIds.isNotEmpty()) {
             groupDao.addMembers(newMemberIds.distinct().map { GroupMember(groupId = groupId, personId = it) })
         }
+        val selfId = self().id
+        removedMemberIds.distinct().filter { it != selfId }.forEach { groupDao.removeMemberIfUninvolved(groupId, it) }
         notifier.onLedgerChanged()
     }
 

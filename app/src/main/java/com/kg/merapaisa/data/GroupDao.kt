@@ -111,6 +111,29 @@ interface GroupDao {
     @Query("SELECT personId FROM group_members WHERE groupId = :groupId")
     suspend fun getMemberIds(groupId: Long): List<Long>
 
+    /** Rows in this group a member paid: expenses and payments both. */
+    @Query("SELECT COUNT(*) FROM expenses WHERE groupId = :groupId AND paidByPersonId = :personId")
+    suspend fun paidCountInGroup(groupId: Long, personId: Long): Int
+
+    /** Shares this member holds in this group's expenses and payments. */
+    @Query(
+        "SELECT COUNT(*) FROM expense_shares s JOIN expenses e ON e.id = s.expenseId " +
+            "WHERE e.groupId = :groupId AND s.personId = :personId"
+    )
+    suspend fun shareCountInGroup(groupId: Long, personId: Long): Int
+
+    /**
+     * Takes someone out of a group only if nothing in it involves them (v3.7.0): they paid no
+     * expense or payment and hold no share. Checked here, inside the write, so a sheet opened
+     * before an expense was added cannot remove someone that expense now names. False if refused.
+     */
+    @androidx.room.Transaction
+    suspend fun removeMemberIfUninvolved(groupId: Long, personId: Long): Boolean {
+        if (paidCountInGroup(groupId, personId) > 0 || shareCountInGroup(groupId, personId) > 0) return false
+        removeMember(groupId, personId)
+        return true
+    }
+
     /** Every share in the group, so balances can be derived without a query per expense. */
     @Query(
         """

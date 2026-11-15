@@ -266,8 +266,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { groupRepository.deleteGroup(groupId) }
     }
 
-    fun editGroup(groupId: Long, name: String, newMemberIds: List<Long>) {
-        viewModelScope.launch { groupRepository.editGroup(groupId, name, newMemberIds) }
+    fun editGroup(groupId: Long, name: String, newMemberIds: List<Long>, removedMemberIds: List<Long> = emptyList()) {
+        viewModelScope.launch { groupRepository.editGroup(groupId, name, newMemberIds, removedMemberIds) }
     }
 
     fun showSettingsDialog(show: Boolean) = _uiState.update { it.copy(showSettingsDialog = show) }

@@ -29,6 +29,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.Group
+import androidx.compose.material3.TextButton
+import com.kg.merapaisa.data.involvementOf
+import com.kg.merapaisa.data.Involvement
+import com.kg.merapaisa.data.ExpenseShare
+import com.kg.merapaisa.data.Expense
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.ui.RowDivider
@@ -56,7 +61,7 @@ fun EditGroupSheet(
     members: List<Person>,
     people: List<PersonWithBalance>,
     onDismiss: () -> Unit,
-    onSave: (name: String, newMemberIds: List<Long>) -> Unit,
+    onSave: (name: String, newMemberIds: List<Long>, removedMemberIds: List<Long>) -> Unit,
     /**
      * People ticked when the sheet opens. Empty in the app, since nobody is added until ticked. It
      * exists so the gallery can show the sheet with people chosen, which is otherwise only
@@ -64,12 +69,18 @@ fun EditGroupSheet(
      */
     initiallySelectedIds: Set<Long> = emptySet(),
     /** Adds someone new to the ledger without leaving the sheet. No-op in the gallery. */
-    onCreatePerson: CreatePerson = { _, _, _, _, _, _ -> }
+    onCreatePerson: CreatePerson = { _, _, _, _, _, _ -> },
+    /** The group's rows, to tell who can be removed: only someone nothing here involves. */
+    expenses: List<Expense> = emptyList(),
+    shares: List<ExpenseShare> = emptyList(),
+    /** You, who are in every group of yours and are never offered for removal. */
+    selfId: Long = 0
 ) {
     val theme = LocalAppTheme.current
     var name by remember(group.id) { mutableStateOf(group.name) }
     var selected by remember(group.id) { mutableStateOf(initiallySelectedIds) }
     var addingPerson by remember { mutableStateOf(false) }
+    var removing by remember(group.id) { mutableStateOf(setOf<Long>()) }
 
     val memberIds = members.map { it.id }.toSet()
     val candidates = people.filter { it.id !in memberIds }
@@ -102,6 +113,29 @@ fun EditGroupSheet(
                 shape = Shapes.medium,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)
             )
+
+            Text(
+                "Members",
+                style = MeraPaisaType.sectionTitle,
+                color = theme.textSecondary,
+                modifier = Modifier.padding(
+                    start = Spacing.lg, end = Spacing.lg, top = Spacing.xl, bottom = Spacing.sm
+                )
+            )
+            // You first, then everyone else as the group lists them. You can't leave your own
+            // group; anyone else can go only while nothing here names them (Parth, 15 Nov 2026).
+            val ordered = members.sortedBy { if (it.id == selfId) 0 else 1 }
+            ordered.forEachIndexed { index, member ->
+                if (index > 0) RowDivider()
+                MemberRow(
+                    name = if (member.id == selfId) "You" else member.name,
+                    involvement = if (member.id == selfId) null else involvementOf(member.id, expenses, shares),
+                    leaving = member.id in removing,
+                    onToggle = {
+                        removing = if (member.id in removing) removing - member.id else removing + member.id
+                    }
+                )
+            }
 
             Text(
                 if (selected.isEmpty()) "Add people" else "${selected.size} to add",
@@ -166,11 +200,13 @@ fun EditGroupSheet(
             }
             PrimaryAction(
                 "Save group",
-                enabled = name.isNotBlank() && (name.trim() != group.name || selected.isNotEmpty())
+                enabled = name.isNotBlank() &&
+                    (name.trim() != group.name || selected.isNotEmpty() || removing.isNotEmpty())
             ) {
                 val newName = name.trim()
                 val added = selected.toList()
-                scope.launch { sheetState.hide() }.invokeOnCompletion { onSave(newName, added) }
+                val removed = removing.toList()
+                scope.launch { sheetState.hide() }.invokeOnCompletion { onSave(newName, added, removed) }
             }
         }
     }
@@ -188,3 +224,44 @@ fun EditGroupSheet(
         )
     }
 }
+
+/**
+ * One member in Edit group. You have no action. Anyone nothing in the group involves can be taken
+ * out, which happens when the sheet is saved ("Remove", then "Keep" to change your mind); anyone
+ * else has a line saying why they stay.
+ */
+@Composable
+private fun MemberRow(name: String, involvement: Involvement?, leaving: Boolean, onToggle: () -> Unit) {
+    val theme = LocalAppTheme.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                name,
+                style = MeraPaisaType.body,
+                color = if (leaving) theme.textSecondary else theme.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            val line = when {
+                leaving -> "Leaves the group when you save."
+                involvement == Involvement.Paid -> "Paid for something here, so they stay."
+                involvement == Involvement.Share -> "Has a share of something here, so they stay."
+                else -> null
+            }
+            if (line != null) Text(line, style = MeraPaisaType.label, color = theme.textSecondary)
+        }
+        if (involvement == Involvement.None) {
+            TextButton(onClick = onToggle, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(if (leaving) "Keep" else "Remove", style = MeraPaisaType.bodyStrong, color = theme.primary)
+            }
+        }
+    }
+}
+

@@ -594,8 +594,17 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
             members = Fixtures.mixedPeople.take(3).map { it.person },
             people = Fixtures.mixedPeople,
             onDismiss = {},
-            onSave = { _, _ -> },
-            initiallySelectedIds = setOf(Fixtures.dollarPerson.id, Fixtures.shortName.id)
+            onSave = { _, _, _ -> },
+            initiallySelectedIds = setOf(Fixtures.dollarPerson.id, Fixtures.shortName.id),
+            // The first member paid for something, the second shares in it, the third is free to go.
+            expenses = listOf(
+                com.kg.merapaisa.data.Expense(id = 1, groupId = Fixtures.group.id, description = "Hotel",
+                    amountMinor = 1_000_00, paidByPersonId = Fixtures.mixedPeople[0].id)
+            ),
+            shares = listOf(
+                com.kg.merapaisa.data.ExpenseShare(1, Fixtures.mixedPeople[0].id, 500_00),
+                com.kg.merapaisa.data.ExpenseShare(1, Fixtures.mixedPeople[1].id, 500_00)
+            )
         )
     },
     "sheet-add-expense" to {

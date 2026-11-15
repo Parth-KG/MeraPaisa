@@ -100,7 +100,7 @@ class AddPersonInGroupTest {
                 members = listOf(people[0].person),
                 people = people,
                 onDismiss = {},
-                onSave = { _, _ -> },
+                onSave = { _, _, _ -> },
                 onCreatePerson = create
             )
         }

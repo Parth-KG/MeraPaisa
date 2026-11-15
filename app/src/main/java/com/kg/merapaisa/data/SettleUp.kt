@@ -136,3 +136,24 @@ fun evenShares(amountMinor: Long, memberIds: List<Long>): Map<Long, Long> {
         base + extra
     }
 }
+
+/** What ties a member to a group, which decides whether they can be removed (v3.7.0). */
+enum class Involvement {
+    /** Nothing in the group names them: they can be taken out. */
+    None,
+    /** They paid an expense or a payment here. */
+    Paid,
+    /** They paid nothing but hold a share of an expense or a payment here. */
+    Share
+}
+
+/**
+ * Whether anything in a group involves [personId]: paying an expense or a payment counts first,
+ * then holding a share of one. Only someone at [Involvement.None] may be removed, so no balance
+ * ever has to move when a member leaves (Parth, 15 Nov 2026).
+ */
+fun involvementOf(personId: Long, expenses: List<Expense>, shares: List<ExpenseShare>): Involvement = when {
+    expenses.any { it.paidByPersonId == personId } -> Involvement.Paid
+    shares.any { it.personId == personId } -> Involvement.Share
+    else -> Involvement.None
+}

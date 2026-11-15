@@ -626,11 +626,14 @@ fun MainScreen(viewModel: MainViewModel) {
                     members = loaded.members,
                     people = persons,
                     onDismiss = { editingGroup = false },
-                    onSave = { name, added ->
+                    onSave = { name, added, removed ->
                         editingGroup = false
-                        viewModel.editGroup(summary.group.id, name, added)
+                        viewModel.editGroup(summary.group.id, name, added, removed)
                     },
-                    onCreatePerson = viewModel::addPerson
+                    onCreatePerson = viewModel::addPerson,
+                    expenses = loaded.expenses,
+                    shares = loaded.shares,
+                    selfId = selfId
                 )
             }
 
