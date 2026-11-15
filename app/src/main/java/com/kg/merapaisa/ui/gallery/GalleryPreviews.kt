@@ -674,6 +674,23 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
             )
         )
     },
+    // An expense saved with unequal shares opens with "Adjust the shares" already on (v3.7.0).
+    "sheet-edit-expense-unequal" to {
+        val ids = Fixtures.groupMembers.map { it.id }
+        AddExpenseDialog(
+            members = Fixtures.groupMembers.take(3),
+            currency = "INR",
+            selfId = 1,
+            onDismiss = {},
+            onSave = { _, _, _, _ -> },
+            editing = com.kg.merapaisa.ui.groups.ExpenseDraft(
+                description = "Deposit for the flat",
+                amountMinor = 30_000_00,
+                paidByPersonId = ids[0],
+                shares = mapOf(ids[0] to 15_000_00L, ids[1] to 10_000_00L, ids[2] to 5_000_00L)
+            )
+        )
+    },
     // Moving your part of a group to your ledger (v3.7.0): an INR and a USD person, then the
     // same with the dollar rate missing.
     "sheet-move-to-ledger" to {

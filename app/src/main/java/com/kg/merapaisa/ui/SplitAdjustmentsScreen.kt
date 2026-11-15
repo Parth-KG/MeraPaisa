@@ -366,7 +366,7 @@ fun SplitAdjustmentsContent(
  * before reading it: they can see the two figures above disagree. What they cannot see is that a
  * lock is the reason nothing moved to close the gap.
  */
-private fun mismatchMessage(
+internal fun mismatchMessage(
     total: Long,
     target: Long,
     currency: String,
@@ -399,7 +399,7 @@ private fun mismatchMessage(
  * given, so the opening shares simply appear.
  */
 @Composable
-private fun SplitShareRow(
+internal fun SplitShareRow(
     participant: SplitParticipant,
     sourceCurrency: String,
     amountInSourceMinor: Long,

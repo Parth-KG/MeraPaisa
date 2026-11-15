@@ -36,6 +36,11 @@ import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.data.evenShares
+import com.kg.merapaisa.ui.mismatchMessage
+import com.kg.merapaisa.ui.SplitParticipant
+import com.kg.merapaisa.ui.SplitShareRow
+import com.kg.merapaisa.data.redistribute
+import androidx.compose.material3.TextButton
 import com.kg.merapaisa.data.formatMinorPlain
 import com.kg.merapaisa.data.isTypableAmount
 import com.kg.merapaisa.data.parseAmountToMinor
@@ -110,11 +115,25 @@ fun AddExpenseDialog(
 
     var adding by remember { mutableStateOf(false) }
     val amountMinor = parseAmountToMinor(amount)
+    // The stored shares count until "Split equally" is chosen, which means equal from then on.
+    var keepStored by remember { mutableStateOf(true) }
     val shares = if (amountMinor != null && amountMinor > 0 && sharedWith.isNotEmpty()) {
-        sharesToSave(amountMinor, sharedWith, editing)
+        sharesToSave(amountMinor, sharedWith, editing.takeIf { keepStored })
     } else emptyMap()
+
+    // "Adjust the shares" (v3.7.0): equal unless asked, as on Balances. An expense saved with
+    // unequal shares opens adjusted, with those shares in the fields. A new amount or a change in
+    // who shares it starts the fields again from the shares above.
+    var adjusting by remember {
+        mutableStateOf(editing != null && editing.shares != evenShares(editing.amountMinor, editing.shares.keys.sorted()))
+    }
+    var custom by remember(amountMinor, sharedWith) { mutableStateOf(shares) }
+    var locked by remember(amountMinor, sharedWith) { mutableStateOf(setOf<Long>()) }
+    var lastEdited by remember(amountMinor, sharedWith) { mutableStateOf<Long?>(null) }
+    val customAddsUp = amountMinor != null && custom.values.sum() == amountMinor && custom.keys == sharedWith
+
     val valid = description.isNotBlank() && amountMinor != null && amountMinor > 0 &&
-        sharedWith.isNotEmpty() && members.any { it.id == paidBy }
+        sharedWith.isNotEmpty() && members.any { it.id == paidBy } && (!adjusting || customAddsUp)
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -193,7 +212,8 @@ fun AddExpenseDialog(
             members.forEachIndexed { index, m ->
                 if (index > 0) RowDivider()
                 val isIn = m.id in sharedWith
-                val share = if (isIn) shares[m.id] else null
+                // While adjusting, the figures are in the fields below instead.
+                val share = if (isIn && !adjusting) shares[m.id] else null
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -228,6 +248,64 @@ fun AddExpenseDialog(
                     }
                 }
             }
+
+            if (amountMinor != null && amountMinor > 0 && sharedWith.size > 1) {
+                if (!adjusting) {
+                    TextButton(
+                        onClick = { adjusting = true; custom = shares; locked = emptySet() },
+                        modifier = Modifier.padding(horizontal = Spacing.sm).heightIn(min = 48.dp)
+                    ) {
+                        Text("Adjust the shares", style = MeraPaisaType.bodyStrong, color = theme.primary)
+                    }
+                } else {
+                    FormHeading("Shares")
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        members.filter { it.id in sharedWith }.forEach { m ->
+                            SplitShareRow(
+                                participant = SplitParticipant(m.id, m.name, currency),
+                                sourceCurrency = currency,
+                                amountInSourceMinor = custom[m.id] ?: 0L,
+                                convertedAmountMinor = null,
+                                locked = m.id in locked,
+                                animateShare = m.id != lastEdited,
+                                onAmountChange = { typed ->
+                                    lastEdited = m.id
+                                    custom = redistribute(custom, locked + m.id, m.id, typed, amountMinor)
+                                    locked = locked + m.id
+                                },
+                                onToggleLock = {
+                                    if (m.id in locked) {
+                                        locked = locked - m.id
+                                        if (lastEdited == m.id) lastEdited = null
+                                    } else {
+                                        locked = locked + m.id
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    if (!customAddsUp && custom.keys == sharedWith) {
+                        Text(
+                            mismatchMessage(
+                                total = custom.values.sum(),
+                                target = amountMinor,
+                                currency = currency,
+                                lockedSum = custom.filterKeys { it in locked }.values.sum(),
+                                everyShareLocked = locked.containsAll(sharedWith)
+                            ),
+                            style = MeraPaisaType.label,
+                            color = theme.negative,
+                            modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.sm)
+                        )
+                    }
+                    TextButton(
+                        onClick = { adjusting = false; keepStored = false },
+                        modifier = Modifier.padding(horizontal = Spacing.sm).heightIn(min = 48.dp)
+                    ) {
+                        Text("Split equally", style = MeraPaisaType.bodyStrong, color = theme.primary)
+                    }
+                }
+            }
         }
 
         SheetFoot(above = scroll) {
@@ -240,7 +318,7 @@ fun AddExpenseDialog(
                 // tap in that time added the expense twice.
                 if (adding) return@PrimaryAction
                 adding = true
-                val saved = sharesToSave(minor, sharedWith, editing)
+                val saved = if (adjusting) custom else sharesToSave(minor, sharedWith, editing.takeIf { keepStored })
                 scope.launch { sheetState.hide() }.invokeOnCompletion {
                     onSave(description.trim(), minor, paidBy, saved)
                 }
