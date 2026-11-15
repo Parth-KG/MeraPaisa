@@ -157,3 +157,34 @@ fun involvementOf(personId: Long, expenses: List<Expense>, shares: List<ExpenseS
     shares.any { it.personId == personId } -> Involvement.Share
     else -> Involvement.None
 }
+
+/**
+ * Your position in a group, pair by pair, as the debts arose (v3.7.0): for each member, what they
+ * owe you for expenses you paid, net of what you owe them for theirs, payments between you two
+ * counted. Positive means they owe you. Members you are even with are left out.
+ *
+ * This is [directTransfers] kept to the pairs that include you, so it never routes you through
+ * someone you shared nothing with, and it does not depend on the group's fewest-payments switch.
+ * The values add up to your own position: your share of what you paid cancels out, and every other
+ * share you are part of lands in exactly one pair.
+ */
+fun pairsWithYou(expenses: List<Expense>, shares: List<ExpenseShare>, selfId: Long): Map<Long, Long> {
+    val paidBy = expenses.associate { it.id to it.paidByPersonId }
+    val pairs = LinkedHashMap<Long, Long>()
+    shares.forEach { share ->
+        val payer = paidBy[share.expenseId] ?: return@forEach
+        when {
+            payer == share.personId -> Unit
+            payer == selfId -> pairs[share.personId] = (pairs[share.personId] ?: 0L) + share.shareMinor
+            share.personId == selfId -> pairs[payer] = (pairs[payer] ?: 0L) - share.shareMinor
+        }
+    }
+    return pairs.filterValues { it != 0L }
+}
+
+/** The description a payment row carries when it was written by moving your part of a group to
+ * your ledger (v3.7.0). Users cannot name a payment, so it marks those rows and nothing else. */
+const val MOVED_TO_LEDGER = "Moved to your ledger"
+
+/** True for a payment row written by moving your part of a group to your ledger. */
+val Expense.isMovedToLedger: Boolean get() = isSettlement && description == MOVED_TO_LEDGER
