@@ -598,6 +598,7 @@ fun MainScreen(viewModel: MainViewModel) {
         val selfId by viewModel.selfId.collectAsState()
         val summary = groups.firstOrNull { it.group.id == openGroupId }
         var editingGroup by remember(openGroupId) { mutableStateOf(false) }
+        var editingExpenseId by remember(openGroupId) { mutableStateOf<Long?>(null) }
 
         BackHandler(enabled = true) { viewModel.openGroup(null) }
 
@@ -615,7 +616,8 @@ fun MainScreen(viewModel: MainViewModel) {
                 onSettleUp = { viewModel.showSettleUp(true) },
                 onDeleteExpense = viewModel::deleteExpense,
                 onSimplifyChange = viewModel::setSimplifyDebts,
-                onEdit = { editingGroup = true }
+                onEdit = { editingGroup = true },
+                onEditExpense = { editingExpenseId = it.id }
             )
 
             if (editingGroup) {
@@ -638,8 +640,33 @@ fun MainScreen(viewModel: MainViewModel) {
                     currency = summary.group.currency,
                     selfId = selfId,
                     onDismiss = { viewModel.showAddExpenseDialog(false) },
-                    onAdd = viewModel::addExpense
+                    onSave = viewModel::addExpense
                 )
+            }
+            editingExpenseId?.let { expenseId ->
+                val expense = loaded.expenses.firstOrNull { it.id == expenseId && !it.isSettlement }
+                if (expense == null) {
+                    // Deleted or restored away while the sheet was open.
+                    LaunchedEffect(expenseId) { editingExpenseId = null }
+                } else {
+                    AddExpenseDialog(
+                        members = loaded.members,
+                        currency = summary.group.currency,
+                        selfId = selfId,
+                        onDismiss = { editingExpenseId = null },
+                        onSave = { description, amountMinor, paidBy, shares ->
+                            editingExpenseId = null
+                            viewModel.editExpense(expenseId, description, amountMinor, paidBy, shares)
+                        },
+                        editing = com.kg.merapaisa.ui.groups.ExpenseDraft(
+                            description = expense.description,
+                            amountMinor = expense.amountMinor,
+                            paidByPersonId = expense.paidByPersonId,
+                            shares = loaded.shares.filter { it.expenseId == expenseId }
+                                .associate { it.personId to it.shareMinor }
+                        )
+                    )
+                }
             }
             if (ui.showSettleUp) {
                 SettleUpSheet(

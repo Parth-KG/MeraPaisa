@@ -100,6 +100,7 @@ class GroupRepository(
         GroupDetail(
             members = members,
             expenses = expenses,
+            shares = shares,
             balances = balances,
             // Computed here rather than in the screen, so the plan and the balances it squares are
             // always derived from the same read of the same rows.
@@ -125,8 +126,9 @@ class GroupRepository(
         description: String,
         amountMinor: Long,
         paidByPersonId: Long,
-        sharedWith: List<Long>
+        sharesByPerson: Map<Long, Long>
     ) {
+        require(sharesByPerson.values.sum() == amountMinor) { "shares must add up to the expense" }
         groupDao.recordExpense(
             expense = Expense(
                 groupId = groupId,
@@ -134,9 +136,36 @@ class GroupRepository(
                 amountMinor = amountMinor,
                 paidByPersonId = paidByPersonId
             ),
-            sharesByPerson = evenShares(amountMinor, sharedWith)
+            sharesByPerson = sharesByPerson
         )
         notifier.onLedgerChanged()
+    }
+
+    /** An expense split equally between [sharedWith], the remainder to the earliest. */
+    suspend fun addExpense(
+        groupId: Long,
+        description: String,
+        amountMinor: Long,
+        paidByPersonId: Long,
+        sharedWith: List<Long>
+    ) = addExpense(groupId, description, amountMinor, paidByPersonId, evenShares(amountMinor, sharedWith))
+
+    /**
+     * Rewrites an expense: what for, the amount, who paid and the shares (v3.7.0). Balances and
+     * the plan follow by themselves, since both are derived from the rows. Payments are not
+     * edited; they are deleted and recorded again.
+     */
+    suspend fun editExpense(
+        expenseId: Long,
+        description: String,
+        amountMinor: Long,
+        paidByPersonId: Long,
+        sharesByPerson: Map<Long, Long>
+    ) {
+        require(sharesByPerson.values.sum() == amountMinor) { "shares must add up to the expense" }
+        if (groupDao.updateExpense(expenseId, description, amountMinor, paidByPersonId, sharesByPerson)) {
+            notifier.onLedgerChanged()
+        }
     }
 
     /**
@@ -175,6 +204,8 @@ class GroupRepository(
 data class GroupDetail(
     val members: List<com.kg.merapaisa.data.Person>,
     val expenses: List<com.kg.merapaisa.data.Expense>,
+    /** Every share of every expense in the group, for editing one and for the pair amounts. */
+    val shares: List<com.kg.merapaisa.data.ExpenseShare> = emptyList(),
     val balances: List<com.kg.merapaisa.data.MemberBalance>,
     /**
      * Who pays whom, and how much, computed by whichever method this group is set to.

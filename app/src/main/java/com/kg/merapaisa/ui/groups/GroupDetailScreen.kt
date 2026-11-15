@@ -94,7 +94,9 @@ fun GroupDetailScreen(
     onDeleteExpense: (Long) -> Unit,
     onSimplifyChange: (Boolean) -> Unit,
     /** Rename the group or add people to it. Null hides the button. */
-    onEdit: (() -> Unit)? = null
+    onEdit: (() -> Unit)? = null,
+    /** Open an expense (not a payment) in the expense sheet to change it. */
+    onEditExpense: (Expense) -> Unit = {}
 ) {
     val theme = LocalAppTheme.current
     val list = rememberLazyListState()
@@ -246,7 +248,8 @@ fun GroupDetailScreen(
                     amountMinor = e.amountMinor,
                     currency = group.currency,
                     deleteLabel = "Delete expense",
-                    onDelete = { onDeleteExpense(e.id) }
+                    onDelete = { onDeleteExpense(e.id) },
+                    onEdit = { onEditExpense(e) }
                 )
             }
 
@@ -371,7 +374,9 @@ private fun EntryRow(
     currency: String,
     deleteLabel: String,
     onDelete: () -> Unit,
-    quiet: Boolean = false
+    quiet: Boolean = false,
+    /** "Edit expense" above Delete. Null for a payment, which is deleted and recorded again. */
+    onEdit: (() -> Unit)? = null
 ) {
     val theme = LocalAppTheme.current
     var showMenu by remember { mutableStateOf(false) }
@@ -429,6 +434,12 @@ private fun EntryRow(
             onDismissRequest = { showMenu = false },
             shape = Shapes.medium
         ) {
+            if (onEdit != null) {
+                DropdownMenuItem(
+                    text = { Text("Edit expense", style = MeraPaisaType.body, color = theme.textPrimary) },
+                    onClick = { showMenu = false; onEdit() }
+                )
+            }
             DropdownMenuItem(
                 text = { Text(deleteLabel, style = MeraPaisaType.body, color = theme.textPrimary) },
                 onClick = { showMenu = false; confirming = true }

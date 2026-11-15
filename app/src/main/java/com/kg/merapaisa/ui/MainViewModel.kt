@@ -211,11 +211,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun showSettleUp(show: Boolean) = _uiState.update { it.copy(showSettleUp = show) }
 
-    fun addExpense(description: String, amountMinor: Long, paidByPersonId: Long, sharedWith: List<Long>) {
+    fun addExpense(description: String, amountMinor: Long, paidByPersonId: Long, sharesByPerson: Map<Long, Long>) {
         val groupId = _uiState.value.openGroupId ?: return
         viewModelScope.launch {
-            groupRepository.addExpense(groupId, description, amountMinor, paidByPersonId, sharedWith)
+            groupRepository.addExpense(groupId, description, amountMinor, paidByPersonId, sharesByPerson)
             _uiState.update { it.copy(showAddExpenseDialog = false) }
+        }
+    }
+
+    fun editExpense(expenseId: Long, description: String, amountMinor: Long, paidByPersonId: Long, sharesByPerson: Map<Long, Long>) {
+        viewModelScope.launch {
+            groupRepository.editExpense(expenseId, description, amountMinor, paidByPersonId, sharesByPerson)
         }
     }
 

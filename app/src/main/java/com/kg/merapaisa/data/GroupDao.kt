@@ -167,6 +167,37 @@ interface GroupDao {
         })
     }
 
+    @androidx.room.Update
+    suspend fun updateExpenseRow(expense: Expense)
+
+    @Query("DELETE FROM expense_shares WHERE expenseId = :expenseId")
+    suspend fun deleteSharesFor(expenseId: Long)
+
+    @Query("SELECT * FROM expenses WHERE id = :expenseId")
+    suspend fun expenseNow(expenseId: Long): Expense?
+
+    /**
+     * Rewrites an expense and its shares together (v3.7.0), for the same reason [recordExpense]
+     * writes them together: half an edit would stop the group's balances netting to zero. The date
+     * and the settlement flag stay as they were. False if the expense has gone meanwhile.
+     */
+    @androidx.room.Transaction
+    suspend fun updateExpense(
+        expenseId: Long,
+        description: String,
+        amountMinor: Long,
+        paidByPersonId: Long,
+        sharesByPerson: Map<Long, Long>
+    ): Boolean {
+        val old = expenseNow(expenseId) ?: return false
+        updateExpenseRow(old.copy(description = description, amountMinor = amountMinor, paidByPersonId = paidByPersonId))
+        deleteSharesFor(expenseId)
+        insertShares(sharesByPerson.map { (personId, share) ->
+            ExpenseShare(expenseId = expenseId, personId = personId, shareMinor = share)
+        })
+        return true
+    }
+
     // -----------------------------------------------------------------------------------------
     // Backup and restore
     //

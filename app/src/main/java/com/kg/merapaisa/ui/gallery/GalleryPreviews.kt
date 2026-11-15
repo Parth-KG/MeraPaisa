@@ -582,7 +582,24 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
             currency = "INR",
             selfId = 1,
             onDismiss = {},
-            onAdd = { _, _, _, _ -> }
+            onSave = { _, _, _, _ -> }
+        )
+    },
+    // An expense opened to change it, with shares that aren't equal (v3.7.0).
+    "sheet-edit-expense" to {
+        val ids = Fixtures.groupMembers.map { it.id }
+        AddExpenseDialog(
+            members = Fixtures.groupMembers,
+            currency = "INR",
+            selfId = 1,
+            onDismiss = {},
+            onSave = { _, _, _, _ -> },
+            editing = com.kg.merapaisa.ui.groups.ExpenseDraft(
+                description = "Dinner at Thalassa",
+                amountMinor = 4_200_00,
+                paidByPersonId = ids[1],
+                shares = com.kg.merapaisa.data.evenShares(4_200_00, ids.take(3))
+            )
         )
     },
     "sheet-settle-up" to {

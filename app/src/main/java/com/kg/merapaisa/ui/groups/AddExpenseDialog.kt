@@ -36,6 +36,7 @@ import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.Person
 import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.data.evenShares
+import com.kg.merapaisa.data.formatMinorPlain
 import com.kg.merapaisa.data.isTypableAmount
 import com.kg.merapaisa.data.parseAmountToMinor
 import com.kg.merapaisa.ui.RowDivider
@@ -57,6 +58,27 @@ import kotlinx.coroutines.launch
  * is for a decision, so a form of four fields goes on a sheet, where the members are plain rows
  * that scroll with everything else rather than two little windows scrolling inside a third.
  */
+/** An expense as it stands, to open the sheet on for editing (v3.7.0). */
+data class ExpenseDraft(
+    val description: String,
+    val amountMinor: Long,
+    val paidByPersonId: Long,
+    /** The stored shares, by person, which add up to [amountMinor]. */
+    val shares: Map<Long, Long>
+)
+
+/**
+ * The shares a sheet would save: the stored ones while the amount and the people sharing are as
+ * they were when an edit opened (so an edit never quietly resets shares to equal), otherwise an
+ * equal split, the remainder to the earliest member.
+ */
+internal fun sharesToSave(amountMinor: Long, sharedWith: Set<Long>, editing: ExpenseDraft?): Map<Long, Long> =
+    if (editing != null && editing.amountMinor == amountMinor && editing.shares.keys == sharedWith) {
+        editing.shares
+    } else {
+        evenShares(amountMinor, sharedWith.toList().sorted())
+    }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddExpenseDialog(
@@ -64,20 +86,33 @@ fun AddExpenseDialog(
     currency: String,
     selfId: Long,
     onDismiss: () -> Unit,
-    onAdd: (description: String, amountMinor: Long, paidByPersonId: Long, sharedWith: List<Long>) -> Unit
+    onSave: (description: String, amountMinor: Long, paidByPersonId: Long, sharesByPerson: Map<Long, Long>) -> Unit,
+    /** The expense being edited, or null to add one. */
+    editing: ExpenseDraft? = null
 ) {
     val theme = LocalAppTheme.current
-    var description by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf(editing?.description.orEmpty()) }
+    var amount by remember {
+        mutableStateOf(editing?.let { formatMinorPlain(it.amountMinor, currency).removeSuffix(".00") }.orEmpty())
+    }
     // selfId is filled asynchronously and starts at 0, which is nobody. Keying on it stops the
     // field latching onto that placeholder and writing an expense whose payer does not exist.
     var paidBy by remember(selfId, members) {
-        mutableLongStateOf(members.firstOrNull { it.id == selfId }?.id ?: members.firstOrNull()?.id ?: 0L)
+        mutableLongStateOf(
+            editing?.paidByPersonId?.takeIf { id -> members.any { it.id == id } }
+                ?: members.firstOrNull { it.id == selfId }?.id ?: members.firstOrNull()?.id ?: 0L
+        )
     }
-    var sharedWith by remember(members) { mutableStateOf(members.map { it.id }.toSet()) }
+    var sharedWith by remember(members) {
+        mutableStateOf(editing?.shares?.keys?.filter { id -> members.any { it.id == id } }?.toSet()
+            ?: members.map { it.id }.toSet())
+    }
 
     var adding by remember { mutableStateOf(false) }
     val amountMinor = parseAmountToMinor(amount)
+    val shares = if (amountMinor != null && amountMinor > 0 && sharedWith.isNotEmpty()) {
+        sharesToSave(amountMinor, sharedWith, editing)
+    } else emptyMap()
     val valid = description.isNotBlank() && amountMinor != null && amountMinor > 0 &&
         sharedWith.isNotEmpty() && members.any { it.id == paidBy }
 
@@ -94,7 +129,7 @@ fun AddExpenseDialog(
                 .verticalScroll(scroll)
         ) {
             Text(
-                "Add an expense",
+                if (editing == null) "Add an expense" else "Edit expense",
                 style = MeraPaisaType.screenTitle,
                 color = theme.textPrimary,
                 modifier = Modifier.padding(horizontal = Spacing.lg)
@@ -158,9 +193,7 @@ fun AddExpenseDialog(
             members.forEachIndexed { index, m ->
                 if (index > 0) RowDivider()
                 val isIn = m.id in sharedWith
-                val share = if (isIn && amountMinor != null) {
-                    evenShares(amountMinor, sharedWith.toList().sorted())[m.id]
-                } else null
+                val share = if (isIn) shares[m.id] else null
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -198,18 +231,18 @@ fun AddExpenseDialog(
         }
 
         SheetFoot(above = scroll) {
-            SecondaryAction("Don't add", enabled = true) {
+            SecondaryAction(if (editing == null) "Don't add" else "Keep it as it was", enabled = true) {
                 scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }
-            PrimaryAction("Add expense", enabled = valid && !adding) {
+            PrimaryAction(if (editing == null) "Add expense" else "Save expense", enabled = valid && !adding) {
                 val minor = amountMinor ?: return@PrimaryAction
                 // Once only: the button stays live while the sheet slides away, and a second
                 // tap in that time added the expense twice.
                 if (adding) return@PrimaryAction
                 adding = true
-                val shares = sharedWith.toList().sorted()
+                val saved = sharesToSave(minor, sharedWith, editing)
                 scope.launch { sheetState.hide() }.invokeOnCompletion {
-                    onAdd(description.trim(), minor, paidBy, shares)
+                    onSave(description.trim(), minor, paidBy, saved)
                 }
             }
         }
