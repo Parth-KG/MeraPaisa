@@ -53,7 +53,7 @@ Mera Paisa keeps all of that on your phone.
 | **Net position** | Where you stand overall, one line per currency, never added together |
 | **Multi-currency** | ₹, $, €, £, ¥ with live rates from [Frankfurter](https://frankfurter.dev/). Balances stay in each person's currency and are never silently converted |
 | **Expense splitting** | Equal or custom shares, with lock-on-edit redistribution |
-| **Groups** | A trip or a flatshare: log who paid for what, then settle everyone in at most *n* − 1 payments for *n* members. Kept apart from your personal balances, in its own currency |
+| **Groups** | A trip or a flatshare: log who paid for what, equally or in shares you set, then settle everyone in at most *n* − 1 payments for *n* members. Kept apart from your personal balances, in its own currency, until you move your part into your ledger |
 | **Settle up** | Square a balance after one confirmation; the closing entry stays in their history |
 | **Paid by QR** | Show a QR to someone who owes you, and they scan it in their UPI app with the amount filled in. Reminders can attach the same QR as a picture. Nothing is recorded until you say they paid. Rupees only |
 | **Move a debt** | Hand part of what one person owes onto someone else, converted if they keep a different currency |
@@ -118,11 +118,13 @@ Each person has their own currency and balances stay in it. Your net position is
 
 ### Groups
 
-A group is a trip, a flatshare, a dinner: anywhere several people keep paying on each other's behalf. You are always a member, because a trip you are not part of is somebody else's ledger. A group is its own ledger in its own currency: nothing in it changes anyone's balance on Active or Even, and settling someone there leaves their groups alone. Anyone can join a group, whatever currency their own balance is kept in.
+A group is a trip, a flatshare, a dinner: anywhere several people keep paying on each other's behalf. You are always a member, because a trip you are not part of is somebody else's ledger. A group is its own ledger in its own currency: nothing in it changes anyone's balance on Active or Even until you move it there, and settling someone there leaves their groups alone. Anyone can join a group, whatever currency their own balance is kept in, and **Add a new person** at the end of the list in New group and Edit group adds someone to your ledger without leaving the sheet, ticked and ready.
 
-Log an expense with a description, an amount and who paid. Shares are equal by default and split so the parts always add back to the whole, since paise cannot be divided three ways. Each member's position is what they paid out less what they were assigned, so a group always nets to zero.
+Log an expense with a description, an amount and who paid. Shares are equal by default and split so the parts always add back to the whole, since paise cannot be divided three ways. **Adjust the shares** sets them yourself, as Split an expense does on Balances: type a share and the unlocked ones take up the difference. Long-press an expense to edit it; its shares stay as they were unless you change the amount or who shares it. Each member's position is what they paid out less what they were assigned, so a group always nets to zero.
 
-**Settle up** turns those positions into a list of payments, and records each one when it happens. **Edit group** renames it or brings more people in; someone who joins late owes nothing for what was spent before. Deleting an expense or a group asks first, and touches nothing outside the group. Deleting a member hands their share of everyone else's expenses to whoever paid, so the group still adds up.
+**Settle up** turns those positions into a list of payments, and records each one when it happens. **Edit group** renames it, brings more people in, or takes out someone nothing in the group involves; someone who joins late owes nothing for what was spent before. A finished trip can be archived from its menu: it moves to a section at the bottom of the Groups tab and still opens. Deleting an expense or a group asks first, and touches nothing outside the group. Deleting a member hands their share of everyone else's expenses to whoever paid, so the group still adds up.
+
+**Move to your ledger**, on your own row, takes your part of a group onto Balances: one entry per person you share costs with, worked out pair by pair as the debts arose (never the simplified plan, which could route you through someone you shared nothing with), at today's rate for anyone kept in another currency. Your part of the group comes to even, and what the others owe each other stays in the group. It asks first, offers Undo, and a later move takes only what is new.
 
 ### History, corrections and rollback
 
@@ -170,7 +172,7 @@ Kotlin and Jetpack Compose with Material 3. Room for storage, with exported sche
 
 Type is Anek Latin by Ek Type for amounts and titles and Figtree for everything else, shipped as static subset instances because API 24 and 25 ignore variable font axes.
 
-520 tests on the JVM covering money arithmetic, settle-up, per-currency totals, amount formatting, CSV, summaries, the share codec, exchange-rate replies, backups with photos and the UPI mark, UPI links, QR codes, reminders with a QR and theme contrast, and 219 instrumentation tests covering every migration, the full migration chain, the settle, rollback, edit, delete, reconcile, move-debt and backup-photo paths against a real database, and the QR picture a reminder sends.
+536 tests on the JVM covering money arithmetic, settle-up, group pairs and shares, per-currency totals, amount formatting, CSV, summaries, the share codec, exchange-rate replies, backups with photos and the UPI mark, UPI links, QR codes, reminders with a QR and theme contrast, and 241 instrumentation tests covering every migration, the full migration chain, the settle, rollback, edit, delete, reconcile, move-debt, backup-photo, group-edit, archive and move-to-ledger paths against a real database, and the QR picture a reminder sends.
 
 ## Repository structure
 
