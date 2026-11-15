@@ -54,6 +54,8 @@ import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.currencySymbol
 import com.kg.merapaisa.data.formatMinorPlain
+import com.kg.merapaisa.data.equalSplit
+import com.kg.merapaisa.data.redistribute
 import com.kg.merapaisa.ui.format.PlainAmountText
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.parseAmountToMinor
@@ -84,42 +86,6 @@ private data class ConvertedSplit(
 
 /** How long the amount fields must be quiet before a rate is fetched for them. */
 private const val CONVERSION_SETTLE_MS = 400L
-
-private fun equalSplit(amountMinor: Long, participants: List<SplitParticipant>): Map<Long, Long> {
-    if (participants.isEmpty()) return emptyMap()
-    val base = amountMinor / participants.size
-    val remainder = amountMinor - (base * participants.size)
-    return participants.mapIndexed { i, p ->
-        p.id to if (i == 0) base + remainder else base
-    }.toMap()
-}
-
-private fun redistribute(
-    current: Map<Long, Long>,
-    locked: Set<Long>,
-    changedId: Long,
-    newValue: Long,
-    total: Long
-): Map<Long, Long> {
-    val updated = current.toMutableMap()
-    updated[changedId] = newValue
-
-    val lockedSum = updated.filterKeys { it in locked }.values.sum()
-    val unlockedIds = updated.keys.filter { it !in locked }
-    if (unlockedIds.isEmpty()) return updated
-
-    val remaining = total - lockedSum
-    val perUnlocked = remaining / unlockedIds.size
-    // Integer division leaves a few minor units over; give them to the first row so the
-    // parts still add up to the whole rather than tripping the totals-mismatch warning.
-    val leftover = remaining - perUnlocked * unlockedIds.size
-
-    unlockedIds.forEachIndexed { i, id ->
-        val share = if (i == 0) perUnlocked + leftover else perUnlocked
-        updated[id] = kotlin.math.max(0L, share)
-    }
-    return updated
-}
 
 /**
  * Step three of a split: who pays what.
@@ -204,7 +170,7 @@ fun SplitAdjustmentsContent(
 
     // Per-person amounts in source currency (we convert at confirm time only for display)
     var amountsInSource by remember(participants, amountMinor) {
-        mutableStateOf(equalSplit(amountMinor, participants))
+        mutableStateOf(equalSplit(amountMinor, participants.map { it.id }))
     }
     var lockedIds by remember(participants) { mutableStateOf(initiallyLockedIds) }
 
