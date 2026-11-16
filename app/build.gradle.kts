@@ -24,8 +24,8 @@ android {
         applicationId = "com.kg.merapaisa"
         minSdk = 24
         targetSdk = 36
-        versionCode = 22
-        versionName = "3.6.0"
+        versionCode = 23
+        versionName = "3.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
