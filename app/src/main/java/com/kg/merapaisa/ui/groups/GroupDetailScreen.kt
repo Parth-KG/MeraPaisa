@@ -268,9 +268,10 @@ fun GroupDetailScreen(
                         )
                     }
                     if (onMoveToLedger != null) {
+                        // 4dp outside plus the button's own 12dp inside puts its words on the gutter.
                         TextButton(
                             onClick = onMoveToLedger,
-                            modifier = Modifier.padding(horizontal = Spacing.sm).heightIn(min = 48.dp)
+                            modifier = Modifier.padding(horizontal = Spacing.xs).heightIn(min = 48.dp)
                         ) {
                             Text("Move to your ledger", style = MeraPaisaType.bodyStrong, color = theme.primary)
                         }

@@ -253,7 +253,7 @@ fun AddExpenseDialog(
                 if (!adjusting) {
                     TextButton(
                         onClick = { adjusting = true; custom = shares; locked = emptySet() },
-                        modifier = Modifier.padding(horizontal = Spacing.sm).heightIn(min = 48.dp)
+                        modifier = Modifier.padding(horizontal = Spacing.xs).heightIn(min = 48.dp)
                     ) {
                         Text("Adjust the shares", style = MeraPaisaType.bodyStrong, color = theme.primary)
                     }
@@ -300,7 +300,7 @@ fun AddExpenseDialog(
                     }
                     TextButton(
                         onClick = { adjusting = false; keepStored = false },
-                        modifier = Modifier.padding(horizontal = Spacing.sm).heightIn(min = 48.dp)
+                        modifier = Modifier.padding(horizontal = Spacing.xs).heightIn(min = 48.dp)
                     ) {
                         Text("Split equally", style = MeraPaisaType.bodyStrong, color = theme.primary)
                     }

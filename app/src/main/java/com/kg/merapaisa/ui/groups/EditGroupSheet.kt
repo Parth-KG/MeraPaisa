@@ -246,7 +246,8 @@ private fun MemberRow(name: String, involvement: Involvement?, leaving: Boolean,
                 name,
                 style = MeraPaisaType.body,
                 color = if (leaving) theme.textSecondary else theme.textPrimary,
-                maxLines = 1,
+                // Two lines at large type, as list titles get, so a long name beside "Remove" is read.
+                maxLines = com.kg.merapaisa.ui.listTitleMaxLines(),
                 overflow = TextOverflow.Ellipsis
             )
             val line = when {

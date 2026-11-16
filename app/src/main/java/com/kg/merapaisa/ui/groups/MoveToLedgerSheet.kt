@@ -109,7 +109,7 @@ fun MoveToLedgerSheet(
                 )
                 TextButton(
                     onClick = onRetry,
-                    modifier = Modifier.padding(horizontal = Spacing.sm).heightIn(min = 48.dp)
+                    modifier = Modifier.padding(horizontal = Spacing.xs).heightIn(min = 48.dp)
                 ) {
                     Text("Try again", style = MeraPaisaType.bodyStrong, color = theme.primary)
                 }
