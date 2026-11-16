@@ -60,7 +60,8 @@ class AddExpenseAdjustTest {
         // The share fields follow the description and the amount.
         compose.onAllNodes(hasSetTextAction())[2].performTextReplacement("500")
         compose.waitForIdle()
-        compose.onNode(hasText("Add expense") and hasClickAction()).performScrollTo().assertIsEnabled().performClick()
+        // The foot sits outside the scrolling form.
+        compose.onNode(hasText("Add expense") and hasClickAction()).assertIsEnabled().performClick()
         compose.waitForIdle()
         val shares = saved!!
         assertEquals(900_00L, shares.values.sum())

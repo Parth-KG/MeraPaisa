@@ -11,6 +11,7 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -61,7 +62,8 @@ class AddPersonInGroupTest {
     private fun addThroughSheet(name: String) {
         compose.onNodeWithText("Add a new person").performScrollTo().performClick()
         compose.waitForIdle()
-        compose.onNode(hasText("Name") and hasSetTextAction()).performTextInput(name)
+        // The group sheet has a "Name" field too; Add a person's is the newer one, on top.
+        compose.onAllNodes(hasText("Name") and hasSetTextAction()).onLast().performTextInput(name)
         compose.onNodeWithText("Add person").performClick()
         compose.waitForIdle()
     }
