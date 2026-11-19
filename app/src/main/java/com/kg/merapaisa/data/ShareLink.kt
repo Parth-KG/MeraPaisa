@@ -30,6 +30,25 @@ const val SHARE_SCHEME = "merapaisa"
 fun buildShareLink(blob: String): String = "https://$SHARE_HOST$SHARE_PATH#$blob"
 
 /**
+ * The longest link the app holds while it waits for the lock: the largest payload a link may carry
+ * ([MAX_ENCODED_CHARS]), plus room for the address and anything a chat app wrapped around it.
+ */
+const val MAX_HELD_LINK_CHARS = MAX_ENCODED_CHARS + 1024
+
+/**
+ * What the app holds of a link that arrived from outside (v3.7.1). A link longer than any it could
+ * accept is not held whole: the held link goes into the activity's saved state, and a crafted one
+ * of a few hundred thousand characters could crash the app there (TransactionTooLargeException)
+ * before the size check ever ran. It becomes a short link that reads as damaged, so the person
+ * still hears that a link came and could not be used.
+ */
+fun heldLink(link: String): String =
+    if (link.length <= MAX_HELD_LINK_CHARS) link else buildShareLink(UNREADABLE_BLOB)
+
+/** One character of the blob alphabet, which no payload can be: it decodes as damaged. */
+private const val UNREADABLE_BLOB = "A"
+
+/**
  * The message that goes into the share sheet: a sentence a human can read, then the link.
  *
  * The sentence matters. A bare link asks the recipient to tap something unexplained, and this

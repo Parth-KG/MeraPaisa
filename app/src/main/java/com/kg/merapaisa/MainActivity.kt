@@ -164,7 +164,7 @@ class MainActivity : FragmentActivity() {
      * included: the payload lives in the fragment, so dropping it would leave an empty link.
      */
     private fun shareLinkFrom(intent: Intent?): String? =
-        if (intent?.action == Intent.ACTION_VIEW) intent.data?.toString() else null
+        if (intent?.action == Intent.ACTION_VIEW) intent.data?.toString()?.let { com.kg.merapaisa.data.heldLink(it) } else null
 
     override fun onStop() {
         super.onStop()

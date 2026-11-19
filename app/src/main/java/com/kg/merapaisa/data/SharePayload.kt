@@ -131,7 +131,7 @@ const val SHARE_FORMAT_VERSION = 2
  * so each of these is a refusal rather than a truncation. Quietly dropping half a payload
  * would write a balance that matches neither ledger.
  */
-private const val MAX_ENCODED_CHARS = 64 * 1024
+const val MAX_ENCODED_CHARS = 64 * 1024
 private const val MAX_INFLATED_BYTES = 256 * 1024
 private const val MAX_ENTRIES = 1000
 const val MAX_NOTE_CHARS = 500
