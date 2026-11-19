@@ -170,7 +170,7 @@ fun SplitAdjustmentsContent(
 
     // Per-person amounts in source currency (we convert at confirm time only for display)
     var amountsInSource by remember(participants, amountMinor) {
-        mutableStateOf(equalSplit(amountMinor, participants.map { it.id }))
+        mutableStateOf(equalSplit(amountMinor, participants.map { it.id }, com.kg.merapaisa.data.minorStep(sourceCurrency)))
     }
     var lockedIds by remember(participants) { mutableStateOf(initiallyLockedIds) }
 
@@ -271,7 +271,8 @@ fun SplitAdjustmentsContent(
                             locked = lockedIds + p.id,   // editing locks this row
                             changedId = p.id,
                             newValue = newAmt,
-                            total = amountMinor
+                            total = amountMinor,
+                            step = com.kg.merapaisa.data.minorStep(sourceCurrency)
                         )
                         lockedIds = lockedIds + p.id
                     },

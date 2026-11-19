@@ -560,8 +560,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val rate = rateCache[key]?.takeIf { now - it.first < RATE_REUSE_MS }?.second
             ?: exchangeRates.rate(from, to)?.also { rateCache[key] = now to it }
             ?: return null
-        return com.kg.merapaisa.network.convertedMinor(
-            amountMinor, com.kg.merapaisa.network.requestAmountMajor(amountMinor) * rate
+        // Lands on the smallest amount the other currency has: whole yen into yen (v3.7.1), where
+        // hundredths had been kept that the screen rounded away and Move a debt then refused.
+        return com.kg.merapaisa.data.roundToStep(
+            com.kg.merapaisa.network.convertedMinor(
+                amountMinor, com.kg.merapaisa.network.requestAmountMajor(amountMinor) * rate
+            ),
+            com.kg.merapaisa.data.minorStep(to)
         )
     }
 

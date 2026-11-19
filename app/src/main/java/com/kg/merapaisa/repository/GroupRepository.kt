@@ -160,7 +160,10 @@ class GroupRepository(
         amountMinor: Long,
         paidByPersonId: Long,
         sharedWith: List<Long>
-    ) = addExpense(groupId, description, amountMinor, paidByPersonId, evenShares(amountMinor, sharedWith))
+    ) = addExpense(
+        groupId, description, amountMinor, paidByPersonId,
+        evenShares(amountMinor, sharedWith, com.kg.merapaisa.data.minorStep(groupDao.currencyNow(groupId) ?: "INR"))
+    )
 
     /**
      * Rewrites an expense: what for, the amount, who paid and the shares (v3.7.0). Balances and

@@ -263,6 +263,9 @@ interface GroupDao {
     @Query("SELECT personId FROM group_members WHERE groupId = :groupId")
     suspend fun memberIdsNow(groupId: Long): List<Long>
 
+    @Query("SELECT currency FROM expense_groups WHERE id = :groupId")
+    suspend fun currencyNow(groupId: Long): String?
+
     @Query("SELECT simplifyDebts FROM expense_groups WHERE id = :groupId")
     suspend fun simplifyNow(groupId: Long): Boolean?
 

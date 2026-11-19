@@ -35,6 +35,21 @@ fun currencySymbol(code: String): String = CURRENCY_SYMBOLS[code] ?: code
 
 fun currencyDecimals(code: String): Int = if (code in ZERO_DECIMAL_CURRENCIES) 0 else 2
 
+/**
+ * The smallest amount that exists in [currency], in the hundredths every amount is stored in: 100
+ * for yen, which has no decimals, and 1 for everything else (v3.7.1). Amounts are typed whole in
+ * yen already; this keeps conversions and splits whole too, where they used to store a fraction of
+ * a yen that the screen rounded away and Move a debt then refused.
+ */
+fun minorStep(currency: String): Long = if (currencyDecimals(normaliseCurrency(currency.trim())) == 0) 100L else 1L
+
+/** [amountMinor] to the nearest [step], halves away from zero, so a sign never changes. */
+fun roundToStep(amountMinor: Long, step: Long): Long {
+    if (step <= 1L) return amountMinor
+    val magnitude = Math.round(Math.abs(amountMinor).toDouble() / step) * step
+    return if (amountMinor < 0) -magnitude else magnitude
+}
+
 /** Normalises a legacy symbol to its ISO code; passes codes through untouched. */
 fun normaliseCurrency(value: String): String = LEGACY_SYMBOL_TO_CODE[value] ?: value
 
@@ -225,7 +240,17 @@ fun formatSignedAmount(amountMinor: Long, currencyCode: String): String =
  * An empty list converts to an empty list. A list summing to zero stays summing to zero, so a
  * settled person stays settled.
  */
-fun convertAll(amounts: List<Long>, rate: Double): List<Long> {
+fun convertAll(amounts: List<Long>, rate: Double): List<Long> = convertAll(amounts, rate, step = 1L)
+
+/**
+ * As above, into a currency whose smallest amount is [step] hundredths (see [minorStep]): every
+ * entry and the total land on whole steps, so a change into yen stores whole yen. Worked in steps
+ * rather than hundredths, which is the same arithmetic at a rate [step] times smaller.
+ */
+fun convertAll(amounts: List<Long>, rate: Double, step: Long): List<Long> =
+    if (step <= 1L) convertAllMinor(amounts, rate) else convertAllMinor(amounts, rate / step).map { it * step }
+
+private fun convertAllMinor(amounts: List<Long>, rate: Double): List<Long> {
     if (amounts.isEmpty()) return emptyList()
 
     val converted = amounts.map { Math.round(it * rate) }.toMutableList()

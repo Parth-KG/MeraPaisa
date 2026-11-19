@@ -150,7 +150,7 @@ data class SettlePlan(val balances: List<MemberBalance>, val transfers: List<Tra
  * Splits an amount evenly, giving the remaining minor units to the earliest members so the
  * parts always add back up to the whole. Paise cannot be divided three ways.
  */
-fun evenShares(amountMinor: Long, memberIds: List<Long>): Map<Long, Long> {
+fun evenShares(amountMinor: Long, memberIds: List<Long>, step: Long = 1L): Map<Long, Long> {
     // Distinct first, and before the arithmetic. The result is a map keyed by person, so a list
     // naming somebody twice used to divide by a count the map could not hold: `associateWith`
     // collapsed the duplicate while the division had already given away its share, and the parts
@@ -158,6 +158,15 @@ fun evenShares(amountMinor: Long, memberIds: List<Long>): Map<Long, Long> {
     // would simply have been wrong by the difference, with every individual figure still plausible.
     val members = memberIds.distinct()
     if (members.isEmpty()) return emptyMap()
+    // In yen (step 100) the parts are whole yen, a yen to each of the earliest members as needed;
+    // the sub-yen part an amount could only carry from an older entry goes to the first.
+    if (step > 1L) {
+        val units = amountMinor / step
+        val rest = amountMinor - units * step
+        return evenShares(units, members).mapValues { it.value * step }.toMutableMap().also {
+            it[members.first()] = it.getValue(members.first()) + rest
+        }
+    }
     val base = amountMinor / members.size
     var remainder = amountMinor - base * members.size
     return members.associateWith { _ ->

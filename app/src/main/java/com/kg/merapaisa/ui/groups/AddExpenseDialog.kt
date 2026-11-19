@@ -77,11 +77,11 @@ data class ExpenseDraft(
  * they were when an edit opened (so an edit never quietly resets shares to equal), otherwise an
  * equal split, the remainder to the earliest member.
  */
-internal fun sharesToSave(amountMinor: Long, sharedWith: Set<Long>, editing: ExpenseDraft?): Map<Long, Long> =
+internal fun sharesToSave(amountMinor: Long, sharedWith: Set<Long>, editing: ExpenseDraft?, step: Long = 1L): Map<Long, Long> =
     if (editing != null && editing.amountMinor == amountMinor && editing.shares.keys == sharedWith) {
         editing.shares
     } else {
-        evenShares(amountMinor, sharedWith.toList().sorted())
+        evenShares(amountMinor, sharedWith.toList().sorted(), step)
     }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,6 +95,8 @@ fun AddExpenseDialog(
     /** The expense being edited, or null to add one. */
     editing: ExpenseDraft? = null
 ) {
+    // Whole yen in a yen group (v3.7.1): the smallest amount the shares may come in.
+    val step = com.kg.merapaisa.data.minorStep(currency)
     val theme = LocalAppTheme.current
     var description by remember { mutableStateOf(editing?.description.orEmpty()) }
     var amount by remember {
@@ -118,14 +120,15 @@ fun AddExpenseDialog(
     // The stored shares count until "Split equally" is chosen, which means equal from then on.
     var keepStored by remember { mutableStateOf(true) }
     val shares = if (amountMinor != null && amountMinor > 0 && sharedWith.isNotEmpty()) {
-        sharesToSave(amountMinor, sharedWith, editing.takeIf { keepStored })
+        sharesToSave(amountMinor, sharedWith, editing.takeIf { keepStored }, step)
     } else emptyMap()
 
     // "Adjust the shares" (v3.7.0): equal unless asked, as on Balances. An expense saved with
     // unequal shares opens adjusted, with those shares in the fields. A new amount or a change in
     // who shares it starts the fields again from the shares above.
     var adjusting by remember {
-        mutableStateOf(editing != null && editing.shares != evenShares(editing.amountMinor, editing.shares.keys.sorted()))
+        mutableStateOf(editing != null && editing.shares != evenShares(editing.amountMinor, editing.shares.keys.sorted(), step) &&
+                editing.shares != evenShares(editing.amountMinor, editing.shares.keys.sorted()))
     }
     var custom by remember(amountMinor, sharedWith) { mutableStateOf(shares) }
     var locked by remember(amountMinor, sharedWith) { mutableStateOf(setOf<Long>()) }
@@ -270,7 +273,7 @@ fun AddExpenseDialog(
                                 animateShare = m.id != lastEdited,
                                 onAmountChange = { typed ->
                                     lastEdited = m.id
-                                    custom = redistribute(custom, locked + m.id, m.id, typed, amountMinor)
+                                    custom = redistribute(custom, locked + m.id, m.id, typed, amountMinor, step)
                                     locked = locked + m.id
                                 },
                                 onToggleLock = {
@@ -318,7 +321,7 @@ fun AddExpenseDialog(
                 // tap in that time added the expense twice.
                 if (adding) return@PrimaryAction
                 adding = true
-                val saved = if (adjusting) custom else sharesToSave(minor, sharedWith, editing.takeIf { keepStored })
+                val saved = if (adjusting) custom else sharesToSave(minor, sharedWith, editing.takeIf { keepStored }, step)
                 scope.launch { sheetState.hide() }.invokeOnCompletion {
                     onSave(description.trim(), minor, paidBy, saved)
                 }

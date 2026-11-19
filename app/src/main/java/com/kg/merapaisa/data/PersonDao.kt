@@ -311,7 +311,7 @@ interface PersonDao {
         if (fromCurrency != null && normaliseCurrency(person.currency) != normaliseCurrency(fromCurrency)) return false
         val entries = getTransactionsForPersonNow(personId)
         if (entries.isNotEmpty()) {
-            val converted = convertAll(entries.map { it.amountMinor }, rate)
+            val converted = convertAll(entries.map { it.amountMinor }, rate, minorStep(toCurrency))
             updateTransactions(entries.mapIndexed { i, t -> t.copy(amountMinor = converted[i]) })
         }
         updatePerson(person.copy(currency = toCurrency))

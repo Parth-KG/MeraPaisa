@@ -9,10 +9,13 @@ package com.kg.merapaisa.data
 /**
  * [amountMinor] in equal parts for [ids], in that order, the minor units integer division leaves
  * over all going to the first, so the parts always add back up to the whole.
+ *
+ * [step] is the currency's smallest amount ([minorStep]): with 100 (yen) every part is whole yen,
+ * and the whole yen left over go to the first, with any fraction an older entry carried.
  */
-fun equalSplit(amountMinor: Long, ids: List<Long>): Map<Long, Long> {
+fun equalSplit(amountMinor: Long, ids: List<Long>, step: Long = 1L): Map<Long, Long> {
     if (ids.isEmpty()) return emptyMap()
-    val base = amountMinor / ids.size
+    val base = (amountMinor / step / ids.size) * step
     val remainder = amountMinor - (base * ids.size)
     return ids.mapIndexed { i, id -> id to if (i == 0) base + remainder else base }.toMap()
 }
@@ -28,7 +31,9 @@ fun redistribute(
     locked: Set<Long>,
     changedId: Long,
     newValue: Long,
-    total: Long
+    total: Long,
+    /** The currency's smallest amount ([minorStep]); the unlocked rows get whole ones. */
+    step: Long = 1L
 ): Map<Long, Long> {
     val updated = current.toMutableMap()
     updated[changedId] = newValue
@@ -38,7 +43,7 @@ fun redistribute(
     if (unlockedIds.isEmpty()) return updated
 
     val remaining = total - lockedSum
-    val perUnlocked = remaining / unlockedIds.size
+    val perUnlocked = (remaining / step / unlockedIds.size) * step
     // Integer division leaves a few minor units over; give them to the first row so the
     // parts still add up to the whole rather than tripping the totals-mismatch warning.
     val leftover = remaining - perUnlocked * unlockedIds.size

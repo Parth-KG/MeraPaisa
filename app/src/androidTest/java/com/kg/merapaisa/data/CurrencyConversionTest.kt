@@ -53,6 +53,16 @@ class CurrencyConversionTest {
     // -----------------------------------------------------------------------------------------
 
     @Test
+    fun aChangeIntoYenStoresWholeYen() = runBlocking {
+        val id = seed()
+        repo.convertCurrency(id, "JPY", 1.7911)
+        val entries = dao.getTransactionsForPersonNow(id)
+        assertTrue("whole yen only (v3.7.1)", entries.all { it.amountMinor % 100 == 0L })
+        assertEquals(entries.sumOf { it.amountMinor }, dao.getBalanceNow(id))
+        assertEquals(0L, dao.getBalanceNow(id) % 100)
+    }
+
+    @Test
     fun everyEntryIsRewritten() = runBlocking {
         val id = seed()
         repo.convertCurrency(id, "USD", 2.0)
