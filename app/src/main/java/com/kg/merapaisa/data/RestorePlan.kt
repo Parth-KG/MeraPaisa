@@ -268,7 +268,15 @@ private fun planMerge(
     // here. Bringing them back then restored only the expenses they paid, and the group's
     // positions came out the other way. So where an expense here holds exactly what that deletion
     // would have left, the share goes back from the payer to the person coming back.
-    val newPersonIds = newPersons.map { it.id }.toHashSet()
+    //
+    // Coming back means having nothing in that group here: no share and no payment. That is
+    // someone this Merge adds, and also someone deleted and then added again by name before the
+    // Merge, whom it matches rather than adds. Only counting those it adds left the second with
+    // the expenses she paid and none of her shares, and the positions ran the other way again.
+    val involvedHere = HashSet<Pair<Long, Long>>()
+    val groupOfExpense = existing.expenses.associate { it.id to it.groupId }
+    existing.expenses.forEach { involvedHere += it.groupId to it.paidByPersonId }
+    existing.expenseShares.forEach { s -> groupOfExpense[s.expenseId]?.let { involvedHere += it to s.personId } }
     val incomingSharesByExpense = incoming.expenseShares.groupBy { it.expenseId }
     val existingSharesByExpense = existing.expenseShares.groupBy { it.expenseId }
     val returnedShares = mutableListOf<ExpenseShare>()
@@ -279,7 +287,7 @@ private fun planMerge(
         if (backup.any { it.personId !in personIdMap }) return
         val shares = backup.associate { personIdMap.getValue(it.personId) to it.shareMinor }
         val payer = here.paidByPersonId
-        val returning = shares.filterKeys { it in newPersonIds && it != payer }
+        val returning = shares.filterKeys { it != payer && it != localSelfId && (here.groupId to it) !in involvedHere }
         if (returning.isEmpty()) return
         val afterDeletion = (shares - returning.keys).toMutableMap()
         if (returning.values.any { it != 0L }) afterDeletion[payer] = (afterDeletion[payer] ?: 0L) + returning.values.sum()

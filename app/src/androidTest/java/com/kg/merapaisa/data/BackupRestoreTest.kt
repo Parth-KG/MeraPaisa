@@ -247,6 +247,34 @@ class BackupRestoreTest {
         assertTrue("a second Merge changes nothing", again.changesNothing)
     }
 
+    /**
+     * As above, with Asha added again by name before the Merge, the way someone would put a
+     * deleted friend back. Merge matches her rather than adding her, and her share of your dinner
+     * must still come back with her taxi.
+     */
+    @Test
+    fun mergingBackADeletedMemberAddedAgainRestoresHerGroupPosition() = runBlocking {
+        val selfId = personDao.ensureSelf().id
+        val asha = personDao.insertPerson(Person(name = "Asha", currency = "INR", sortOrder = 0))
+        val groupId = groups.createGroup("Goa", "INR", listOf(selfId, asha))
+        groups.addExpense(groupId, "Dinner", 20_000, selfId, listOf(selfId, asha))
+        groups.addExpense(groupId, "Taxi", 10_000, asha, listOf(selfId, asha))
+        val json = backups.exportJson(1, "3.7.0")
+
+        people.deletePerson(personDao.getPersonNow(asha)!!)
+        val again = personDao.insertPerson(Person(name = "Asha", currency = "INR", sortOrder = 0))
+        val decoded = decodeBackup(json) as BackupResult.Ok
+        backups.apply(backups.plan(decoded.snapshot, RestoreMode.Merge))
+
+        assertEquals("the Asha added again is the one matched", listOf(again), personDao.getAllPersonsForBackup().filter { it.name == "Asha" }.map { it.id })
+        val positions = groupDao.paidByMember(groupId).associate { it.personId to it.amountMinor }
+            .let { paid ->
+                groupDao.owedByMember(groupId).associate { it.personId to (paid[it.personId] ?: 0L) - it.amountMinor }
+            }
+        assertEquals(mapOf(selfId to 5_000L, again to -5_000L), positions)
+        assertTrue("a second Merge changes nothing", backups.plan(decoded.snapshot, RestoreMode.Merge).changesNothing)
+    }
+
     // -----------------------------------------------------------------------------------------
     // CSV
     // -----------------------------------------------------------------------------------------

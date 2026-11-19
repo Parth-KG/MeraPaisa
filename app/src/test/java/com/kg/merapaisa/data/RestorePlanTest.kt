@@ -626,6 +626,29 @@ class RestorePlanTest {
         assertTrue("a second identical restore must be a no-op, got ${again.inserts}", again.changesNothing)
     }
 
+    /**
+     * As above, but Asha was added again by name before the backup was merged, so she is matched
+     * rather than added. Her share of the dinner you paid still has to come back, or the taxi she
+     * paid returns alone and the positions run the other way.
+     */
+    @Test
+    fun `merging back a deleted member added again by name restores her share of what others paid`() {
+        val ledger = emptyLedger().plus(merge(emptyLedger(), backupWithAshaInAGroup()))
+        val goa = ledger.groups.single().id
+        val asha = ledger.persons.single { it.name == "Asha" }.id
+        val afterDelete = ledger.deleting(asha)
+        val readded = afterDelete.copy(persons = afterDelete.persons + Person(id = 99, name = "Asha", currency = "INR"))
+
+        val plan = merge(readded, backupWithAshaInAGroup())
+        val restored = readded.plus(plan)
+
+        assertEquals("the Asha added again is the one matched", 0, plan.persons.count { !it.isSelf })
+        assertEquals(mapOf("You" to 5_000L, "Asha" to -5_000L), restored.positions(goa))
+        assertEquals("both expenses there once each", 2, restored.expenses.size)
+        val again = merge(restored, backupWithAshaInAGroup())
+        assertTrue("a second identical restore must be a no-op, got ${again.inserts}", again.changesNothing)
+    }
+
     /** A group renamed since the backup is still that group, so Merge adds nothing to it twice. */
     @Test
     fun `merging after renaming a group finds the group, and copies none of it`() {
