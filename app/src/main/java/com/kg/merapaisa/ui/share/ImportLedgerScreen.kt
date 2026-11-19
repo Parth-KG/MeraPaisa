@@ -308,7 +308,7 @@ private fun ConfirmingScreen(
             item {
                 OutlinedTextField(
                     value = newName,
-                    onValueChange = { onNewPersonNameChange(it) },
+                    onValueChange = { onNewPersonNameChange(com.kg.merapaisa.data.typedUpTo(it, com.kg.merapaisa.data.MAX_NAME_CHARS)) },
                     label = { Text("Their name", style = MeraPaisaType.label) },
                     supportingText = {
                         Text(

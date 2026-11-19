@@ -130,7 +130,7 @@ fun NumPad(
         if (showNote) {
             OutlinedTextField(
                 value = note,
-                onValueChange = onNoteChange,
+                onValueChange = { onNoteChange(com.kg.merapaisa.data.typedUpTo(it, com.kg.merapaisa.data.MAX_NOTE_CHARS)) },
                 placeholder = {
                     Text("Dinner, cab fare", style = MeraPaisaType.body, color = theme.textSecondary)
                 },

@@ -141,7 +141,7 @@ fun AddPersonDialog(
 
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { name = com.kg.merapaisa.data.typedUpTo(it, com.kg.merapaisa.data.MAX_NAME_CHARS) },
                 label = { Text("Name") },
                 placeholder = { Text("John Doe") },
                 // Allowed, but said: two people with one name read the same on every list, and a

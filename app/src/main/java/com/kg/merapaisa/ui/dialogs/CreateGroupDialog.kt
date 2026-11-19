@@ -95,7 +95,7 @@ fun CreateGroupDialog(
 
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { name = com.kg.merapaisa.data.typedUpTo(it, com.kg.merapaisa.data.MAX_NAME_CHARS) },
                 label = { Text("Name") },
                 placeholder = { Text("Goa trip, Flat 402") },
                 singleLine = true,

@@ -124,7 +124,7 @@ fun EditPersonDialog(
 
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { name = com.kg.merapaisa.data.typedUpTo(it, com.kg.merapaisa.data.MAX_NAME_CHARS) },
                 label = { Text("Name") },
                 // Allowed, but said: two people with one name read the same on every list, and a
                 // link is filed against whoever has the sender's name.

@@ -187,7 +187,7 @@ fun MoveDebtDialog(
 
             OutlinedTextField(
                 value = state.note,
-                onValueChange = onNoteChange,
+                onValueChange = { onNoteChange(com.kg.merapaisa.data.typedUpTo(it, com.kg.merapaisa.data.MAX_MOVE_NOTE_CHARS)) },
                 label = { Text("Why, if it helps") },
                 placeholder = { Text("Sasti covered it") },
                 textStyle = MeraPaisaType.body,

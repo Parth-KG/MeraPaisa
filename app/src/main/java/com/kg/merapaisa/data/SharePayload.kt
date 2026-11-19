@@ -134,8 +134,26 @@ const val SHARE_FORMAT_VERSION = 2
 private const val MAX_ENCODED_CHARS = 64 * 1024
 private const val MAX_INFLATED_BYTES = 256 * 1024
 private const val MAX_ENTRIES = 1000
-private const val MAX_NOTE_CHARS = 500
-private const val MAX_NAME_CHARS = 100
+const val MAX_NOTE_CHARS = 500
+const val MAX_NAME_CHARS = 100
+
+/**
+ * The note typed in Move a debt. The entries it writes put "Moved from <name>, <the conversion>: "
+ * in front of it, and a name may be [MAX_NAME_CHARS] long, so this leaves room for both inside
+ * [MAX_NOTE_CHARS].
+ */
+const val MAX_MOVE_NOTE_CHARS = 300
+
+/**
+ * What a field keeps of [text] (v3.7.1): the first [max] characters, so nothing typed or pasted
+ * is ever longer than a link may carry. A receiver refuses a longer note or name as damaged, and
+ * resending did not help. Never ends on half of a character that takes two.
+ */
+fun typedUpTo(text: String, max: Int): String {
+    if (text.length <= max) return text
+    val end = if (Character.isHighSurrogate(text[max - 1])) max - 1 else max
+    return text.substring(0, end)
+}
 
 /** [newEntryUid] makes 16; the slack is for a future format, and the cap is for a hostile one. */
 private const val MAX_UID_CHARS = 64

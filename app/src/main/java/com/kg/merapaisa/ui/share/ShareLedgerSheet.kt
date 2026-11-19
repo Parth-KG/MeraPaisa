@@ -86,7 +86,7 @@ fun ShareLedgerSheet(
 
             OutlinedTextField(
                 value = state.senderName,
-                onValueChange = onSenderNameChange,
+                onValueChange = { onSenderNameChange(com.kg.merapaisa.data.typedUpTo(it, com.kg.merapaisa.data.MAX_NAME_CHARS)) },
                 label = { Text("Your name") },
                 supportingText = {
                     Text(

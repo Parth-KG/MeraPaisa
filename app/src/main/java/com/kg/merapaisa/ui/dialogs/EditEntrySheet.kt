@@ -168,7 +168,10 @@ fun EditEntrySheet(
             Spacer(Modifier.height(Spacing.md))
             OutlinedTextField(
                 value = note,
-                onValueChange = { note = it },
+                onValueChange = {
+                    val kept = com.kg.merapaisa.data.typedUpTo(it.text, com.kg.merapaisa.data.MAX_NOTE_CHARS)
+                    note = if (kept == it.text) it else it.copy(text = kept, selection = androidx.compose.ui.text.TextRange(kept.length))
+                },
                 label = { Text("Note") },
                 placeholder = { Text("Dinner, cab fare") },
                 singleLine = true,
