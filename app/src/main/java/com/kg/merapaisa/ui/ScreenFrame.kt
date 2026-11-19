@@ -159,6 +159,13 @@ internal fun FootEdge(visible: Boolean) {
     )
 }
 
+/**
+ * [FootEdge]'s mirror over the top of a list (v3.7.1): the same line, there while the list has
+ * scrolled on under what sits above it, so rows don't run straight into the words over them.
+ */
+@Composable
+internal fun TopEdge(visible: Boolean) = FootEdge(visible)
+
 /** The actions, side by side at the foot, clear of the navigation bar. */
 @Composable
 internal fun FootActions(content: @Composable RowScope.() -> Unit) {

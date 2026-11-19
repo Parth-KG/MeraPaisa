@@ -6,6 +6,7 @@ import com.kg.merapaisa.ui.SecondaryAction
 import com.kg.merapaisa.ui.PrimaryAction
 import com.kg.merapaisa.ui.FootActions
 import com.kg.merapaisa.ui.FootEdge
+import com.kg.merapaisa.ui.TopEdge
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -194,6 +196,10 @@ fun GroupDetailScreen(
             )
             Text("$memberCount, $expenseCount", style = MeraPaisaType.label, color = theme.textSecondary)
         }
+        // Air under the count line, and a line once the list has scrolled under it (v3.7.1): the
+        // rows ran right up against "6 members, 5 expenses" with nothing between.
+        Spacer(Modifier.height(Spacing.sm))
+        TopEdge(visible = list.canScrollBackward)
 
         LazyColumn(
             state = list,
