@@ -97,8 +97,10 @@ fun ReminderSheet(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var message by remember(person.id) { mutableStateOf(buildReminderText(person)) }
-    var includeLog by remember { mutableStateOf(false) }
+    // Saveable, so turning the phone keeps what was written. Plain `remember` put the stock text
+    // back, and a Send after a turn cut the first one short sent that instead.
+    var message by rememberSaveable(person.id) { mutableStateOf(buildReminderText(person)) }
+    var includeLog by rememberSaveable(person.id) { mutableStateOf(false) }
     // Offered only where Show QR is, and on every time the sheet opens (Parth, 15 Nov 2026): not
     // remembered from one reminder to the next.
     val canAttachQr = canShowPayQr(person.currency, person.balanceMinor, myUpiId)
