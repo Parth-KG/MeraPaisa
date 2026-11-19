@@ -11,7 +11,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.kg.merapaisa.LocalAppTheme
@@ -48,6 +52,9 @@ fun PayQrSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scroll = rememberScrollState()
     val amount = amountString(amountMinor, "INR")
+    // Once only: the buttons stay live while the sheet slides away, and a second tap on Record in
+    // that time recorded the payment twice, turning what they owed into what you owe.
+    var closing by remember { mutableStateOf(false) }
 
     SheetFrame(onDismissRequest = onNotYet, sheetState = sheetState) {
         Column(
@@ -81,9 +88,13 @@ fun PayQrSheet(
 
         SheetFoot(above = scroll) {
             SecondaryAction("Not yet", enabled = true) {
+                if (closing) return@SecondaryAction
+                closing = true
                 scope.launch { sheetState.hide() }.invokeOnCompletion { onNotYet() }
             }
             PrimaryAction("Record $amount", enabled = true) {
+                if (closing) return@PrimaryAction
+                closing = true
                 scope.launch { sheetState.hide() }.invokeOnCompletion { onPaid() }
             }
         }

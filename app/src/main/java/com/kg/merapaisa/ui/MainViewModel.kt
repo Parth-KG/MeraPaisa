@@ -111,8 +111,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Settle up, without the mark).
      */
     fun closePayQr(person: PersonWithBalance, paid: Boolean) {
-        _uiState.update { it.copy(payQrPersonId = null) }
-        if (!paid || person.balanceMinor <= 0) return
+        // Records once per opening of the sheet: a second call finds it already closed.
+        var wasOpen = false
+        _uiState.update { wasOpen = it.payQrPersonId == person.id; it.copy(payQrPersonId = null) }
+        if (!wasOpen || !paid || person.balanceMinor <= 0) return
         viewModelScope.launch {
             repository.recordEntries(listOf(Transaction(personId = person.id, amountMinor = -person.balanceMinor, paidByUpi = true)))
         }
