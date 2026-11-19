@@ -100,7 +100,9 @@ sealed interface ReconcileItem {
         val theirAmountMinor: Long,
         val theirNote: String,
         /** Their timestamp, which may differ from the local one and is shown when it does. */
-        val theirTimestamp: Long
+        val theirTimestamp: Long,
+        /** The local row's "by UPI" mark, which links do not carry, so accepting keeps it. */
+        val localPaidByUpi: Boolean = false
     ) : ReconcileItem {
         val amountDiffers: Boolean get() = localAmountMinor != theirAmountMinor
         val noteDiffers: Boolean get() = localNote != theirNote
@@ -298,7 +300,8 @@ fun reconcile(
                 localNote = existing.note,
                 theirAmountMinor = entry.amountMinor,
                 theirNote = entry.note,
-                theirTimestamp = stamp
+                theirTimestamp = stamp,
+                localPaidByUpi = existing.paidByUpi
             )
         }
     }
@@ -363,7 +366,10 @@ fun ReconcilePlan.writesFor(personId: Long, selected: Set<String>): ReconcileWri
                 uid = item.uid,
                 // Accepting their version makes this their row. If they later delete it, that is
                 // now a deletion this phone will recognise rather than silently keep.
-                fromShare = true
+                fromShare = true,
+                // The update writes the whole row, and a link has no mark to send, so without this
+                // an entry recorded from Show QR lost "by UPI" when their note was accepted.
+                paidByUpi = item.localPaidByUpi
             )
 
             is ReconcileItem.DeletedBySender -> deleteIds += item.localId

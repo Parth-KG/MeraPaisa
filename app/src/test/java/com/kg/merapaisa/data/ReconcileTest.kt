@@ -308,6 +308,27 @@ class ReconcileTest {
         assertTrue(p.writesFor(personId, setOf("a")).updates.single().fromShare)
     }
 
+    /** Links carry no "by UPI" mark, so their version of an entry cannot take it away. */
+    @Test
+    fun `accepting an edit keeps the by UPI mark`() {
+        val p = plan(
+            incoming = listOf(incoming("a", -50_000, note = "Paid back for the hotel")),
+            local = listOf(local(1, "a", -50_000, note = "").copy(paidByUpi = true))
+        )
+
+        assertTrue(p.writesFor(personId, setOf("a")).updates.single().paidByUpi)
+    }
+
+    @Test
+    fun `accepting an edit of an entry without the mark does not add it`() {
+        val p = plan(
+            incoming = listOf(incoming("a", -40_000)),
+            local = listOf(local(1, "a", -34_000))
+        )
+
+        assertFalse(p.writesFor(personId, setOf("a")).updates.single().paidByUpi)
+    }
+
     @Test
     fun `a forward dated entry is clamped to now`() {
         val p = plan(listOf(incoming("a", -1_000, timestamp = now + 999_999_999L)), emptyList())
