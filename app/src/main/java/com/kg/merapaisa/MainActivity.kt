@@ -154,7 +154,9 @@ class MainActivity : FragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        pendingShareLink = shareLinkFrom(intent)
+        // Only a link replaces the one waiting. The widget or the launcher icon arrives here too,
+        // and clearing it then dropped a link held for the fingerprint without a word.
+        shareLinkFrom(intent)?.let { pendingShareLink = it }
     }
 
     /**
