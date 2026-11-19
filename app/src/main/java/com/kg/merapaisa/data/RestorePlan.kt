@@ -141,9 +141,20 @@ private fun planMerge(
 
     // Name and currency together, because the app itself treats the same name in two currencies as
     // two people. Case and surrounding space are ignored: "asha " and "Asha" are one person.
+    // The app lets two people share a name and currency (it only warns), so a key can stand for
+    // several people. They are paired in id order, the first here with the first in the file, so
+    // each keeps their own entries. Matching every one of them to the same person put two people's
+    // money on one.
     val existingByKey = existing.persons
         .filter { !it.isSelf }
-        .associateBy { personKey(it.name, it.currency) }
+        .groupBy { personKey(it.name, it.currency) }
+        .mapValues { (_, people) -> people.sortedBy { it.id } }
+    val incomingRank = incoming.persons
+        .filter { !it.isSelf }
+        .groupBy { personKey(it.name, it.currency) }
+        .values
+        .flatMap { people -> people.sortedBy { it.id }.mapIndexed { rank, p -> p.id to rank } }
+        .toMap()
 
     incoming.persons.forEach { person ->
         if (person.isSelf) {
@@ -151,7 +162,7 @@ private fun planMerge(
             personIdMap[person.id] = localSelfId
             return@forEach
         }
-        val match = existingByKey[personKey(person.name, person.currency)]
+        val match = existingByKey[personKey(person.name, person.currency)]?.getOrNull(incomingRank[person.id] ?: 0)
         val photo = incoming.photos[person.id]
         if (match != null) {
             personIdMap[person.id] = match.id

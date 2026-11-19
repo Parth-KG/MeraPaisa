@@ -483,4 +483,51 @@ class RestorePlanTest {
         assertTrue("a second identical restore must be a no-op, got ${second.inserts}", second.changesNothing)
         assertEquals(4, second.alreadyPresent.expenses)
     }
+
+
+    // -----------------------------------------------------------------------------------------
+    // Two people with the same name and currency
+    // -----------------------------------------------------------------------------------------
+
+    /** Two Ashas, both in rupees, each with her own entries and both in one group expense. */
+    private fun backupWithTwoAshas() = snapshot(
+        persons = listOf(
+            Person(id = 10, name = "You", isSelf = true, sortOrder = -1),
+            Person(id = 11, name = "Asha", currency = "INR"),
+            Person(id = 12, name = "Asha", currency = "INR")
+        ),
+        transactions = listOf(
+            Transaction(id = 1, personId = 11, amountMinor = 20_000, timestamp = 1_000, note = "Dinner"),
+            Transaction(id = 2, personId = 12, amountMinor = -7_000, timestamp = 2_000, note = "Cab")
+        ),
+        groups = listOf(Group(id = 20, name = "Goa", currency = "INR", createdAt = 500)),
+        groupMembers = listOf(GroupMember(20, 10), GroupMember(20, 11), GroupMember(20, 12)),
+        expenses = listOf(
+            Expense(id = 30, groupId = 20, description = "Hotel", amountMinor = 30_000, paidByPersonId = 10, timestamp = 600)
+        ),
+        expenseShares = listOf(ExpenseShare(30, 10, 10_000), ExpenseShare(30, 11, 10_000), ExpenseShare(30, 12, 10_000))
+    )
+
+    private fun BackupSnapshot.balances() = persons.filter { !it.isSelf }.sortedBy { it.id }
+        .map { p -> transactions.filter { it.personId == p.id }.sumOf { it.amountMinor } }
+
+    @Test
+    fun `merging your own backup back keeps two people of one name apart`() {
+        val ledger = emptyLedger().plus(merge(emptyLedger(), backupWithTwoAshas()))
+        assertEquals(listOf(20_000L, -7_000L), ledger.balances())
+
+        val again = merge(ledger, backupWithTwoAshas())
+
+        assertTrue("a second identical restore must be a no-op, got ${again.inserts}", again.changesNothing)
+        assertEquals(2, again.alreadyPresent.people)
+        assertEquals(listOf(20_000L, -7_000L), ledger.plus(again).balances())
+    }
+
+    @Test
+    fun `two people of one name in the file are both added to a ledger with neither`() {
+        val plan = merge(emptyLedger(), backupWithTwoAshas())
+
+        assertEquals(2, plan.persons.count { it.name == "Asha" })
+        assertEquals(3, plan.expenseShares.size)
+    }
 }
