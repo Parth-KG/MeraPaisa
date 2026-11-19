@@ -62,9 +62,11 @@ class PersonRepository(
      * "Converted INR to USD" correction, which left a log where old entries read in one currency
      * and a mystery adjustment reconciled it to another.
      */
-    suspend fun convertCurrency(personId: Long, toCurrency: String, rate: Double) {
-        dao.convertPersonCurrency(personId, toCurrency, rate)
+    /** False when the person is no longer in [fromCurrency], and nothing was converted. */
+    suspend fun convertCurrency(personId: Long, toCurrency: String, rate: Double, fromCurrency: String? = null): Boolean {
+        val converted = dao.convertPersonCurrency(personId, toCurrency, rate, fromCurrency)
         notifier.onLedgerChanged()
+        return converted
     }
 
     suspend fun updatePerson(person: Person) {

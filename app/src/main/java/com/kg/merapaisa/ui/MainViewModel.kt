@@ -494,7 +494,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         "are and only change the currency."
                     return@launch
                 }
-                repository.convertCurrency(snapshot.id, currency, rate)
+                // From the currency this edit started in. A second Save landing after the first
+                // had converted would otherwise convert the converted entries again.
+                if (!repository.convertCurrency(snapshot.id, currency, rate, fromCurrency = snapshot.currency)) return@launch
             }
 
             // The edit is committed, so the photo it replaced is now unreferenced.

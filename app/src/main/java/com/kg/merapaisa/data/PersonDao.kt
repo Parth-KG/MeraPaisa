@@ -295,16 +295,27 @@ interface PersonDao {
      *
      * One transaction: a failure halfway would leave a history half in each currency, with no
      * record of which entries were which.
+     *
+     * [fromCurrency], when given, is the currency [rate] converts from. If the person is no longer
+     * in it, nothing is converted and this returns false: a second Save of the same edit, landing
+     * after the first had converted, multiplied the already converted entries by the rate again.
      */
     @androidx.room.Transaction
-    suspend fun convertPersonCurrency(personId: Long, toCurrency: String, rate: Double) {
+    suspend fun convertPersonCurrency(
+        personId: Long,
+        toCurrency: String,
+        rate: Double,
+        fromCurrency: String? = null
+    ): Boolean {
+        val person = getPersonNow(personId) ?: return false
+        if (fromCurrency != null && normaliseCurrency(person.currency) != normaliseCurrency(fromCurrency)) return false
         val entries = getTransactionsForPersonNow(personId)
         if (entries.isNotEmpty()) {
             val converted = convertAll(entries.map { it.amountMinor }, rate)
             updateTransactions(entries.mapIndexed { i, t -> t.copy(amountMinor = converted[i]) })
         }
-        val person = getPersonNow(personId) ?: return
         updatePerson(person.copy(currency = toCurrency))
+        return true
     }
 
     @Query("DELETE FROM transactions WHERE id = :transactionId")

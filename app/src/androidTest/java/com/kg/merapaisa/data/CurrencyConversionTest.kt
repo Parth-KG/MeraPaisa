@@ -201,6 +201,24 @@ class CurrencyConversionTest {
         assertEquals(entriesBefore, dao.getTransactionsForPersonNow(id).map { it.amountMinor })
     }
 
+    /**
+     * Saving the same edit twice, the second landing after the first had converted: the second
+     * used to convert the converted entries again, applying the rate twice to money already in
+     * dollars. It now finds the person already out of INR and changes nothing.
+     */
+    @Test
+    fun aSecondConversionFromTheOldCurrencyChangesNothing() = runBlocking {
+        val id = seed()
+        assertTrue(repo.convertCurrency(id, "USD", 2.0, fromCurrency = "INR"))
+        val once = dao.getTransactionsForPersonNow(id).map { it.amountMinor }
+
+        assertFalse(repo.convertCurrency(id, "USD", 2.0, fromCurrency = "INR"))
+
+        assertEquals(once, dao.getTransactionsForPersonNow(id).map { it.amountMinor })
+        assertEquals(listOf(40_000L, 10_100L, -20_000L), once)
+        assertEquals("USD", dao.getPersonNow(id)?.currency)
+    }
+
     @Test
     fun aLongHistoryStillReconciles() = runBlocking {
         val id = dao.insertPerson(Person(name = "Busy", currency = "INR"))
