@@ -164,4 +164,19 @@ class ConvertAllTest {
             assertTrue("entry $i turned the other way", out[i] >= 0)
         }
     }
+
+    /**
+     * Four entries of ₹0.40 each way at 0.012 all round to nothing, while their total of −₹0.80
+     * rounds to −1 cent. The largest of them was then a zero, which passed for "the same side"
+     * as the residue, and the first entry, ₹0.40 they owed you, became 1 cent you owe.
+     */
+    @Test
+    fun `a residue never turns an entry the other way when every entry rounds to nothing`() {
+        val amounts = listOf(40L, -40L, -40L, -40L)
+        val out = convertAll(amounts, 0.012)
+        assertEquals(-1L, out.sum())
+        amounts.indices.forEach { i ->
+            assertTrue("entry $i ran ${amounts[i]} and became ${out[i]}", out[i] == 0L || (out[i] > 0) == (amounts[i] > 0))
+        }
+    }
 }

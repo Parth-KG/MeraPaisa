@@ -239,7 +239,9 @@ fun convertAll(amounts: List<Long>, rate: Double): List<Long> {
             if (Math.abs(converted[i]) > Math.abs(converted[pick])) pick = i
         }
         val absorbed = converted[pick] + residue
-        if (absorbed != 0L && (absorbed > 0) == (converted[pick] > 0)) {
+        // Against the entry as it was, not as rounded: when every entry rounds to nothing, the
+        // largest is a zero, and a zero passed for "the same side" as any residue.
+        if (absorbed != 0L && amounts[pick] != 0L && (absorbed > 0) == (amounts[pick] > 0)) {
             converted[pick] = absorbed
         } else {
             // Many small entries can leave a residue bigger than the largest of them, and adding
