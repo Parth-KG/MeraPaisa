@@ -546,7 +546,7 @@ fun ThemedIconCase() {
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(com.kg.merapaisa.ui.theme.Spacing.lg),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
     ) {
-        listOf(48, 96, 192).forEach { size ->
+        listOf(40, 64, 104).forEach { size ->
             Box(
                 modifier = Modifier
                     .size(size.dp)
