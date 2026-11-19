@@ -53,4 +53,16 @@ class UpiTest {
         assertFalse("not a UPI ID", canShowPayQr("INR", 500_00, "me"))
         assertFalse("UPI is rupees only", canShowPayQr("USD", 500_00, "me@okaxis"))
     }
+
+    @Test
+    fun `Show QR is offered for rupees owed to you, with or without your UPI ID`() {
+        assertTrue(canOfferPayQr("INR", 500_00))
+        assertTrue(canOfferPayQr("₹", 1))
+        assertFalse(canOfferPayQr("USD", 500_00))
+        assertFalse(canOfferPayQr("INR", 0))
+        assertFalse(canOfferPayQr("INR", -500_00))
+        // The QR itself still needs the ID.
+        assertFalse(canShowPayQr("INR", 500_00, null))
+        assertTrue(canShowPayQr("INR", 500_00, "parth@okaxis"))
+    }
 }

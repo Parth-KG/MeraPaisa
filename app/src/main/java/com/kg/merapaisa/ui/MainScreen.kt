@@ -2,6 +2,7 @@ package com.kg.merapaisa.ui
 
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
+import com.kg.merapaisa.data.canOfferPayQr
 import com.kg.merapaisa.data.canShowPayQr
 import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.data.upiPayLink
@@ -96,6 +97,8 @@ fun MainScreen(viewModel: MainViewModel) {
     val lock: AppLockViewModel = viewModel()
     val myUpiId by viewModel.myUpiId.collectAsState()
     var showOwnUpi by rememberSaveable { mutableStateOf(false) }
+    // Show QR asked for before there was a UPI ID (v3.7.1): whose QR to show once it is saved.
+    var qrAfterOwnUpiFor by rememberSaveable { mutableStateOf<Long?>(null) }
     // A change to your own UPI ID waiting on a confirm, on a phone with no screen lock to ask with.
     var ownUpiUnlockedChange by remember { mutableStateOf<Pair<String?, String?>?>(null) }
     val theme = LocalAppTheme.current
@@ -334,8 +337,17 @@ fun MainScreen(viewModel: MainViewModel) {
                         },
                         onShareLedger = { viewModel.openShareSheet(person.id) },
                         onMoveDebt = { viewModel.openMoveDebt(person.id) },
-                        onShowQr = if (canShowPayQr(person.currency, person.balanceMinor, myUpiId)) {
-                            { viewModel.openPayQr(person.id) }
+                        // For anyone who owes you rupees (v3.7.1). With no UPI ID yet it asks for
+                        // one first, then shows the QR.
+                        onShowQr = if (canOfferPayQr(person.currency, person.balanceMinor)) {
+                            {
+                                if (canShowPayQr(person.currency, person.balanceMinor, myUpiId)) {
+                                    viewModel.openPayQr(person.id)
+                                } else {
+                                    qrAfterOwnUpiFor = person.id
+                                    showOwnUpi = true
+                                }
+                            }
                         } else null,
                         qrOnlyInRupees = myUpiId != null && person.balanceMinor > 0 &&
                             normaliseCurrency(person.currency) != "INR"
@@ -544,12 +556,27 @@ fun MainScreen(viewModel: MainViewModel) {
             )
         }
     }
+    // The UPI ID is saved through DataStore, so the QR opens once the saved ID has come back, not
+    // at the moment of saving, when the sheet would still see none and close itself.
+    val pendingQr = qrAfterOwnUpiFor
+    if (pendingQr != null && !showOwnUpi && ownUpiUnlockedChange == null) {
+        LaunchedEffect(pendingQr, myUpiId) {
+            val payer = persons.find { it.id == pendingQr }
+            if (payer != null && canShowPayQr(payer.currency, payer.balanceMinor, myUpiId)) {
+                viewModel.openPayQr(pendingQr)
+                qrAfterOwnUpiFor = null
+            }
+        }
+    }
     if (showOwnUpi) {
         val yourName by produceState<String?>(null) { value = viewModel.myNameForUpi() }
         OwnUpiSheet(
             current = myUpiId,
             yourName = yourName,
-            onDismiss = { showOwnUpi = false },
+            onDismiss = {
+                showOwnUpi = false
+                qrAfterOwnUpiFor = null
+            },
             onSave = { wanted ->
                 val current = myUpiId
                 if (canAuthenticate(context)) {
@@ -589,7 +616,10 @@ fun MainScreen(viewModel: MainViewModel) {
                 ownUpiUnlockedChange = null
                 showOwnUpi = false
             },
-            onDismiss = { ownUpiUnlockedChange = null }
+            onDismiss = {
+                ownUpiUnlockedChange = null
+                qrAfterOwnUpiFor = null
+            }
         )
     }
     val openGroupId = ui.openGroupId
@@ -755,7 +785,9 @@ fun MainScreen(viewModel: MainViewModel) {
         ReminderDialog(
             person = target,
             viewModel = viewModel,
-            onDismiss = { viewModel.composeReminder(null) }
+            onDismiss = { viewModel.composeReminder(null) },
+            // "Your UPI ID" opens over the reminder, which stays as written underneath.
+            onAddUpiId = { showOwnUpi = true }
         )
     }
     confirmSettle?.let { target ->

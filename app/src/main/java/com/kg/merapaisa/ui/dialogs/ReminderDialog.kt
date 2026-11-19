@@ -1,5 +1,8 @@
 package com.kg.merapaisa.ui.dialogs
 
+import com.kg.merapaisa.data.isUpiId
+import com.kg.merapaisa.data.canOfferPayQr
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -64,7 +67,9 @@ import kotlinx.coroutines.launch
 fun ReminderDialog(
     person: PersonWithBalance,
     viewModel: MainViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** Opens "Your UPI ID" over the sheet, for a reminder that could carry a QR but has no ID yet. */
+    onAddUpiId: (() -> Unit)? = null
 ) {
     // Keyed on the person: `getTransactions` builds a fresh Flow on every call, and collecting a
     // new one on each recomposition restarted the query every time the draft changed.
@@ -77,7 +82,8 @@ fun ReminderDialog(
         entries = entries,
         onDismiss = onDismiss,
         myUpiId = myUpiId,
-        myName = myName
+        myName = myName,
+        onAddUpiId = onAddUpiId
     )
 }
 
@@ -91,7 +97,12 @@ fun ReminderSheet(
     /** Your own UPI ID: with it, a reminder to someone who owes you rupees can attach your QR. */
     myUpiId: String? = null,
     /** Your name, for their UPI app to show beside your ID, if you have given one. */
-    myName: String? = null
+    myName: String? = null,
+    /**
+     * With no UPI ID yet, a row that opens "Your UPI ID" (v3.7.1); once it is saved, the QR's
+     * switch takes the row's place, on. Null shows no row.
+     */
+    onAddUpiId: (() -> Unit)? = null
 ) {
     val theme = LocalAppTheme.current
     val context = LocalContext.current
@@ -166,6 +177,10 @@ fun ReminderSheet(
                     enabled = true,
                     onCheckedChange = { attachQr = it }
                 )
+            } else if (onAddUpiId != null && canOfferPayQr(person.currency, person.balanceMinor) &&
+                (myUpiId == null || !isUpiId(myUpiId))
+            ) {
+                AddUpiIdRow(onClick = onAddUpiId)
             }
         }
 
@@ -262,6 +277,25 @@ internal fun reminderQrCaption(amountMinor: Long, myUpiId: String): String =
     "Scan to pay ${amountString(amountMinor, "INR")} to $myUpiId"
 
 /** A titled switch the whole width of the sheet, one TalkBack stop, at least 48dp tall. */
+/**
+ * "Add your UPI ID to attach a QR", where the QR's switch would be: the words in the accent, set on
+ * the gutter like the rows above, one TalkBack stop (v3.7.1).
+ */
+@Composable
+private fun AddUpiIdRow(onClick: () -> Unit) {
+    val theme = LocalAppTheme.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button, onClick = onClick)
+            .heightIn(min = 48.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("Add your UPI ID to attach a QR", style = MeraPaisaType.bodyStrong, color = theme.primary)
+    }
+}
+
 @Composable
 private fun SwitchRow(
     title: String,

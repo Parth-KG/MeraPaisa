@@ -1,5 +1,6 @@
 package com.kg.merapaisa.ui
 
+import org.junit.Assert.assertTrue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -27,7 +28,12 @@ class ReminderQrSwitchTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun open(balance: Long, currency: String = "INR", myUpiId: String? = "parth@okaxis") {
+    private fun open(
+        balance: Long,
+        currency: String = "INR",
+        myUpiId: String? = "parth@okaxis",
+        onAddUpiId: (() -> Unit)? = null
+    ) {
         val theme = themes.first()
         compose.setContent {
             MeraPaisaTheme(theme) {
@@ -37,7 +43,8 @@ class ReminderQrSwitchTest {
                         entries = emptyList(),
                         onDismiss = {},
                         myUpiId = myUpiId,
-                        myName = "Parth"
+                        myName = "Parth",
+                        onAddUpiId = onAddUpiId
                     )
                 }
             }
@@ -65,6 +72,27 @@ class ReminderQrSwitchTest {
     fun noSwitchWithoutYourUpiId() {
         open(500_00, myUpiId = null)
         compose.onNodeWithText("Attach a QR to pay you").assertDoesNotExist()
+    }
+
+    @Test
+    fun withoutYourUpiIdTheRowOffersToAddOne() {
+        var asked = false
+        open(500_00, myUpiId = null, onAddUpiId = { asked = true })
+        compose.onNodeWithText("Attach a QR to pay you").assertDoesNotExist()
+        compose.onNodeWithText("Add your UPI ID to attach a QR").performClick()
+        assertTrue(asked)
+    }
+
+    @Test
+    fun noAddRowOutsideRupeesOrWhenNothingIsOwed() {
+        open(50_00, currency = "USD", myUpiId = null, onAddUpiId = {})
+        compose.onNodeWithText("Add your UPI ID to attach a QR").assertDoesNotExist()
+    }
+
+    @Test
+    fun noAddRowWhenYouOweThem() {
+        open(-40_00, myUpiId = null, onAddUpiId = {})
+        compose.onNodeWithText("Add your UPI ID to attach a QR").assertDoesNotExist()
     }
 
     @Test

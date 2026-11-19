@@ -61,7 +61,15 @@ fun upiPayLink(payeeId: String, payeeName: String?, amountMinor: Long): String {
  * rupees, once your own UPI ID is set.
  */
 fun canShowPayQr(currency: String, balanceMinor: Long, myUpiId: String?): Boolean =
-    normaliseCurrency(currency) == "INR" && balanceMinor > 0 && myUpiId != null && isUpiId(myUpiId)
+    canOfferPayQr(currency, balanceMinor) && myUpiId != null && isUpiId(myUpiId)
+
+/**
+ * Whether "Show QR to pay you" is in someone's menu (v3.7.1): for anyone who owes you rupees, your
+ * UPI ID set or not. Without one, it asks for it first, then shows the QR, so the feature can be
+ * found without going to Settings.
+ */
+fun canOfferPayQr(currency: String, balanceMinor: Long): Boolean =
+    normaliseCurrency(currency) == "INR" && balanceMinor > 0
 
 /**
  * A `upi://pay` link to [payeeId] with no amount: what your own QR carries, so whoever scans it

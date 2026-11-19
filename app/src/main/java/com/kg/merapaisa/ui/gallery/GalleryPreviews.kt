@@ -612,6 +612,13 @@ val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "sheet-reminder" to {
         ReminderSheet(person = Fixtures.chaitanya, entries = Fixtures.ashaHistory, onDismiss = {})
     },
+    // Asha owes you rupees and there is no UPI ID yet (v3.7.1): the row that adds one.
+    "sheet-reminder-add-upi" to {
+        ReminderSheet(
+            person = Fixtures.asha, entries = Fixtures.ashaHistory, onDismiss = {},
+            myUpiId = null, myName = "Parth", onAddUpiId = {}
+        )
+    },
     "sheet-share" to {
         ShareLedgerSheet(
             state = Fixtures.shareState,
