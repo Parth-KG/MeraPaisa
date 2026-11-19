@@ -64,6 +64,9 @@ fun CreateGroupDialog(
     // Defaults to on, which is what every group has done since groups shipped.
     var simplifyDebts by remember { mutableStateOf(true) }
     var addingPerson by remember { mutableStateOf(false) }
+    // Once only: the button stays live while the sheet slides away, and a second tap in that time
+    // made the group twice.
+    var creating by remember { mutableStateOf(false) }
 
     // Anyone can join, whatever currency their own balance is kept in. A group is its own
     // ledger in its own currency and moves nothing on the main screen. Filtered against the list
@@ -179,6 +182,8 @@ fun CreateGroupDialog(
                 scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
             }
             PrimaryAction("Create group", enabled = name.isNotBlank() && chosen.isNotEmpty()) {
+                if (creating) return@PrimaryAction
+                creating = true
                 val members = chosen.toList()
                 val groupName = name.trim()
                 scope.launch { sheetState.hide() }.invokeOnCompletion {

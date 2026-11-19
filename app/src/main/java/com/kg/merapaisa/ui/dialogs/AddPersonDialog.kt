@@ -83,6 +83,9 @@ fun AddPersonDialog(
     val scope = rememberCoroutineScope()
 
     var name by remember { mutableStateOf("") }
+    // Once only: the button stays live while the sheet slides away, and a second tap in that time
+    // added the person twice.
+    var adding by remember { mutableStateOf(false) }
     var pfpType by remember { mutableStateOf("initials") }
     var photoPath by remember { mutableStateOf<String?>(null) }
     var emoji by remember { mutableStateOf("") }
@@ -177,6 +180,8 @@ fun AddPersonDialog(
                 scope.launch { sheetState.hide() }.invokeOnCompletion { dismiss() }
             }
             PrimaryAction("Add person", enabled = name.isNotBlank()) {
+                if (adding) return@PrimaryAction
+                adding = true
                 val personName = name.trim()
                 val type = avatarTypeFor(pfpType, emoji, photoPath)
                 val value = avatarValueFor(type, personName, emoji, photoPath)
