@@ -281,22 +281,31 @@ private fun planMerge(
     // the entries the clear folded into its opening balance. Adding that opening balance beside them
     // counted the debt twice. It is left out when every entry it replaced is still here, exactly by
     // uid. An opening entry an earlier clear wrote, which this phone never had, is part of that
-    // chain and needs nothing here; one it does have counts like any entry. If only some of the
-    // entries are here, the opening balance is added as before (BACKUP.md says so).
+    // chain and needs nothing here; one it does have counts like any entry. An entry this phone
+    // cleared itself counts too: its money is in this phone's own opening balance, so a Clear
+    // history here after such a Merge, then the same Merge again, added the backup's opening
+    // balance beside this phone's and counted the debt twice. If only some of the entries are
+    // here, the opening balance is added as before (BACKUP.md says so).
     val skippedOpening = HashSet<Pair<Long, String>>()
     val clearNotCopied = HashSet<Pair<Long, String>>()
     matchOf.forEach { (fileId, here) ->
-        val retiredHere = existing.retiredUids.filter { it.personId == here.id }.map { it.uid }.toHashSet()
+        val retiredHere = existing.retiredUids.filter { it.personId == here.id }
+        val retiredUidsHere = retiredHere.map { it.uid }.toHashSet()
+        val clearedByThisPhone = retiredHere.filter { it.reason == RETIRED_CLEARED }.map { it.uid }.toHashSet()
         val uidsHere = existing.transactions.filter { it.personId == here.id }.map { it.uid }.toHashSet()
+        val counted = { uid: String -> uid in uidsHere || uid in clearedByThisPhone }
         val replaced = incoming.retiredUids
-            .filter { it.personId == fileId && it.reason == RETIRED_CLEARED && it.uid !in retiredHere }
+            .filter {
+                it.personId == fileId && it.reason == RETIRED_CLEARED &&
+                    (it.uid !in retiredUidsHere || it.uid in clearedByThisPhone)
+            }
             .map { it.uid }
         val opening = incoming.transactions.filter {
             it.personId == fileId && it.uid !in minted && it.uid.startsWith(OPENING_UID_PREFIX) &&
-                it.uid !in uidsHere && it.uid !in retiredHere
+                it.uid !in uidsHere && it.uid !in retiredUidsHere
         }
-        val allHere = replaced.all { it in uidsHere || it.startsWith(OPENING_UID_PREFIX) }
-        if (opening.isNotEmpty() && replaced.any { it in uidsHere } && allHere) {
+        val allHere = replaced.all { counted(it) || it.startsWith(OPENING_UID_PREFIX) }
+        if (opening.isNotEmpty() && replaced.any(counted) && allHere) {
             opening.forEach { skippedOpening += fileId to it.uid }
             replaced.forEach { clearNotCopied += fileId to it }
         }

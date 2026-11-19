@@ -168,6 +168,45 @@ class MergeByUidTest {
     }
 
     @Test
+    fun `a Clear history here after that Merge, then the same Merge again, adds nothing`() {
+        val here = snap(listOf(ashaHere), listOf(t(1, 2, 200_00, 1_000, "a1", "Dinner"), t(2, 2, 300_00, 2_000, "a2", "Cab")))
+        val first = merge(here, clearedBackup())
+        val merged = here.copy(transactions = here.transactions + first.transactions, retiredUids = here.retiredUids + first.retiredUids)
+        assertEquals(510_00L, merged.transactions.sumOf { it.amountMinor })
+        // Clear history on this phone: every entry into one opening balance, the uids retired.
+        val clearedHere = merged.copy(
+            transactions = listOf(t(10, 2, 510_00, 20_000, OPENING_UID_PREFIX + "p1", "Opening balance")),
+            retiredUids = merged.transactions.map { cleared(2, it.uid) }
+        )
+        val second = merge(clearedHere, clearedBackup())
+        assertTrue("the backup's opening balance is already in this phone's", second.transactions.isEmpty())
+        assertTrue(second.changesNothing)
+    }
+
+    @Test
+    fun `both phones cleared the same entries, so the backup's opening balance is not added beside this one`() {
+        val here = snap(
+            listOf(ashaHere),
+            listOf(t(1, 2, 500_00, 8_000, OPENING_UID_PREFIX + "p1", "Opening balance"), t(2, 2, 10_00, 9_500, "n1", "Tea")),
+            retired = listOf(cleared(2, "a1"), cleared(2, "a2"))
+        )
+        val plan = merge(here, clearedBackup())
+        assertTrue(plan.transactions.isEmpty())
+        assertTrue(plan.retiredUids.isEmpty())
+    }
+
+    @Test
+    fun `this phone cleared only some of them and lacks the rest, so the opening balance is added as before`() {
+        val here = snap(
+            listOf(ashaHere),
+            listOf(t(1, 2, 200_00, 8_000, OPENING_UID_PREFIX + "p1", "Opening balance")),
+            retired = listOf(cleared(2, "a1"))
+        )
+        val plan = merge(here, clearedBackup())
+        assertTrue(plan.transactions.any { it.uid == OPENING_UID_PREFIX + "o1" })
+    }
+
+    @Test
     fun `a chain of two clears, onto a phone that made neither, leaves the last opening balance out`() {
         val file = snap(
             listOf(ashaFile),
