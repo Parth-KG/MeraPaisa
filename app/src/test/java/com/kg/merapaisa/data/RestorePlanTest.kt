@@ -625,4 +625,39 @@ class RestorePlanTest {
         val again = merge(restored, backupWithAshaInAGroup())
         assertTrue("a second identical restore must be a no-op, got ${again.inserts}", again.changesNothing)
     }
+
+    /** A group renamed since the backup is still that group, so Merge adds nothing to it twice. */
+    @Test
+    fun `merging after renaming a group finds the group, and copies none of it`() {
+        val ledger = emptyLedger().plus(merge(emptyLedger(), backupWithAshaInAGroup()))
+        val goa = ledger.groups.single()
+        val renamed = ledger.copy(groups = listOf(goa.copy(name = "Goa 2026")))
+
+        val plan = merge(renamed, backupWithAshaInAGroup())
+
+        assertTrue("nothing should be added, got ${plan.inserts}", plan.changesNothing)
+        assertEquals(mapOf("You" to 5_000L, "Asha" to -5_000L), renamed.plus(plan).positions(goa.id))
+    }
+
+    /** Two groups made at the same moment in one currency are told apart by name. */
+    @Test
+    fun `groups made at the same moment are still told apart by name`() {
+        val here = emptyLedger().copy(
+            groups = listOf(
+                Group(id = 5, name = "Goa", currency = "INR", createdAt = 500),
+                Group(id = 6, name = "Manali", currency = "INR", createdAt = 500)
+            )
+        )
+        val file = snapshot(
+            persons = listOf(Person(id = 10, name = "You", isSelf = true, sortOrder = -1)),
+            groups = listOf(Group(id = 21, name = "Manali", currency = "INR", createdAt = 500)),
+            expenses = listOf(Expense(id = 40, groupId = 21, description = "Tea", amountMinor = 1_000, paidByPersonId = 10, timestamp = 600)),
+            expenseShares = listOf(ExpenseShare(40, 10, 1_000))
+        )
+
+        val plan = merge(here, file)
+
+        assertEquals(0, plan.groups.size)
+        assertEquals(6L, plan.expenses.single().groupId)
+    }
 }

@@ -213,16 +213,18 @@ private fun planMerge(
         newTransactions.add(t.copy(id = nextTransactionId++, personId = personId))
     }
 
-    // Groups match on name, currency and creation time together. Name alone would merge two
-    // different trips that happen to be called "Goa"; adding createdAt makes a match mean
-    // "this is that same group", not "these share a label".
-    val existingGroupByKey = existing.groups.associateBy { groupKey(it.name, it.currency, it.createdAt) }
+    // Groups match on currency and creation time, the moment the group was made, so a match means
+    // "this is that same group", not "these share a label": two trips called "Goa" stay apart. The
+    // name only tells apart groups made at the same moment. Matching on the name as well copied a
+    // whole group, every expense and share, once it had been renamed since the backup.
+    val existingGroupsByMoment = existing.groups.groupBy { groupMoment(it.currency, it.createdAt) }
     val groupIdMap = HashMap<Long, Long>()
     val newGroups = mutableListOf<Group>()
     var groupsAlreadyPresent = 0
 
     incoming.groups.forEach { group ->
-        val match = existingGroupByKey[groupKey(group.name, group.currency, group.createdAt)]
+        val candidates = existingGroupsByMoment[groupMoment(group.currency, group.createdAt)].orEmpty()
+        val match = candidates.firstOrNull { sameName(it.name, group.name) } ?: candidates.singleOrNull()
         if (match != null) {
             groupIdMap[group.id] = match.id
             groupsAlreadyPresent++
@@ -396,8 +398,10 @@ private fun entryKey(timestamp: Long, amountMinor: Long, note: String): String =
 private fun personKey(name: String, currency: String): String =
     name.trim().lowercase() + "\u0000" + normaliseCurrency(currency.trim())
 
-private fun groupKey(name: String, currency: String, createdAt: Long): String =
-    name.trim().lowercase() + "\u0000" + normaliseCurrency(currency.trim()) + "\u0000" + createdAt
+private fun groupMoment(currency: String, createdAt: Long): String =
+    normaliseCurrency(currency.trim()) + "\u0000" + createdAt
+
+private fun sameName(a: String, b: String): Boolean = a.trim().lowercase() == b.trim().lowercase()
 
 private fun transactionKey(personId: Long, timestamp: Long, amountMinor: Long, note: String): String =
     "$personId\u0000$timestamp\u0000$amountMinor\u0000${note.trim()}"
