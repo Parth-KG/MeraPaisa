@@ -17,7 +17,6 @@ package com.kg.merapaisa.data
 data class ImportedPerson(
     val name: String,
     val currency: String,
-    val isSettled: Boolean,
     val transactions: List<ImportedTransaction>
 )
 
@@ -48,13 +47,10 @@ private val EXPECTED_HEADER = listOf(
 /** Index into a row, named so the column order is stated once. */
 private const val COL_PERSON = 0
 private const val COL_CURRENCY = 1
-private const val COL_SETTLED = 3
 private const val COL_TIMESTAMP = 4
 private const val COL_AMOUNT = 6
 private const val COL_NOTE = 7
 
-/** Spellings of "settled" that a spreadsheet might produce from the exporter's "yes". */
-private val SETTLED_WORDS = setOf("yes", "true", "1")
 
 fun readLedgerCsv(text: String): CsvImportResult {
     val rows = parseCsv(text) ?: return CsvImportResult.Damaged(0, "the file is not valid CSV")
@@ -66,7 +62,6 @@ fun readLedgerCsv(text: String): CsvImportResult {
     // Grouped by name and currency together: the same name in two currencies is two people here,
     // exactly as it is in the app.
     val byPerson = LinkedHashMap<Pair<String, String>, MutableList<ImportedTransaction>>()
-    val settledFlags = LinkedHashMap<Pair<String, String>, Boolean>()
 
     rows.drop(1).forEachIndexed { index, row ->
         val line = index + 2 // 1-based, and the header is line 1
@@ -85,17 +80,8 @@ fun readLedgerCsv(text: String): CsvImportResult {
         val key = name to currency
         val entries = byPerson.getOrPut(key) { mutableListOf() }
 
-        // Read once, from the person's first row. Written as an explicit absence check rather than
-        // an elvis: `in` binds looser than `?:` in Kotlin, so `flags[key] ?: text in SETTLED_WORDS`
-        // parses as `(flags[key] ?: text) in SETTLED_WORDS` and, on the second row, compares the
-        // stored Boolean against a set of Strings, quietly un-settling anyone with more than one
-        // transaction.
-        //
-        // "yes"/"no" is what the exporter writes; the rest are tolerated because a spreadsheet
-        // round trip may well have turned it into TRUE or 1.
-        if (key !in settledFlags) {
-            settledFlags[key] = row[COL_SETTLED].trim().lowercase() in SETTLED_WORDS
-        }
+        // The "settled" column (index 3) is read no more: the balance decides who is even, and the
+        // column is only still written for older versions (schema 12, v3.7.1).
 
         val rawTimestamp = row[COL_TIMESTAMP].trim()
         val rawAmount = row[COL_AMOUNT].trim()
@@ -122,7 +108,6 @@ fun readLedgerCsv(text: String): CsvImportResult {
             ImportedPerson(
                 name = name,
                 currency = currency,
-                isSettled = settledFlags[key] ?: false,
                 transactions = entries.sortedBy { it.timestamp }
             )
         }

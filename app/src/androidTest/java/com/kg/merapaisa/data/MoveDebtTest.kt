@@ -113,11 +113,11 @@ class MoveDebtTest {
         val a = person("A", 30_000)
         val b = person("B", 0)
         dao.settle(b)
-        assertTrue(dao.getPersonNow(b)!!.isSettled)
+        assertTrue((dao.getBalanceNow(b) == 0L))
 
         repo.moveDebt(a, b, 10_000)
 
-        assertFalse(dao.getPersonNow(b)!!.isSettled)
+        assertFalse((dao.getBalanceNow(b) == 0L))
     }
 
     // -----------------------------------------------------------------------------------------

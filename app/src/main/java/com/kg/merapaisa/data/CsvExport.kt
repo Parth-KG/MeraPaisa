@@ -38,8 +38,9 @@ fun buildLedgerCsv(
             person.name,
             person.currency,
             formatMinorPlain(person.balanceMinor, person.currency),
-            // The stored flag, as before: older versions read it back on import.
-            if (person.person.isSettled) "yes" else "no"
+            // Worked out from the balance, since nothing stores it any more (schema 12): older
+            // versions read it back on import and want the column there (Parth, 20 Nov 2026).
+            if (person.balanceMinor == 0L) "yes" else "no"
         )
 
         if (ledger.transactions.isEmpty()) {

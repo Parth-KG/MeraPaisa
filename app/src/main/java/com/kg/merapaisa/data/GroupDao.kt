@@ -272,10 +272,6 @@ interface GroupDao {
     @Insert
     suspend fun insertLedgerEntries(entries: List<Transaction>)
 
-    /** Money moving again means the debt is live again, as [PersonDao.recordEntries] does. */
-    @Query("UPDATE persons SET isSettled = 0 WHERE id IN (:personIds)")
-    suspend fun unsettle(personIds: List<Long>)
-
     @Query("DELETE FROM expenses WHERE id IN (:expenseIds)")
     suspend fun deleteExpenses(expenseIds: List<Long>)
 
@@ -307,7 +303,6 @@ interface GroupDao {
             Transaction(personId = it.personId, amountMinor = it.ledgerAmountMinor, timestamp = now, note = note)
         }
         insertLedgerEntries(entries)
-        unsettle(entries.map { it.personId }.distinct())
         return MoveReceipt(groupId, expenseIds, entries.map { it.uid })
     }
 

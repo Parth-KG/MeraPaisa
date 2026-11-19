@@ -16,7 +16,6 @@ data class Person(
     val pfpValue: String = "",        // initials text, emoji, or file path
     val pfpColor: String = "#4CAF50", // color for initials background
     val sortOrder: Int = 0,
-    val isSettled: Boolean = false,
     val currency: String = "INR",     // ISO 4217 code
     /**
      * Exactly one row is you. Groups need you to be a real member with a real id, rather than

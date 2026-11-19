@@ -542,6 +542,62 @@ class MigrationTest {
         }
     }
 
+    /**
+     * v12 (v3.7.1) drops `persons.isSettled` by rebuilding the table. Dropping a table that others
+     * point at is where a migration could quietly lose a ledger, so every table that names a person
+     * is seeded and checked: nothing may be cascaded away, and nothing may be left pointing at no one.
+     */
+    @Test
+    fun migrate11To12_dropsTheSettledFlagAndKeepsEverythingThatPointsAtAPerson() {
+        helper.createDatabase(TEST_DB, 11).use { db ->
+            db.insertV7Person(id = 1, name = "You", currency = "INR", isSelf = 1)
+            db.insertV7Person(id = 2, name = "Asha", currency = "INR")
+            db.insertV7Person(id = 3, name = "Diego", currency = "USD")
+            db.insertV7Person(id = 9, name = "Gone", currency = "INR")
+            db.execSQL("DELETE FROM persons WHERE id = 9")
+            db.execSQL("UPDATE persons SET lastSharedAt = 4242, sortOrder = 3, pfpType = 'photo', pfpValue = '/f/pfp_1.jpg' WHERE id = 2")
+            db.insertV10Transaction(personId = 2, amountMinor = 25_050, uid = "abc")
+            db.insertV10Transaction(personId = 3, amountMinor = -4_000, uid = "def")
+            db.execSQL("INSERT INTO retired_uids (personId, uid, reason, retiredAt) VALUES (2, 'old', 'cleared', 5)")
+            db.execSQL("INSERT INTO applied_payloads (payloadId, appliedAt, personId, senderName, entryCount, netMinor) VALUES ('p1', 1, 2, 'Asha', 1, 100)")
+            db.execSQL("INSERT INTO expense_groups (id, name, currency, createdAt, archived, simplifyDebts) VALUES (1, 'Goa', 'INR', 1, 0, 1)")
+            db.execSQL("INSERT INTO group_members (groupId, personId) VALUES (1, 1), (1, 2)")
+            db.execSQL("INSERT INTO expenses (id, groupId, description, amountMinor, paidByPersonId, timestamp, isSettlement) VALUES (1, 1, 'Hotel', 600, 1, 1, 0)")
+            db.execSQL("INSERT INTO expense_shares (expenseId, personId, shareMinor) VALUES (1, 1, 300), (1, 2, 300)")
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 12, true, MIGRATION_11_12).use { db ->
+            assertEquals(3L, db.longOf("SELECT COUNT(*) FROM persons"))
+            assertEquals(25_050L, db.derivedBalance(2))
+            assertEquals(-4_000L, db.derivedBalance(3))
+            assertEquals(1L, db.longOf("SELECT COUNT(*) FROM retired_uids"))
+            assertEquals(1L, db.longOf("SELECT COUNT(*) FROM applied_payloads"))
+            assertEquals(2L, db.longOf("SELECT COUNT(*) FROM group_members"))
+            assertEquals(1L, db.longOf("SELECT COUNT(*) FROM expenses"))
+            assertEquals(2L, db.longOf("SELECT COUNT(*) FROM expense_shares"))
+            assertEquals("every column but the flag comes through", 4242L, db.longOf("SELECT lastSharedAt FROM persons WHERE id = 2"))
+            assertEquals(3L, db.longOf("SELECT sortOrder FROM persons WHERE id = 2"))
+            assertEquals(1L, db.longOf("SELECT COUNT(*) FROM persons WHERE id = 2 AND pfpType = 'photo' AND pfpValue = '/f/pfp_1.jpg'"))
+            assertEquals(1L, db.longOf("SELECT COUNT(*) FROM persons WHERE isSelf = 1"))
+            assertTrue("no row points at a missing person", db.query("PRAGMA foreign_key_check").use { !it.moveToFirst() })
+            db.query("SELECT * FROM persons LIMIT 1").use { assertEquals(-1, it.getColumnIndex("isSettled")) }
+
+            // The counter is carried over: the next person is not given the deleted one's id.
+            db.execSQL("INSERT INTO persons (name, pfpType, pfpValue, pfpColor, sortOrder, currency, isSelf, lastSharedAt) VALUES ('New', 'initials', 'NE', '#4CAF50', 0, 'INR', 0, 0)")
+            assertEquals(10L, db.longOf("SELECT MAX(id) FROM persons"))
+        }
+    }
+
+    @Test
+    fun migrate11To12_withNoOneButYou() {
+        helper.createDatabase(TEST_DB, 11).use { db ->
+            db.insertV7Person(id = 1, name = "You", currency = "INR", isSelf = 1)
+        }
+        helper.runMigrationsAndValidate(TEST_DB, 12, true, MIGRATION_11_12).use { db ->
+            assertEquals(1L, db.longOf("SELECT COUNT(*) FROM persons WHERE isSelf = 1"))
+        }
+    }
+
     // -----------------------------------------------------------------------------------------
     // The whole chain, which is what a real upgrade actually runs
     // -----------------------------------------------------------------------------------------
@@ -569,9 +625,9 @@ class MigrationTest {
         }
 
         helper.runMigrationsAndValidate(
-            TEST_DB, 11, true,
+            TEST_DB, 12, true,
             MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-            MIGRATION_9_10, MIGRATION_10_11
+            MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12
         ).use { db ->
             // The money survives, in minor units, with the paise intact.
             assertEquals("Asha's balance must survive six migrations", 25_050L, db.derivedBalance(1))
@@ -612,9 +668,9 @@ class MigrationTest {
         helper.createDatabase(TEST_DB, 3).use { }
 
         helper.runMigrationsAndValidate(
-            TEST_DB, 11, true,
+            TEST_DB, 12, true,
             MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-            MIGRATION_9_10, MIGRATION_10_11
+            MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12
         ).use { db ->
             assertEquals(0L, db.longOf("SELECT COUNT(*) FROM transactions"))
             // Exactly one person, and it is the row that is you: migration 5 -> 6 creates it, and

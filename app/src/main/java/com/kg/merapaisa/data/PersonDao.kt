@@ -128,9 +128,6 @@ interface PersonDao {
     @Query("SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM persons WHERE isSelf = 0")
     suspend fun nextSortOrder(): Int
 
-    @Query("UPDATE persons SET isSettled = :settled WHERE id = :personId")
-    suspend fun setSettled(personId: Long, settled: Boolean)
-
     /** Points a person at a photo file, for a restore giving a photo to someone who had none. */
     @Query("UPDATE persons SET pfpType = 'photo', pfpValue = :path WHERE id = :personId")
     suspend fun setPhoto(personId: Long, path: String)
@@ -152,7 +149,6 @@ interface PersonDao {
         if (outstanding != 0L) {
             insertTransaction(Transaction(personId = personId, amountMinor = -outstanding, note = note))
         }
-        setSettled(personId, true)
     }
 
     /**
@@ -162,7 +158,6 @@ interface PersonDao {
     @androidx.room.Transaction
     suspend fun recordEntry(transaction: Transaction) {
         insertTransaction(transaction)
-        if (transaction.amountMinor != 0L) setSettled(transaction.personId, false)
     }
 
     /**
@@ -215,8 +210,6 @@ interface PersonDao {
                 )
             )
         )
-        // The receiver's balance just moved, so they belong back in the active list.
-        setSettled(toPersonId, false)
         return MoveDebtResult.Moved(amountMinor)
     }
 
@@ -264,7 +257,6 @@ interface PersonDao {
                 )
             )
         )
-        setSettled(toPersonId, false)
         return MoveDebtResult.Moved(fromAmountMinor)
     }
 
@@ -272,10 +264,6 @@ interface PersonDao {
     @androidx.room.Transaction
     suspend fun recordEntries(transactions: List<Transaction>) {
         insertTransactions(transactions)
-        transactions.filter { it.amountMinor != 0L }
-            .map { it.personId }
-            .distinct()
-            .forEach { setSettled(it, false) }
     }
 
     @Update
@@ -347,7 +335,6 @@ interface PersonDao {
     @androidx.room.Transaction
     suspend fun editTransaction(transaction: Transaction) {
         updateTransaction(transaction)
-        if (getBalanceNow(transaction.personId) != 0L) setSettled(transaction.personId, false)
     }
 
     /** Removes one entry outright. A mistyped amount should not have to live in the history. */
@@ -355,7 +342,6 @@ interface PersonDao {
     suspend fun removeTransaction(transaction: Transaction) {
         retire(listOf(transaction), RETIRED_DELETED)
         deleteTransaction(transaction.id)
-        if (getBalanceNow(transaction.personId) != 0L) setSettled(transaction.personId, false)
     }
 
     /** Reverses everything at or after [since] in one entry, computed under the transaction. */
@@ -364,8 +350,6 @@ interface PersonDao {
         val toReverse = sumTransactionsSince(personId, since)
         if (toReverse == 0L) return
         insertTransaction(Transaction(personId = personId, amountMinor = -toReverse, note = note))
-        // The balance is non-zero again, so they are no longer settled.
-        setSettled(personId, false)
     }
 
     /**
@@ -529,8 +513,6 @@ interface PersonDao {
 
         if (entries.isNotEmpty()) {
             insertTransactions(entries)
-            // Money moved, so they are live again. Same rule as recordEntries.
-            if (entries.any { it.amountMinor != 0L }) setSettled(personId, false)
         }
 
         insertAppliedPayload(
@@ -590,10 +572,6 @@ interface PersonDao {
         }
         if (write.updates.isNotEmpty()) updateTransactions(write.updates)
         write.deleteIds.forEach { deleteTransaction(it) }
-
-        // Money moved, so they are live again (same rule as recordEntries). Deletions count: a
-        // removed entry changes the balance just as an added one does.
-        if (net != 0L) setSettled(personId, false)
 
         // Recorded as applied only when it actually wrote something. A link the user looked at and
         // ticked nothing on has not been applied, only considered, and filing it here

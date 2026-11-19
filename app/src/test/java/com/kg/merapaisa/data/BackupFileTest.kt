@@ -14,7 +14,7 @@ class BackupFileTest {
         persons: List<Person> = listOf(
             Person(id = 1, name = "You", isSelf = true, sortOrder = -1),
             Person(id = 2, name = "Asha", currency = "INR", sortOrder = 0),
-            Person(id = 3, name = "Ravi", currency = "USD", sortOrder = 1, isSettled = true)
+            Person(id = 3, name = "Ravi", currency = "USD", sortOrder = 1)
         ),
         transactions: List<Transaction> = listOf(
             Transaction(id = 1, personId = 2, amountMinor = 25_050, timestamp = 1_000, note = "Dinner"),
@@ -312,6 +312,22 @@ class BackupFileTest {
         assertEquals(big, back.photos[2L])
         assertEquals(big, back.photos[3L])
     }
+
+    @Test
+    fun `a backup still says isSettled, worked out from the balance, for older versions`() {
+        val text = encodeBackup(snapshot(), 0, "test")
+        val persons = Regex("\"name\"\\s*:\\s*\"(\\w+)\"[^}]*?\"isSettled\"\\s*:\\s*(true|false)").findAll(text)
+            .associate { it.groupValues[1] to it.groupValues[2] }
+        assertEquals("Asha owes you, so not settled", "false", persons["Asha"])
+        assertEquals("your own row has no entries, so it is even", "true", persons["You"])
+    }
+
+    @Test
+    fun `a backup without isSettled reads`() {
+        val text = encodeBackup(snapshot(), 0, "test").replace(Regex("\"isSettled\"\\s*:\\s*(true|false)\\s*,"), "")
+        assertTrue(!text.contains("isSettled"))
+        assertTrue(decodeBackup(text) is BackupResult.Ok)
+    }
 }
 
 /**
@@ -326,14 +342,13 @@ class CsvImportTest {
         name: String = "Asha",
         currency: String = "INR",
         balanceMinor: Long = 25_050,
-        isSettled: Boolean = false,
         transactions: List<Transaction> = listOf(
             Transaction(id = 1, personId = 1, amountMinor = 20_000, timestamp = 1_000, note = "Dinner"),
             Transaction(id = 2, personId = 1, amountMinor = 5_050, timestamp = 2_000, note = "Chai")
         )
     ) = PersonLedger(
         person = PersonWithBalance(
-            person = Person(id = 1, name = name, currency = currency, isSettled = isSettled),
+            person = Person(id = 1, name = name, currency = currency),
             balanceMinor = balanceMinor
         ),
         transactions = transactions
@@ -408,9 +423,11 @@ class CsvImportTest {
     }
 
     @Test
-    fun `carries the settled flag`() {
-        val csv = csvOf(ledger(isSettled = true, balanceMinor = 0))
-        assertTrue((readLedgerCsv(csv) as CsvImportResult.Ok).people.single().isSettled)
+    fun `still writes the settled column, from the balance, for older versions`() {
+        val even = csvOf(ledger(balanceMinor = 0, transactions = emptyList()))
+        assertTrue(even.lines()[1].startsWith("Asha,INR,0,yes,") || even.lines()[1].startsWith("Asha,INR,0.00,yes,"))
+        val owed = csvOf(ledger())
+        assertTrue(owed.lines()[1].contains(",no,"))
     }
 
     /**
@@ -494,15 +511,11 @@ class CsvImportTest {
 
     /** A spreadsheet may well turn "yes" into TRUE. */
     @Test
-    fun `tolerates alternative spellings of the settled flag`() {
+    fun `reads a CSV whatever its settled column says`() {
         val base = "person,currency,balance,settled,timestamp,date,amount,note\r\n"
-        for (flag in listOf("yes", "TRUE", "True", "1")) {
+        for (flag in listOf("yes", "TRUE", "1", "no", "", "anything")) {
             val csv = base + "Asha,INR,0.00,$flag,1,x,1.00,n\r\n"
-            assertTrue("'$flag' should read as settled", (readLedgerCsv(csv) as CsvImportResult.Ok).people.single().isSettled)
-        }
-        for (flag in listOf("no", "FALSE", "0", "")) {
-            val csv = base + "Asha,INR,0.00,$flag,1,x,1.00,n\r\n"
-            assertTrue("'$flag' should read as not settled", !(readLedgerCsv(csv) as CsvImportResult.Ok).people.single().isSettled)
+            assertEquals(1, (readLedgerCsv(csv) as CsvImportResult.Ok).people.single().transactions.size)
         }
     }
 
@@ -582,4 +595,5 @@ class CsvImportTest {
         assertEquals(setOf(dropped), read.mintedUids)
         assertEquals("keepme", read.transactions.single { it.amountMinor == 100L }.uid)
     }
+
 }

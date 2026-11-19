@@ -343,11 +343,11 @@ class ReconcileApplyTest {
         theyRecord(theirYou, 34_000, "Dinner", 1_000)
         val yourThem = yourPersonForThem()
         yourDb.personDao().settle(yourThem)
-        assertTrue(yourDb.personDao().getPersonNow(yourThem)!!.isSettled)
+        assertTrue((yourDb.personDao().getBalanceNow(yourThem) == 0L))
 
         val link = theirLink(theirYou)
         yours.applyReconcile(yourThem, link, setOf(link.entries.single().uid), now)
 
-        assertFalse(yourDb.personDao().getPersonNow(yourThem)!!.isSettled)
+        assertFalse((yourDb.personDao().getBalanceNow(yourThem) == 0L))
     }
 }

@@ -64,7 +64,7 @@ object Fixtures {
      * Squared with Settle up, so at zero and on Even. The stored flag is set, as Settle up still
      * sets it, and must make no difference to how the row looks.
      */
-    val settledUpPerson = personWith(7, "Gita Rao", "INR", 0, settled = true)
+    val settledUpPerson = personWith(7, "Gita Rao", "INR", 0)
 
     /** The shortest possible name, which tends to break rows built around a wide avatar. */
     val shortName = personWith(8, "Jo", "INR", 75_50)
@@ -406,8 +406,7 @@ object Fixtures {
         id: Long,
         name: String,
         currency: String,
-        balanceMinor: Long,
-        settled: Boolean = false
+        balanceMinor: Long
     ) = PersonWithBalance(
         Person(
             id = id,
@@ -418,7 +417,6 @@ object Fixtures {
             // an untouched ledger and useless for judging a palette of eight.
             pfpColor = com.kg.merapaisa.ui.AVATAR_HUES[(id.toInt() - 1).coerceAtLeast(0) % com.kg.merapaisa.ui.AVATAR_HUES.size],
             sortOrder = id.toInt(),
-            isSettled = settled,
             currency = currency
         ),
         balanceMinor

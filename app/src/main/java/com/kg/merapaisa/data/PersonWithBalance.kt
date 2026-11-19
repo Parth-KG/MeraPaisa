@@ -20,9 +20,9 @@ data class PersonWithBalance(
      *
      * The balance decides, and nothing else. It used to be the stored `isSettled` flag, which only
      * Settle up set, so someone just added sat on Active at zero, and someone who had paid you
-     * back stayed there too. The flag is still written, because backups and older versions of the
-     * app expect it, but nothing reads it to place a person any more. The list and the widget both
-     * ask this, so they cannot disagree about who is open.
+     * back stayed there too. The column went in schema 12 (v3.7.1); backups and the CSV still say it,
+     * worked out from the balance, for older versions. The list and the widget both ask this, so
+     * they cannot disagree about who is open.
      */
     val isEven: Boolean get() = balanceMinor == 0L
 

@@ -106,11 +106,11 @@ class ShareImportTest {
     fun importingReopensASettledPerson() = runBlocking {
         val id = newPerson()
         dao.settle(id)
-        assertTrue(dao.getPersonNow(id)!!.isSettled)
+        assertTrue((dao.getBalanceNow(id) == 0L))
 
         repo.importPayload(id, payload(), now = 9_000L)
 
-        assertFalse("money moved, so they are not settled any more", dao.getPersonNow(id)!!.isSettled)
+        assertFalse("money moved, so they are not settled any more", (dao.getBalanceNow(id) == 0L))
     }
 
     /** An all-zero payload is legitimate (notes only) and must not unsettle anyone. */
@@ -121,7 +121,7 @@ class ShareImportTest {
 
         repo.importPayload(id, payload(entries = listOf(SharedEntry(1L, 0L, "Note"))), now = 9_000L)
 
-        assertTrue("nothing moved, so they stay settled", dao.getPersonNow(id)!!.isSettled)
+        assertTrue("nothing moved, so they stay settled", (dao.getBalanceNow(id) == 0L))
     }
 
     // ---------------------------------------------------------------------------------------

@@ -47,7 +47,7 @@ class PersonDaoTest {
         dao.settle(id)
 
         assertEquals("settling must close the balance out exactly", 0L, dao.getBalanceNow(id))
-        assertTrue(personById(id).person.isSettled)
+        assertTrue(personById(id).isEven)
         val closing = dao.getTransactionsForPerson(id).first().first { it.note == "Settled" }
         assertEquals(-250_00L, closing.amountMinor)
     }
@@ -60,7 +60,7 @@ class PersonDaoTest {
 
         dao.settle(id)
 
-        assertTrue(personById(id).person.isSettled)
+        assertTrue(personById(id).isEven)
         assertEquals("no closing entry is needed at zero", 2, dao.getTransactionCount(id).first())
     }
 
@@ -68,11 +68,11 @@ class PersonDaoTest {
     fun recordingMoneyAgainstASettledPersonReopensThem() = runBlocking {
         val id = newPerson()
         dao.settle(id)
-        assertTrue(personById(id).person.isSettled)
+        assertTrue(personById(id).isEven)
 
         dao.recordEntry(Transaction(personId = id, amountMinor = 40_00, note = "cab"))
 
-        assertFalse("money moving again means the debt is live again", personById(id).person.isSettled)
+        assertFalse("money moving again means the debt is live again", personById(id).isEven)
         assertEquals(40_00L, dao.getBalanceNow(id))
     }
 
@@ -90,8 +90,8 @@ class PersonDaoTest {
             )
         )
 
-        assertFalse(personById(a).person.isSettled)
-        assertFalse(personById(b).person.isSettled)
+        assertFalse(personById(a).isEven)
+        assertFalse(personById(b).isEven)
     }
 
     @Test
@@ -104,7 +104,7 @@ class PersonDaoTest {
         dao.rollbackTo(id, since = closing.timestamp)
 
         assertEquals("the debt is owed again", 80_00L, dao.getBalanceNow(id))
-        assertFalse(personById(id).person.isSettled)
+        assertFalse(personById(id).isEven)
     }
 
     @Test
@@ -123,7 +123,7 @@ class PersonDaoTest {
             countBefore,
             dao.getTransactionCount(id).first()
         )
-        assertTrue("still square, so still settled", personById(id).person.isSettled)
+        assertTrue("still square, so still settled", personById(id).isEven)
     }
 
     @Test
@@ -136,7 +136,7 @@ class PersonDaoTest {
 
         assertEquals("clearing the log must not change what is owed", 100_00L, dao.getBalanceNow(id))
         assertEquals(1, dao.getTransactionCount(id).first())
-        assertFalse(personById(id).person.isSettled)
+        assertFalse(personById(id).isEven)
     }
 
     @Test
@@ -229,13 +229,13 @@ class PersonDaoTest {
         val id = newPerson()
         dao.recordEntry(Transaction(personId = id, amountMinor = 100_00, timestamp = 1))
         dao.settle(id)
-        assertTrue(personById(id).person.isSettled)
+        assertTrue(personById(id).isEven)
 
         val closing = dao.getTransactionsForPersonNow(id).single { it.note == "Settled" }
         dao.editTransaction(closing.copy(amountMinor = -40_00))
 
         assertEquals(60_00L, dao.getBalanceNow(id))
-        assertFalse("a balance that is no longer zero is no longer settled", personById(id).person.isSettled)
+        assertFalse("a balance that is no longer zero is no longer settled", personById(id).isEven)
     }
 
     @Test
@@ -250,7 +250,7 @@ class PersonDaoTest {
         dao.removeTransaction(stray)
 
         assertEquals(0L, dao.getBalanceNow(id))
-        assertTrue("still square, so still settled", personById(id).person.isSettled)
+        assertTrue("still square, so still settled", personById(id).isEven)
     }
 
     // --- groups are kept apart from the people list ---
@@ -290,7 +290,7 @@ class PersonDaoTest {
         dao.settle(a)
         spend(groupWith(listOf(me, a)), paidBy = me, amountMinor = 100_00, sharedWith = listOf(me, a))
 
-        assertTrue("what happens in a group stays in the group", personById(a).person.isSettled)
+        assertTrue("what happens in a group stays in the group", personById(a).isEven)
     }
 
     @Test

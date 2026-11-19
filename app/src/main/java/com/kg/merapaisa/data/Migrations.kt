@@ -300,3 +300,51 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
         db.execSQL("ALTER TABLE `transactions` ADD COLUMN `paidByUpi` INTEGER NOT NULL DEFAULT 0")
     }
 }
+
+/**
+ * v12 (v3.7.1): `persons.isSettled` goes. Nothing has read it since v3.3.1, which put a person on
+ * Even by their balance alone; it was only written, and a stored flag that can disagree with the
+ * balance it describes is a second copy of the truth.
+ *
+ * SQLite drops a column only from 3.35, which is Android 14 on, so the table is rebuilt the way
+ * MIGRATION_3_4 rebuilt it, on every version alike. Room turns foreign keys on only once the
+ * database is open, after migrating, so dropping the old table does not cascade into the tables
+ * that point at it: every entry, membership, share and retired uid keeps its person. Ids are copied
+ * as they are, and the table's AUTOINCREMENT counter is carried over, so a person added later never
+ * gets the id of someone deleted before (applied update links name people by id with no key).
+ */
+val MIGRATION_11_12 = object : Migration(11, 12) {
+
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE TEMP TABLE `persons_seq` AS SELECT `seq` FROM `sqlite_sequence` WHERE `name` = 'persons'")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `persons_new` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`name` TEXT NOT NULL, " +
+                "`pfpType` TEXT NOT NULL, " +
+                "`pfpValue` TEXT NOT NULL, " +
+                "`pfpColor` TEXT NOT NULL, " +
+                "`sortOrder` INTEGER NOT NULL, " +
+                "`currency` TEXT NOT NULL, " +
+                "`isSelf` INTEGER NOT NULL, " +
+                "`lastSharedAt` INTEGER NOT NULL)"
+        )
+        db.execSQL(
+            "INSERT INTO `persons_new` " +
+                "(`id`, `name`, `pfpType`, `pfpValue`, `pfpColor`, `sortOrder`, `currency`, `isSelf`, `lastSharedAt`) " +
+                "SELECT `id`, `name`, `pfpType`, `pfpValue`, `pfpColor`, `sortOrder`, `currency`, `isSelf`, `lastSharedAt` " +
+                "FROM `persons`"
+        )
+        db.execSQL("DROP TABLE `persons`")
+        db.execSQL("ALTER TABLE `persons_new` RENAME TO `persons`")
+        db.execSQL(
+            "UPDATE `sqlite_sequence` SET `seq` = MAX(`seq`, COALESCE((SELECT `seq` FROM `persons_seq`), 0)) " +
+                "WHERE `name` = 'persons'"
+        )
+        db.execSQL(
+            "INSERT INTO `sqlite_sequence` (`name`, `seq`) SELECT 'persons', `seq` FROM `persons_seq` " +
+                "WHERE NOT EXISTS (SELECT 1 FROM `sqlite_sequence` WHERE `name` = 'persons')"
+        )
+        db.execSQL("DROP TABLE `persons_seq`")
+    }
+}

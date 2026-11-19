@@ -11,11 +11,10 @@ class CsvExportTest {
         name: String,
         currency: String = "INR",
         balanceMinor: Long = 0,
-        settled: Boolean = false,
         transactions: List<Transaction> = emptyList()
     ) = PersonLedger(
         PersonWithBalance(
-            Person(id = 1, name = name, currency = currency, isSettled = settled),
+            Person(id = 1, name = name, currency = currency),
             balanceMinor
         ),
         transactions
@@ -54,7 +53,7 @@ class CsvExportTest {
     fun aPersonWithNoTransactionsStillAppears() {
         val csv = buildLedgerCsv(listOf(ledger("Bare", balanceMinor = 0)))
         val body = rows(csv).drop(1)
-        assertEquals(listOf("Bare,INR,0.00,no,,,,"), body)
+        assertEquals(listOf("Bare,INR,0.00,yes,,,,"), body)
     }
 
     @Test
@@ -76,18 +75,23 @@ class CsvExportTest {
     }
 
     @Test
-    fun negativeAmountsAndSettledFlagAreRecorded() {
+    fun negativeAmountsAreRecordedAndSettledFollowsTheBalance() {
         val csv = buildLedgerCsv(
             listOf(
                 ledger(
-                    "Owed", balanceMinor = -75_25, settled = true,
+                    "Owed", balanceMinor = -75_25,
                     transactions = listOf(Transaction(personId = 1, amountMinor = -75_25, timestamp = 0))
+                ),
+                ledger(
+                    "Square", balanceMinor = 0,
+                    transactions = listOf(Transaction(personId = 1, amountMinor = 0, timestamp = 0))
                 )
             )
         )
-        val row = rows(csv).drop(1).single()
-        assertTrue(row.startsWith("Owed,INR,-75.25,yes,"))
-        assertTrue(row.endsWith(",-75.25,"))
+        val (owed, square) = rows(csv).drop(1).partition { it.startsWith("Owed") }
+        assertTrue(owed.single().startsWith("Owed,INR,-75.25,no,"))
+        assertTrue(owed.single().endsWith(",-75.25,"))
+        assertTrue(square.single().startsWith("Square,INR,0.00,yes,"))
     }
 
     @Test

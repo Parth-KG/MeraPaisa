@@ -61,7 +61,7 @@ class GroupsKeptApartTest {
         val hotel = groupDao.getExpenses(group).first().single()
         groups.deleteExpense(hotel.id)
 
-        assertTrue(dao.getPersonNow(asha)!!.isSettled)
+        assertTrue((dao.getBalanceNow(asha) == 0L))
         assertEquals(0L, balanceOf(asha))
     }
 
@@ -136,7 +136,7 @@ class GroupsKeptApartTest {
 
         people.settle(asha)
 
-        assertTrue(dao.getPersonNow(asha)!!.isSettled)
+        assertTrue((dao.getBalanceNow(asha) == 0L))
         assertEquals(0L, balanceOf(asha))
         assertEquals(before, groupBalances(group))
         assertEquals(1, groupDao.getExpenses(group).first().size)

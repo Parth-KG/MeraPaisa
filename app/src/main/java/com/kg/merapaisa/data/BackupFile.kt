@@ -78,8 +78,9 @@ const val BACKUP_VERSION = 1
 private const val MAX_PHOTO_CHARS = 1_000_000
 
 /** Renders a snapshot as indented JSON. */
-fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String): String =
-    writeJson(
+fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String): String {
+    val balances = snapshot.transactions.groupBy { it.personId }.mapValues { (_, t) -> t.sumOf { it.amountMinor } }
+    return writeJson(
         jsonObject(
             "format" to BACKUP_FORMAT.json(),
             "version" to BACKUP_VERSION.json(),
@@ -87,6 +88,10 @@ fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String)
             "appVersion" to appVersion.json(),
             "persons" to jsonArray(snapshot.persons.map { p ->
                 val photo = snapshot.photos[p.id]
+                // No longer stored (schema 12, v3.7.1) but still written, worked out from the
+                // entries: every older version calls a backup without it damaged, and v3.3.0 and
+                // older put people on Even by it (Parth, 20 Nov 2026).
+                val even = (balances[p.id] ?: 0L) == 0L
                 jsonObject(
                     "id" to p.id.json(),
                     "name" to p.name.json(),
@@ -94,7 +99,7 @@ fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String)
                     "pfpValue" to p.pfpValue.json(),
                     "pfpColor" to p.pfpColor.json(),
                     "sortOrder" to p.sortOrder.json(),
-                    "isSettled" to p.isSettled.json(),
+                    "isSettled" to even.json(),
                     "currency" to p.currency.json(),
                     "isSelf" to p.isSelf.json(),
                     "lastSharedAt" to p.lastSharedAt.json(),
@@ -174,6 +179,7 @@ fun encodeBackup(snapshot: BackupSnapshot, exportedAt: Long, appVersion: String)
             })
         )
     )
+}
 
 /**
  * Reads a backup file back.
@@ -201,7 +207,7 @@ fun decodeBackup(text: String): BackupResult {
             pfpValue = o.string("pfpValue") ?: return BackupResult.Damaged,
             pfpColor = o.string("pfpColor") ?: return BackupResult.Damaged,
             sortOrder = o.long("sortOrder")?.toInt() ?: return BackupResult.Damaged,
-            isSettled = o.bool("isSettled") ?: return BackupResult.Damaged,
+            // `isSettled` is read no more (schema 12); a file may have it or not.
             currency = o.string("currency") ?: return BackupResult.Damaged,
             isSelf = o.bool("isSelf") ?: return BackupResult.Damaged,
             lastSharedAt = o.long("lastSharedAt") ?: return BackupResult.Damaged

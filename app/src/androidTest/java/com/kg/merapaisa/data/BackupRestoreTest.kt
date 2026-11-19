@@ -337,7 +337,7 @@ class BackupRestoreTest {
     }
 
     @Test
-    fun aCsvRestoreKeepsTheSettledFlag() = runBlocking {
+    fun aCsvRestoreBringsASettledPersonBackEven() = runBlocking {
         val id = personDao.insertPerson(Person(name = "Closed", currency = "INR"))
         personDao.recordEntry(Transaction(personId = id, amountMinor = 5_000, timestamp = 1, note = "a"))
         personDao.recordEntry(Transaction(personId = id, amountMinor = 3_000, timestamp = 2, note = "b"))
@@ -351,7 +351,8 @@ class BackupRestoreTest {
         backups.apply(backups.plan(parsed.people.toSnapshot(), RestoreMode.Merge))
 
         val restored = backups.snapshot().persons.first { it.name == "Closed" }
-        assertTrue("a settled person must come back settled", restored.isSettled)
+        assertTrue("the CSV still says settled, for older versions", csv.contains("Closed,INR,0.00,yes,"))
+        assertEquals("a settled person must come back even", 0L, personDao.getBalanceNow(restored.id))
     }
 
     // -----------------------------------------------------------------------------------------
