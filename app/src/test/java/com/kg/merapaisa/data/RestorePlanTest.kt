@@ -530,4 +530,47 @@ class RestorePlanTest {
         assertEquals(2, plan.persons.count { it.name == "Asha" })
         assertEquals(3, plan.expenseShares.size)
     }
+
+    // -----------------------------------------------------------------------------------------
+    // Bringing back someone deleted since the backup
+    // -----------------------------------------------------------------------------------------
+
+    /**
+     * The ledger after deleting [personId] the way the app does (`deletePersonWithHistory`): their
+     * share of expenses others paid goes to the payer, and what they paid goes with them, along
+     * with their entries, their place in groups and the shares of their expenses.
+     */
+    private fun BackupSnapshot.deleting(personId: Long): BackupSnapshot {
+        val theirExpenses = expenses.filter { it.paidByPersonId == personId }.map { it.id }.toSet()
+        val payerOf = expenses.associate { it.id to it.paidByPersonId }
+        val kept = expenseShares.filter { it.expenseId !in theirExpenses }
+        val handed = kept.filter { it.personId == personId && it.shareMinor != 0L }
+            .groupBy({ payerOf.getValue(it.expenseId) to it.expenseId }, { it.shareMinor })
+        val shares = kept.filter { it.personId != personId }.map { s ->
+            val extra = handed[s.personId to s.expenseId]?.sum() ?: 0L
+            s.copy(shareMinor = s.shareMinor + extra)
+        } + handed.filterKeys { (payer, expenseId) -> kept.none { it.expenseId == expenseId && it.personId == payer } }
+            .map { (k, v) -> ExpenseShare(k.second, k.first, v.sum()) }
+        return copy(
+            persons = persons.filter { it.id != personId },
+            transactions = transactions.filter { it.personId != personId },
+            groupMembers = groupMembers.filter { it.personId != personId },
+            expenses = expenses.filter { it.id !in theirExpenses },
+            expenseShares = shares
+        )
+    }
+
+    @Test
+    fun `merging back one of two people of one name, deleted since, restores her and leaves the other alone`() {
+        val ledger = emptyLedger().plus(merge(emptyLedger(), backupWithTwoAshas()))
+        val first = ledger.persons.filter { it.name == "Asha" }.minOf { it.id }
+        val afterDelete = ledger.deleting(first)
+        assertEquals(listOf(-7_000L), afterDelete.balances())
+
+        val plan = merge(afterDelete, backupWithTwoAshas())
+
+        assertEquals("only the deleted Asha comes back", 1, plan.persons.count { it.name == "Asha" })
+        assertEquals("her one entry, and nothing of the other's again", 1, plan.transactions.size)
+        assertEquals(listOf(-7_000L, 20_000L), afterDelete.plus(plan).balances())
+    }
 }

@@ -142,19 +142,23 @@ private fun planMerge(
     // Name and currency together, because the app itself treats the same name in two currencies as
     // two people. Case and surrounding space are ignored: "asha " and "Asha" are one person.
     // The app lets two people share a name and currency (it only warns), so a key can stand for
-    // several people. They are paired in id order, the first here with the first in the file, so
-    // each keeps their own entries. Matching every one of them to the same person put two people's
-    // money on one.
+    // several people. Matching every one of them to the same person put two people's money on one;
+    // see [pairSameNamed] for how they are paired instead.
     val existingByKey = existing.persons
         .filter { !it.isSelf }
         .groupBy { personKey(it.name, it.currency) }
-        .mapValues { (_, people) -> people.sortedBy { it.id } }
-    val incomingRank = incoming.persons
+    val existingEntries = existing.transactions
+        .groupBy({ it.personId }, { entryKey(it.timestamp, it.amountMinor, it.note) })
+        .mapValues { (_, keys) -> keys.toHashSet() }
+    val incomingEntries = incoming.transactions
+        .groupBy({ it.personId }, { entryKey(it.timestamp, it.amountMinor, it.note) })
+    val matchOf = HashMap<Long, Person>()
+    incoming.persons
         .filter { !it.isSelf }
         .groupBy { personKey(it.name, it.currency) }
-        .values
-        .flatMap { people -> people.sortedBy { it.id }.mapIndexed { rank, p -> p.id to rank } }
-        .toMap()
+        .forEach { (key, people) ->
+            matchOf.putAll(pairSameNamed(people, existingByKey[key].orEmpty(), incomingEntries, existingEntries))
+        }
 
     incoming.persons.forEach { person ->
         if (person.isSelf) {
@@ -162,7 +166,7 @@ private fun planMerge(
             personIdMap[person.id] = localSelfId
             return@forEach
         }
-        val match = existingByKey[personKey(person.name, person.currency)]?.getOrNull(incomingRank[person.id] ?: 0)
+        val match = matchOf[person.id]
         val photo = incoming.photos[person.id]
         if (match != null) {
             personIdMap[person.id] = match.id
@@ -306,6 +310,45 @@ private fun planMerge(
         )
     )
 }
+
+/**
+ * Pairs the people of one name and currency in the file with those here. First by the entries
+ * they share, most first, so someone deleted since the backup is not paired with the one who
+ * stayed; then by the same id, as in a backup of this phone; then the rest in id order.
+ */
+private fun pairSameNamed(
+    incoming: List<Person>,
+    here: List<Person>,
+    incomingEntries: Map<Long, List<String>>,
+    hereEntries: Map<Long, Set<String>>
+): Map<Long, Person> {
+    val pairs = HashMap<Long, Person>()
+    val taken = HashSet<Long>()
+    fun pair(fromFile: Person, onPhone: Person) {
+        if (fromFile.id in pairs || onPhone.id in taken) return
+        pairs[fromFile.id] = onPhone
+        taken += onPhone.id
+    }
+    incoming.flatMap { i ->
+        here.map { h -> Triple(i, h, incomingEntries[i.id].orEmpty().count { it in hereEntries[h.id].orEmpty() }) }
+    }
+        .filter { it.third > 0 }
+        .sortedWith(
+            compareByDescending<Triple<Person, Person, Int>> { it.third }
+                .thenBy { if (it.first.id == it.second.id) 0 else 1 }
+                .thenBy { it.first.id }
+                .thenBy { it.second.id }
+        )
+        .forEach { (i, h, _) -> pair(i, h) }
+    incoming.forEach { i -> here.firstOrNull { it.id == i.id }?.let { h -> pair(i, h) } }
+    incoming.filter { it.id !in pairs }.sortedBy { it.id }
+        .zip(here.filter { it.id !in taken }.sortedBy { it.id })
+        .forEach { (i, h) -> pair(i, h) }
+    return pairs
+}
+
+private fun entryKey(timestamp: Long, amountMinor: Long, note: String): String =
+    "$timestamp\u0000$amountMinor\u0000${note.trim()}"
 
 private fun personKey(name: String, currency: String): String =
     name.trim().lowercase() + "\u0000" + normaliseCurrency(currency.trim())
