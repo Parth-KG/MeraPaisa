@@ -61,6 +61,11 @@ data class RestorePlan(
      * one exception (Parth, 11 Nov 2026), since otherwise it would silently not come back.
      */
     val photosForPeopleAlreadyHere: Int = 0,
+    /**
+     * Merge only: people in the file whose entries are here on someone kept in another currency
+     * now, so they come back as a second person (v3.7.1). By name, for the preview to say so.
+     */
+    val secondPeople: List<String> = emptyList(),
     /** What Replace would delete first. Zeroes in Merge, which deletes nothing. */
     val deletes: RestoreCounts,
     /** What Merge recognised and skipped. Zeroes in Replace, which starts from nothing. */
@@ -148,22 +153,75 @@ private fun planMerge(
     val photos = HashMap<Long, String>()
     var photosForPeopleAlreadyHere = 0
 
-    // Name and currency together, because the app itself treats the same name in two currencies as
-    // two people. Case and surrounding space are ignored: "asha " and "Asha" are one person.
-    // The app lets two people share a name and currency (it only warns), so a key can stand for
-    // several people. Matching every one of them to the same person put two people's money on one;
-    // see [pairSameNamed] for how they are paired instead.
-    val existingByKey = existing.persons
-        .filter { !it.isSelf }
+    val minted = incoming.mintedUids
+    val herePeople = existing.persons.filter { !it.isSelf }
+    val matchOf = HashMap<Long, Person>()
+
+    // First by the entries themselves (v3.7.1). An entry keeps its uid through an edit, a rename of
+    // its person and a currency change, so someone whose entries are here is that person, whatever
+    // either is now called. Most shared entries first. A uid counts as shared when the same entry is
+    // here on that person the same way round (a link puts the same uid on the other phone with the
+    // sign turned), or when it was cleared here. Only within one currency: someone converted since
+    // the backup has the old entries in the old currency, which cannot be put on her as they are.
+    val hereSign = HashMap<String, MutableMap<Long, Int>>()
+    existing.transactions.forEach { t ->
+        hereSign.getOrPut(t.uid) { HashMap() }[t.personId] = java.lang.Long.signum(t.amountMinor)
+    }
+    val clearedHereByUid = existing.retiredUids
+        .filter { it.reason == RETIRED_CLEARED }
+        .groupBy({ it.uid }, { it.personId })
+    val shared = HashMap<Pair<Long, Long>, Int>()
+    incoming.transactions.forEach { t ->
+        if (t.uid in minted) return@forEach
+        val sign = java.lang.Long.signum(t.amountMinor)
+        hereSign[t.uid]?.forEach { (hereId, hereSignOf) ->
+            if (hereSignOf == sign) shared.merge(t.personId to hereId, 1, Int::plus)
+        }
+        clearedHereByUid[t.uid]?.forEach { hereId -> shared.merge(t.personId to hereId, 1, Int::plus) }
+    }
+    val incomingById = incoming.persons.filter { !it.isSelf }.associateBy { it.id }
+    val hereById = herePeople.associateBy { it.id }
+    val takenHere = HashSet<Long>()
+    val inOtherCurrency = HashSet<Long>()
+    shared.entries
+        .sortedWith(
+            compareByDescending<Map.Entry<Pair<Long, Long>, Int>> { it.value }
+                .thenBy { if (it.key.first == it.key.second) 0 else 1 }
+                .thenBy { it.key.first }
+                .thenBy { it.key.second }
+        )
+        .forEach { (pair, _) ->
+            val fromFile = incomingById[pair.first] ?: return@forEach
+            val onPhone = hereById[pair.second] ?: return@forEach
+            if (sameCurrency(fromFile.currency, onPhone.currency)) {
+                if (fromFile.id !in matchOf && onPhone.id !in takenHere) {
+                    matchOf[fromFile.id] = onPhone
+                    takenHere += onPhone.id
+                }
+            } else {
+                inOtherCurrency += fromFile.id
+            }
+        }
+
+    // Then name and currency together, for everyone the entries did not settle, because the app
+    // itself treats the same name in two currencies as two people. Case and surrounding space are
+    // ignored: "asha " and "Asha" are one person. The app lets two people share a name and currency
+    // (it only warns), so a key can stand for several people. Matching every one of them to the same
+    // person put two people's money on one; see [pairSameNamed] for how they are paired instead.
+    val existingByKey = herePeople
+        .filter { it.id !in takenHere }
         .groupBy { personKey(it.name, it.currency) }
     val existingEntries = existing.transactions
-        .groupBy({ it.personId }, { entryKey(it.timestamp, it.amountMinor, it.note) })
-        .mapValues { (_, keys) -> keys.toHashSet() }
+        .groupBy({ it.personId }, { it })
+        .mapValues { (_, rows) -> rows.flatMap { listOf(uidKey(it.uid), entryKey(it.timestamp, it.amountMinor, it.note)) }.toHashSet() }
+    // Each entry in the file is known by its contents, and by its uid unless that was made up.
     val incomingEntries = incoming.transactions
-        .groupBy({ it.personId }, { entryKey(it.timestamp, it.amountMinor, it.note) })
-    val matchOf = HashMap<Long, Person>()
+        .groupBy({ it.personId }, {
+            val content = entryKey(it.timestamp, it.amountMinor, it.note)
+            if (it.uid in minted) setOf(content) else setOf(content, uidKey(it.uid))
+        })
     incoming.persons
-        .filter { !it.isSelf }
+        .filter { !it.isSelf && it.id !in matchOf }
         .groupBy { personKey(it.name, it.currency) }
         .forEach { (key, people) ->
             matchOf.putAll(pairSameNamed(people, existingByKey[key].orEmpty(), incomingEntries, existingEntries))
@@ -194,22 +252,74 @@ private fun planMerge(
         }
     }
 
-    // An entry is the same entry if it is on the same person for the same amount at the same moment
-    // with the same note. Two genuinely identical entries a user really did record twice would
-    // collapse to one, which is the accepted cost of restoring the same backup twice safely.
+    // An entry is the same entry if it has the same uid on the same person (v3.7.1): it keeps its
+    // uid through an edit, so an entry edited since the backup is not brought back beside its edit.
+    // A uid cleared here is already counted in that person's opening balance, so it is not added on
+    // top of it. Matching on contents instead did both.
+    //
+    // Contents still decide for an entry whose uid was made up on reading (a backup from before
+    // v2.5, or a CSV): an entry is the same if it is on the same person for the same amount at the
+    // same moment with the same note. Two genuinely identical entries of that kind collapse to one,
+    // the accepted cost of restoring the same old backup twice safely. And for an entry here that
+    // the file does not know by uid (one that came in from a CSV, say), whose contents a file entry
+    // matches exactly, so that restoring a CSV and then the backup it came from adds nothing twice.
+    val hereUids = existing.transactions.map { it.personId to it.uid }.toHashSet()
+    val clearedHere = existing.retiredUids.filter { it.reason == RETIRED_CLEARED }.map { it.personId to it.uid }.toHashSet()
+    val fileUids = incoming.transactions.filter { it.uid !in minted }.map { it.uid }.toHashSet()
+    val hereByContentOnly = HashMap<String, Int>()
+    existing.transactions.filter { it.uid !in fileUids }.forEach {
+        hereByContentOnly.merge(transactionKey(it.personId, it.timestamp, it.amountMinor, it.note), 1, Int::plus)
+    }
     val existingTransactionKeys = existing.transactions
         .map { transactionKey(it.personId, it.timestamp, it.amountMinor, it.note) }
         .toHashSet()
+
+    // The mirror of Clear history: a backup made after a clear, merged onto a phone that still has
+    // the entries the clear folded into its opening balance. Adding that opening balance beside them
+    // counted the debt twice. It is left out when every entry it replaced is still here, exactly by
+    // uid. An opening entry an earlier clear wrote, which this phone never had, is part of that
+    // chain and needs nothing here; one it does have counts like any entry. If only some of the
+    // entries are here, the opening balance is added as before (BACKUP.md says so).
+    val skippedOpening = HashSet<Pair<Long, String>>()
+    val clearNotCopied = HashSet<Pair<Long, String>>()
+    matchOf.forEach { (fileId, here) ->
+        val retiredHere = existing.retiredUids.filter { it.personId == here.id }.map { it.uid }.toHashSet()
+        val uidsHere = existing.transactions.filter { it.personId == here.id }.map { it.uid }.toHashSet()
+        val replaced = incoming.retiredUids
+            .filter { it.personId == fileId && it.reason == RETIRED_CLEARED && it.uid !in retiredHere }
+            .map { it.uid }
+        val opening = incoming.transactions.filter {
+            it.personId == fileId && it.uid !in minted && it.uid.startsWith(OPENING_UID_PREFIX) &&
+                it.uid !in uidsHere && it.uid !in retiredHere
+        }
+        val allHere = replaced.all { it in uidsHere || it.startsWith(OPENING_UID_PREFIX) }
+        if (opening.isNotEmpty() && replaced.any { it in uidsHere } && allHere) {
+            opening.forEach { skippedOpening += fileId to it.uid }
+            replaced.forEach { clearNotCopied += fileId to it }
+        }
+    }
 
     val newTransactions = mutableListOf<Transaction>()
     var transactionsAlreadyPresent = 0
     incoming.transactions.forEach { t ->
         val personId = personIdMap[t.personId] ?: return@forEach
         val key = transactionKey(personId, t.timestamp, t.amountMinor, t.note)
-        if (!existingTransactionKeys.add(key)) {
+        val present = when {
+            t.uid in minted -> !existingTransactionKeys.add(key)
+            (t.personId to t.uid) in skippedOpening -> true
+            (personId to t.uid) in hereUids || (personId to t.uid) in clearedHere -> true
+            (hereByContentOnly[key] ?: 0) > 0 -> {
+                hereByContentOnly.merge(key, -1, Int::plus)
+                true
+            }
+            else -> false
+        }
+        if (present) {
             transactionsAlreadyPresent++
             return@forEach
         }
+        hereUids += personId to t.uid
+        existingTransactionKeys += key
         newTransactions.add(t.copy(id = nextTransactionId++, personId = personId))
     }
 
@@ -335,6 +445,8 @@ private fun planMerge(
     // Keyed by person and uid, the table's own key, onto whoever each person became here.
     val existingRetired = existing.retiredUids.map { it.personId to it.uid }.toHashSet()
     val newRetired = incoming.retiredUids.mapNotNull { r ->
+        // A clear this phone never made, whose entries it still holds: nothing here was cleared.
+        if ((r.personId to r.uid) in clearNotCopied) return@mapNotNull null
         val personId = personIdMap[r.personId] ?: return@mapNotNull null
         if (!existingRetired.add(personId to r.uid)) return@mapNotNull null
         r.copy(personId = personId)
@@ -354,6 +466,7 @@ private fun planMerge(
         retiredUids = newRetired,
         photos = photos,
         photosForPeopleAlreadyHere = photosForPeopleAlreadyHere,
+        secondPeople = incoming.persons.filter { it.id in inOtherCurrency && it.id !in matchOf }.map { it.name.trim() },
         deletes = RestoreCounts(),
         alreadyPresent = RestoreCounts(
             people = peopleAlreadyPresent,
@@ -372,7 +485,7 @@ private fun planMerge(
 private fun pairSameNamed(
     incoming: List<Person>,
     here: List<Person>,
-    incomingEntries: Map<Long, List<String>>,
+    incomingEntries: Map<Long, List<Set<String>>>,
     hereEntries: Map<Long, Set<String>>
 ): Map<Long, Person> {
     val pairs = HashMap<Long, Person>()
@@ -383,7 +496,7 @@ private fun pairSameNamed(
         taken += onPhone.id
     }
     incoming.flatMap { i ->
-        here.map { h -> Triple(i, h, incomingEntries[i.id].orEmpty().count { it in hereEntries[h.id].orEmpty() }) }
+        here.map { h -> Triple(i, h, incomingEntries[i.id].orEmpty().count { keys -> keys.any { it in hereEntries[h.id].orEmpty() } }) }
     }
         .filter { it.third > 0 }
         .sortedWith(
@@ -399,6 +512,10 @@ private fun pairSameNamed(
         .forEach { (i, h) -> pair(i, h) }
     return pairs
 }
+
+private fun uidKey(uid: String): String = "uid\u0000$uid"
+
+private fun sameCurrency(a: String, b: String): Boolean = normaliseCurrency(a.trim()) == normaliseCurrency(b.trim())
 
 private fun entryKey(timestamp: Long, amountMinor: Long, note: String): String =
     "$timestamp\u0000$amountMinor\u0000${note.trim()}"

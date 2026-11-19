@@ -252,6 +252,7 @@ object Fixtures {
                     persons = replace.plan.persons.take(2),
                     transactions = replace.plan.transactions.take(5),
                     photosForPeopleAlreadyHere = 2,
+                    secondPeople = listOf("Chaitanya Venkataraman"),
                     deletes = RestoreCounts(),
                     alreadyPresent = RestoreCounts(people = 5, transactions = 33)
                 )

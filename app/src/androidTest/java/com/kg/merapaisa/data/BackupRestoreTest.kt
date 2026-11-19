@@ -202,6 +202,33 @@ class BackupRestoreTest {
     }
 
     @Test
+    fun mergingAnOlderBackupAfterClearHistoryAddsNothingOnTopOfTheOpeningBalance() = runBlocking {
+        val (asha, _) = seed()
+        val older = decodeBackup(backups.exportJson(1, "3.7.0")) as BackupResult.Ok
+        val balance = personDao.getBalanceNow(asha)
+        people.clearTransactions(asha)
+        assertEquals(balance, personDao.getBalanceNow(asha))
+
+        backups.apply(backups.plan(older.snapshot, RestoreMode.Merge))
+
+        assertEquals("the old entries are in the opening balance already", balance, personDao.getBalanceNow(asha))
+    }
+
+    @Test
+    fun mergingAnOlderBackupAfterAnEditKeepsTheEdit() = runBlocking {
+        val (asha, _) = seed()
+        val older = decodeBackup(backups.exportJson(1, "3.7.0")) as BackupResult.Ok
+        val dinner = personDao.getTransactionsForPersonNow(asha).single { it.note == "Dinner" }
+        people.editTransaction(dinner.copy(amountMinor = 2_000))
+        val balance = personDao.getBalanceNow(asha)
+
+        backups.apply(backups.plan(older.snapshot, RestoreMode.Merge))
+
+        assertEquals(balance, personDao.getBalanceNow(asha))
+        assertEquals(2, personDao.getTransactionsForPersonNow(asha).size)
+    }
+
+    @Test
     fun mergingAddsOnlyWhatIsMissing() = runBlocking {
         val (asha, _) = seed()
         val snapshot = backups.snapshot()

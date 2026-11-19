@@ -350,6 +350,25 @@ private fun ReviewScreen(
             }
         }
 
+        // Someone kept in another currency since the backup can't take her old entries as they are,
+        // so she comes back beside herself. Said by name, only when it happens (v3.7.1).
+        if (state.mode == RestoreMode.Merge && plan.secondPeople.isNotEmpty()) {
+            item {
+                val names = plan.secondPeople
+                val who = if (names.size == 1) names.single() else names.dropLast(1).joinToString(", ") + " and " + names.last()
+                Paragraph(
+                    if (names.size == 1) {
+                        "$who comes back as a second person. The same entries are here in another " +
+                            "currency now, so Merge can't put the two together."
+                    } else {
+                        "$who come back as second people. The same entries are here in another " +
+                            "currency now, so Merge can't put them together."
+                    },
+                    colour = theme.textPrimary
+                )
+            }
+        }
+
         // The one change Merge makes to someone already here, so it is said out loud.
         if (plan.photosForPeopleAlreadyHere > 0) {
             item {

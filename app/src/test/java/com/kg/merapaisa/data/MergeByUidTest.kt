@@ -1,0 +1,199 @@
+package com.kg.merapaisa.data
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * Merge matches entries by uid (v3.7.1), and finds people by the entries they share before their
+ * names. Each fixture names its uids, as a real backup file does: a file read twice gives the same.
+ */
+class MergeByUidTest {
+
+    private val selfId = 1L
+    private val you = Person(id = selfId, name = "You", isSelf = true, sortOrder = -1)
+
+    private fun t(id: Int, person: Long, amount: Long, time: Long, uid: String, note: String = "") =
+        Transaction(id = id, personId = person, amountMinor = amount, timestamp = time, note = note, uid = uid)
+
+    private fun cleared(person: Long, uid: String) = RetiredUid(person, uid, RETIRED_CLEARED, 9_000)
+
+    private fun snap(
+        persons: List<Person>,
+        transactions: List<Transaction>,
+        retired: List<RetiredUid> = emptyList(),
+        minted: Set<String> = emptySet()
+    ) = BackupSnapshot(
+        persons = listOf(you) + persons,
+        transactions = transactions,
+        groups = emptyList(),
+        groupMembers = emptyList(),
+        expenses = emptyList(),
+        expenseShares = emptyList(),
+        appliedPayloads = emptyList(),
+        retiredUids = retired,
+        mintedUids = minted
+    )
+
+    private fun merge(here: BackupSnapshot, file: BackupSnapshot) = planRestore(here, file, RestoreMode.Merge, selfId)
+
+    private val ashaFile = Person(id = 11, name = "Asha", currency = "INR")
+    private val ashaHere = Person(id = 2, name = "Asha", currency = "INR")
+
+    /** Asha owes you 200 and 300 in the backup. */
+    private fun backup() = snap(
+        listOf(ashaFile),
+        listOf(t(1, 11, 200_00, 1_000, "a1", "Dinner"), t(2, 11, 300_00, 2_000, "a2", "Cab"))
+    )
+
+    @Test
+    fun `after Clear history, an older backup adds nothing on top of the opening balance`() {
+        val here = snap(
+            listOf(ashaHere),
+            listOf(t(1, 2, 500_00, 9_000, OPENING_UID_PREFIX + "x", "Opening balance")),
+            retired = listOf(cleared(2, "a1"), cleared(2, "a2"))
+        )
+        val plan = merge(here, backup())
+        assertTrue(plan.transactions.isEmpty())
+        assertTrue(plan.persons.isEmpty())
+        assertEquals(2, plan.alreadyPresent.transactions)
+    }
+
+    @Test
+    fun `an entry edited since the backup does not come back beside its edit`() {
+        val here = snap(listOf(ashaHere), listOf(t(1, 2, 50_00, 1_000, "a1", "Dinner"), t(2, 2, 300_00, 2_000, "a2", "Cab")))
+        assertTrue(merge(here, backup()).transactions.isEmpty())
+    }
+
+    @Test
+    fun `an entry deleted by hand since the backup comes back, as Merge always said`() {
+        val here = snap(
+            listOf(ashaHere),
+            listOf(t(1, 2, 200_00, 1_000, "a1", "Dinner")),
+            retired = listOf(RetiredUid(2, "a2", RETIRED_DELETED, 9_000))
+        )
+        assertEquals(listOf("a2"), merge(here, backup()).transactions.map { it.uid })
+    }
+
+    @Test
+    fun `a backup without uids still matches on contents`() {
+        val file = snap(
+            listOf(ashaFile),
+            listOf(t(1, 11, 200_00, 1_000, "m1", "Dinner"), t(2, 11, 40_00, 3_000, "m2", "Chai")),
+            minted = setOf("m1", "m2")
+        )
+        val here = snap(listOf(ashaHere), listOf(t(1, 2, 200_00, 1_000, "zz", "Dinner")))
+        val plan = merge(here, file)
+        assertEquals(listOf(40_00L), plan.transactions.map { it.amountMinor })
+        assertTrue(plan.persons.isEmpty())
+    }
+
+    @Test
+    fun `restoring a CSV and then the backup it came from adds nothing twice`() {
+        // A CSV restore gave the entries new uids; the backup still has the old ones.
+        val here = snap(listOf(ashaHere), listOf(t(1, 2, 200_00, 1_000, "c1", "Dinner"), t(2, 2, 300_00, 2_000, "c2", "Cab")))
+        assertTrue(merge(here, backup()).transactions.isEmpty())
+    }
+
+    @Test
+    fun `merging the same backup twice changes nothing the second time`() {
+        val here = snap(listOf(ashaHere), listOf(t(1, 2, 200_00, 1_000, "a1", "Dinner")))
+        val first = merge(here, backup())
+        val after = here.copy(transactions = here.transactions + first.transactions)
+        assertTrue(merge(after, backup()).changesNothing)
+    }
+
+    @Test
+    fun `a person renamed since the backup comes back as herself`() {
+        val here = snap(listOf(Person(id = 2, name = "Asha Kulkarni", currency = "INR")), listOf(t(1, 2, 200_00, 1_000, "a1", "Dinner")))
+        val plan = merge(here, backup())
+        assertTrue("no second Asha", plan.persons.isEmpty())
+        assertEquals(listOf(2L), plan.transactions.map { it.personId })
+        assertEquals(listOf("a2"), plan.transactions.map { it.uid })
+        assertTrue(plan.secondPeople.isEmpty())
+    }
+
+    @Test
+    fun `renamed onto another person's name, the entries win over the name`() {
+        val here = snap(
+            listOf(Person(id = 2, name = "Asha", currency = "INR"), Person(id = 3, name = "Ashu", currency = "INR")),
+            listOf(t(1, 2, 70_00, 500, "b1", "Lunch"), t(2, 3, 200_00, 1_000, "a1", "Dinner"), t(3, 3, 300_00, 2_000, "a2", "Cab"))
+        )
+        val plan = merge(here, backup())
+        assertTrue(plan.persons.isEmpty())
+        assertTrue("nothing lands on the other Asha", plan.transactions.isEmpty())
+    }
+
+    @Test
+    fun `someone moved to another currency since comes back as a second person, by name`() {
+        val here = snap(listOf(Person(id = 2, name = "Asha", currency = "USD")), listOf(t(1, 2, 2_40, 1_000, "a1", "Dinner")))
+        val plan = merge(here, backup())
+        assertEquals(listOf("Asha"), plan.persons.map { it.name })
+        assertEquals(listOf("Asha"), plan.secondPeople)
+    }
+
+    @Test
+    fun `an entry the other phone holds with the sign turned is not taken as hers`() {
+        // An update link puts the same uid on both phones, opposite ways round. A backup from the
+        // other phone does not make its "You" into the person here.
+        val here = snap(listOf(ashaHere), listOf(t(1, 2, 200_00, 1_000, "a1", "Dinner")))
+        val other = snap(listOf(Person(id = 11, name = "Parth", currency = "INR")), listOf(t(1, 11, -200_00, 1_000, "a1", "Dinner")))
+        val plan = merge(here, other)
+        assertEquals(listOf("Parth"), plan.persons.map { it.name })
+    }
+
+    /** The backup was made after a Clear history: one opening balance, the old uids retired. */
+    private fun clearedBackup() = snap(
+        listOf(ashaFile),
+        listOf(t(1, 11, 500_00, 9_000, OPENING_UID_PREFIX + "o1", "Opening balance"), t(2, 11, 10_00, 9_500, "n1", "Tea")),
+        retired = listOf(cleared(11, "a1"), cleared(11, "a2"))
+    )
+
+    @Test
+    fun `a cleared backup onto a phone that still has every old entry leaves the opening balance out`() {
+        val here = snap(listOf(ashaHere), listOf(t(1, 2, 200_00, 1_000, "a1", "Dinner"), t(2, 2, 300_00, 2_000, "a2", "Cab")))
+        val plan = merge(here, clearedBackup())
+        assertEquals("only what came after the clear", listOf("n1"), plan.transactions.map { it.uid })
+        assertTrue("this phone never cleared", plan.retiredUids.isEmpty())
+        val after = here.copy(transactions = here.transactions + plan.transactions)
+        assertEquals(510_00L, after.transactions.sumOf { it.amountMinor })
+    }
+
+    @Test
+    fun `with only some of the old entries here, the opening balance is added as before`() {
+        val here = snap(listOf(ashaHere), listOf(t(1, 2, 200_00, 1_000, "a1", "Dinner")))
+        val plan = merge(here, clearedBackup())
+        assertEquals(setOf(OPENING_UID_PREFIX + "o1", "n1"), plan.transactions.map { it.uid }.toSet())
+        assertEquals(2, plan.retiredUids.size)
+    }
+
+    @Test
+    fun `a chain of two clears, onto a phone that made neither, leaves the last opening balance out`() {
+        val file = snap(
+            listOf(ashaFile),
+            listOf(t(1, 11, 600_00, 9_900, OPENING_UID_PREFIX + "o2", "Opening balance")),
+            retired = listOf(cleared(11, "a1"), cleared(11, "a2"), cleared(11, OPENING_UID_PREFIX + "o1"), cleared(11, "b1"))
+        )
+        val here = snap(
+            listOf(ashaHere),
+            listOf(t(1, 2, 200_00, 1_000, "a1"), t(2, 2, 300_00, 2_000, "a2"), t(3, 2, 100_00, 9_200, "b1"))
+        )
+        assertTrue(merge(here, file).transactions.isEmpty())
+    }
+
+    @Test
+    fun `a chain of two clears, onto a phone that made the first, leaves the last opening balance out`() {
+        val file = snap(
+            listOf(ashaFile),
+            listOf(t(1, 11, 600_00, 9_900, OPENING_UID_PREFIX + "o2", "Opening balance")),
+            retired = listOf(cleared(11, "a1"), cleared(11, "a2"), cleared(11, OPENING_UID_PREFIX + "o1"), cleared(11, "b1"))
+        )
+        val here = snap(
+            listOf(ashaHere),
+            listOf(t(1, 2, 500_00, 9_000, OPENING_UID_PREFIX + "o1", "Opening balance"), t(2, 2, 100_00, 9_200, "b1")),
+            retired = listOf(cleared(2, "a1"), cleared(2, "a2"))
+        )
+        val plan = merge(here, file)
+        assertTrue(plan.transactions.isEmpty())
+    }
+}

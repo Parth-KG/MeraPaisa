@@ -564,4 +564,22 @@ class CsvImportTest {
         assertEquals(false, back.expenses.first { it.id == 1L }.isSettlement)
         assertEquals("groups predating the toggle netted down, so that is what they restore to", true, back.groups.single().simplifyDebts)
     }
+
+    @Test
+    fun `entries without a uid get one, marked as made up, and those with one keep it unmarked`() {
+        val snapshot = BackupSnapshot(
+            persons = listOf(Person(id = 1, name = "You", isSelf = true), Person(id = 2, name = "Asha")),
+            transactions = listOf(
+                Transaction(id = 1, personId = 2, amountMinor = 100, timestamp = 1, note = "", uid = "keepme"),
+                Transaction(id = 2, personId = 2, amountMinor = 200, timestamp = 2, note = "", uid = "dropme")
+            ),
+            groups = emptyList(), groupMembers = emptyList(), expenses = emptyList(),
+            expenseShares = emptyList(), appliedPayloads = emptyList()
+        )
+        val text = encodeBackup(snapshot, 0, "test").replace(Regex("\"uid\"\\s*:\\s*\"dropme\"\\s*,?"), "")
+        val read = (decodeBackup(text) as BackupResult.Ok).snapshot
+        val dropped = read.transactions.single { it.amountMinor == 200L }.uid
+        assertEquals(setOf(dropped), read.mintedUids)
+        assertEquals("keepme", read.transactions.single { it.amountMinor == 100L }.uid)
+    }
 }

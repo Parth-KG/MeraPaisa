@@ -183,6 +183,8 @@ fun List<ImportedPerson>.toSnapshot(): BackupSnapshot {
         groupMembers = emptyList(),
         expenses = emptyList(),
         expenseShares = emptyList(),
-        appliedPayloads = emptyList()
+        appliedPayloads = emptyList(),
+        // A CSV carries no uids, so every one here was just made up.
+        mintedUids = transactions.map { it.uid }.toSet()
     )
 }

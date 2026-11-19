@@ -33,7 +33,13 @@ data class BackupSnapshot(
      * Profile photos, by person id, as Base64URL of the saved JPEG. Only people whose photo file
      * could be read are here; absent from backups written before v3.4.0.
      */
-    val photos: Map<Long, String> = emptyMap()
+    val photos: Map<Long, String> = emptyMap(),
+    /**
+     * Uids made up while reading, because the file carried none for those entries (a backup written
+     * before v2.5, or a CSV). Merge matches entries by uid (v3.7.1), and a uid invented here can
+     * never match, so these entries are matched on their contents instead, as before.
+     */
+    val mintedUids: Set<String> = emptySet()
 ) {
     val isEmpty: Boolean
         get() = persons.none { !it.isSelf } && transactions.isEmpty() && groups.isEmpty()
@@ -212,6 +218,7 @@ fun decodeBackup(text: String): BackupResult {
         if (bytes == null || bytes.isEmpty()) null else id to photo
     }.toMap()
 
+    val mintedUids = HashSet<String>()
     val transactions = root.objects("transactions")?.map { o ->
         Transaction(
             id = o.long("id")?.toInt() ?: return BackupResult.Damaged,
@@ -222,7 +229,7 @@ fun decodeBackup(text: String): BackupResult {
             // Absent in a backup written before v2.5. A fresh uid is the only honest answer: the
             // entry has never been shared under any name, so inventing a stable-looking one from
             // its contents would risk colliding with the other phone's idea of a different debt.
-            uid = o.string("uid") ?: newEntryUid(),
+            uid = o.string("uid") ?: newEntryUid().also { mintedUids += it },
             fromShare = o.bool("fromShare") ?: false,
             paidByUpi = o.bool("paidByUpi") ?: false
         )
@@ -322,7 +329,8 @@ fun decodeBackup(text: String): BackupResult {
             expenseShares = expenseShares,
             appliedPayloads = appliedPayloads,
             retiredUids = retiredUids,
-            photos = photos
+            photos = photos,
+            mintedUids = mintedUids
         ),
         exportedAt = exportedAt,
         appVersion = appVersion
