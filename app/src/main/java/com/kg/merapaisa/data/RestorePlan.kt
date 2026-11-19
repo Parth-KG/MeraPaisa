@@ -361,11 +361,32 @@ private fun planMerge(
         }
     }
 
+    // Who someone is inside a group here. Usually whoever they were matched to. But someone moved
+    // to another currency since the backup comes back as a second person for her own entries, while
+    // the group still has her, as she is now, among its members: its amounts are in the group's
+    // currency, which her move did not touch. Mapping her group rows onto the second person added
+    // her as a member again and brought back every expense she paid, so that part of the group
+    // was counted twice. So inside a group already here, a person the file names goes to whoever
+    // here holds her entries and is a member of it, when the one she was matched to is not.
+    val holders = shared.entries
+        .sortedWith(compareByDescending<Map.Entry<Pair<Long, Long>, Int>> { it.value }.thenBy { it.key.second })
+        .groupBy({ it.key.first }, { it.key.second })
+    val existingGroupIds = existing.groups.map { it.id }.toHashSet()
+    val membersHere = existing.groupMembers.map { it.groupId to it.personId }.toHashSet()
+    fun inGroup(fileGroupId: Long, filePersonId: Long): Long? {
+        val mapped = personIdMap[filePersonId] ?: return null
+        val groupId = groupIdMap[fileGroupId] ?: return mapped
+        if (groupId !in existingGroupIds || (groupId to mapped) in membersHere) return mapped
+        return holders[filePersonId].orEmpty().firstOrNull { (groupId to it) in membersHere } ?: mapped
+    }
+    val incomingGroupOf = incoming.expenses.associate { it.id to it.groupId }
+    fun shareHolder(s: ExpenseShare): Long? = incomingGroupOf[s.expenseId]?.let { inGroup(it, s.personId) }
+
     val existingMemberKeys = existing.groupMembers.map { it.groupId to it.personId }.toHashSet()
     val newMembers = mutableListOf<GroupMember>()
     incoming.groupMembers.forEach { m ->
         val groupId = groupIdMap[m.groupId] ?: return@forEach
-        val personId = personIdMap[m.personId] ?: return@forEach
+        val personId = inGroup(m.groupId, m.personId) ?: return@forEach
         if (existingMemberKeys.add(groupId to personId)) {
             newMembers.add(GroupMember(groupId, personId))
         }
@@ -376,7 +397,7 @@ private fun planMerge(
     // the same amount give two payments that differ only there; without it the second was taken
     // for the first and skipped, and that debt came back in the group beside its ledger entry.
     val existingPayees = existing.expenseShares.groupBy({ it.expenseId }, { it.personId })
-    val incomingPayees = incoming.expenseShares.groupBy({ it.expenseId }, { personIdMap[it.personId] })
+    val incomingPayees = incoming.expenseShares.groupBy({ it.expenseId }, { shareHolder(it) })
     fun payeesOf(e: Expense, payees: Map<Long, List<Long?>>): String =
         if (!e.isSettlement) "" else "\u0000to " + payees[e.id].orEmpty().map { it ?: -1L }.sorted().joinToString(",")
 
@@ -410,8 +431,8 @@ private fun planMerge(
     val sharesTakenBack = mutableListOf<ExpenseShare>()
     fun giveBackShares(here: Expense, from: Expense) {
         val backup = incomingSharesByExpense[from.id].orEmpty()
-        if (backup.any { it.personId !in personIdMap }) return
-        val shares = backup.associate { personIdMap.getValue(it.personId) to it.shareMinor }
+        if (backup.any { shareHolder(it) == null }) return
+        val shares = backup.associate { shareHolder(it)!! to it.shareMinor }
         val payer = here.paidByPersonId
         val returning = shares.filterKeys { it != payer && it != localSelfId && (here.groupId to it) !in involvedHere }
         if (returning.isEmpty()) return
@@ -429,7 +450,7 @@ private fun planMerge(
 
     incoming.expenses.forEach { e ->
         val groupId = groupIdMap[e.groupId] ?: return@forEach
-        val paidBy = personIdMap[e.paidByPersonId] ?: return@forEach
+        val paidBy = inGroup(e.groupId, e.paidByPersonId) ?: return@forEach
         val key = expenseKey(groupId, e.description, e.amountMinor, paidBy, e.timestamp) + payeesOf(e, incomingPayees)
         if (!existingExpenseKeys.add(key)) {
             expensesAlreadyPresent++
@@ -446,7 +467,7 @@ private fun planMerge(
     // would double.
     val newShares = incoming.expenseShares.mapNotNull { s ->
         val expenseId = expenseIdMap[s.expenseId] ?: return@mapNotNull null
-        val personId = personIdMap[s.personId] ?: return@mapNotNull null
+        val personId = shareHolder(s) ?: return@mapNotNull null
         ExpenseShare(expenseId, personId, s.shareMinor)
     } + returnedShares
 

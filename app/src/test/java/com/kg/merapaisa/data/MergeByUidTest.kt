@@ -145,6 +145,41 @@ class MergeByUidTest {
     }
 
     @Test
+    fun `a group member moved to another currency keeps her place in the group, merged once or twice`() {
+        // Goa, in rupees: a taxi Asha paid, split with you. She owes nothing, you owe her 50.
+        val goa = Group(id = 5, name = "Goa", currency = "INR", createdAt = 100)
+        fun groupRows(asha: Long) = Triple(
+            listOf(GroupMember(5, selfId), GroupMember(5, asha)),
+            listOf(Expense(1, 5, "Taxi", 100_00, asha, 3_000)),
+            listOf(ExpenseShare(1, selfId, 50_00), ExpenseShare(1, asha, 50_00))
+        )
+        val (fileMembers, fileExpenses, fileShares) = groupRows(11)
+        val file = backup().copy(groups = listOf(goa), groupMembers = fileMembers, expenses = fileExpenses, expenseShares = fileShares)
+        // Since the backup, Asha moved to dollars; the group is as it was.
+        val (members, expenses, shares) = groupRows(2)
+        val here = snap(
+            listOf(Person(id = 2, name = "Asha", currency = "USD")),
+            listOf(t(1, 2, 2_40, 1_000, "a1", "Dinner"), t(2, 2, 3_60, 2_000, "a2", "Cab"))
+        ).copy(groups = listOf(goa), groupMembers = members, expenses = expenses, expenseShares = shares)
+
+        val plan = merge(here, file)
+        assertEquals("her own entries come back beside her, as decided", listOf("Asha"), plan.secondPeople)
+        assertTrue("no second Asha in the group", plan.groupMembers.isEmpty())
+        assertTrue("the taxi is not counted twice", plan.expenses.isEmpty() && plan.expenseShares.isEmpty())
+
+        val merged = here.copy(
+            persons = here.persons + plan.persons,
+            transactions = here.transactions + plan.transactions,
+            groupMembers = here.groupMembers + plan.groupMembers,
+            expenses = here.expenses + plan.expenses,
+            expenseShares = here.expenseShares + plan.expenseShares
+        )
+        val again = merge(merged, file)
+        assertTrue("a second Merge changes nothing", again.changesNothing)
+        assertTrue(again.groupMembers.isEmpty())
+    }
+
+    @Test
     fun `an entry the other phone holds with the sign turned is not taken as hers`() {
         // An update link puts the same uid on both phones, opposite ways round. A backup from the
         // other phone does not make its "You" into the person here.
