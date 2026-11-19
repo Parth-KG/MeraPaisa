@@ -12,9 +12,7 @@ import com.kg.merapaisa.data.MoveLine
 import com.kg.merapaisa.data.MoveReceipt
 import com.kg.merapaisa.data.evenShares
 import com.kg.merapaisa.data.Transfer
-import com.kg.merapaisa.data.directTransfers
-import com.kg.merapaisa.data.groupBalances
-import com.kg.merapaisa.data.settleUp
+import com.kg.merapaisa.data.settlePlan
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -115,28 +113,15 @@ class GroupRepository(
         groupDao.getSharesForGroup(groupId),
         groupDao.getGroup(groupId)
     ) { members, expenses, shares, group ->
-        val balances = groupBalances(
-            memberIds = members.map { it.id },
-            paidByPerson = expenses.groupBy { it.paidByPersonId }
-                .mapValues { (_, e) -> e.sumOf { it.amountMinor } },
-            sharesByPerson = shares.groupBy { it.personId }
-                .mapValues { (_, s) -> s.sumOf { it.shareMinor } }
-        )
+        // Computed here rather than in the screen, so the plan and the balances it squares are
+        // always derived from the same read of the same rows.
+        val plan = settlePlan(members.map { it.id }, expenses, shares, simplify = group?.simplifyDebts != false)
         GroupDetail(
             members = members,
             expenses = expenses,
             shares = shares,
-            balances = balances,
-            // Computed here rather than in the screen, so the plan and the balances it squares are
-            // always derived from the same read of the same rows.
-            transfers = if (balances.all { it.amountMinor == 0L }) {
-                // Even is even, however the payments that got there were routed.
-                emptyList()
-            } else if (group?.simplifyDebts != false) {
-                settleUp(balances)
-            } else {
-                directTransfers(expenses, shares)
-            },
+            balances = plan.balances,
+            transfers = plan.transfers,
             simplifyDebts = group?.simplifyDebts != false
         )
     }

@@ -117,6 +117,36 @@ fun groupBalances(
 }
 
 /**
+ * Who pays whom in a group, exactly as Settle up shows it: nothing when everyone is even, however
+ * the payments that got there were routed; otherwise the fewest payments ([settleUp]) when
+ * [simplify] is on, or the debts as they arose ([directTransfers]) when it is off.
+ *
+ * One function, so the group screen and anything that acts on its plan (moving your part to your
+ * ledger, v3.7.1) read the same rows the same way and cannot disagree.
+ */
+fun settlePlan(
+    memberIds: List<Long>,
+    expenses: List<Expense>,
+    shares: List<ExpenseShare>,
+    simplify: Boolean
+): SettlePlan {
+    val balances = groupBalances(
+        memberIds = memberIds,
+        paidByPerson = expenses.groupBy { it.paidByPersonId }.mapValues { (_, e) -> e.sumOf { it.amountMinor } },
+        sharesByPerson = shares.groupBy { it.personId }.mapValues { (_, s) -> s.sumOf { it.shareMinor } }
+    )
+    val transfers = when {
+        balances.all { it.amountMinor == 0L } -> emptyList()
+        simplify -> settleUp(balances)
+        else -> directTransfers(expenses, shares)
+    }
+    return SettlePlan(balances, transfers)
+}
+
+/** A group's positions and the payments that square them, from one read of its rows. */
+data class SettlePlan(val balances: List<MemberBalance>, val transfers: List<Transfer>)
+
+/**
  * Splits an amount evenly, giving the remaining minor units to the earliest members so the
  * parts always add back up to the whole. Paise cannot be divided three ways.
  */
