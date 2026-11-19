@@ -50,10 +50,19 @@ object BackupWriter {
             )
             val fileUri = DocumentsContract.createDocument(resolver, dirUri, MIME_JSON, fileName)
                 ?: return@runCatching null
-            resolver.openOutputStream(fileUri)?.use { out ->
-                out.write(content.toByteArray(Charsets.UTF_8))
-                out.flush()
-            } ?: return@runCatching null
+            // A file that could not be written whole is deleted rather than left behind. Left, it
+            // looked like a backup, each retry added another, and pruning kept them, newest by
+            // name, over the good backups before them.
+            val written = runCatching {
+                resolver.openOutputStream(fileUri)?.use { out ->
+                    out.write(content.toByteArray(Charsets.UTF_8))
+                    out.flush()
+                }
+            }.getOrNull() != null
+            if (!written) {
+                runCatching { DocumentsContract.deleteDocument(resolver, fileUri) }
+                return@runCatching null
+            }
             fileUri
         }.getOrNull()
     }
