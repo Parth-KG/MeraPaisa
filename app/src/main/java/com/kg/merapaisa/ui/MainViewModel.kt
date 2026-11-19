@@ -243,15 +243,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // --- Moving your part of a group to your ledger (v3.7.0) ---
 
     /**
-     * Opens the confirm sheet for the open group: one line per person you have a pair with, in
-     * the group's currency, and, for anyone kept in another currency, the entry their ledger would
-     * get at today's rate. Nothing is written yet.
+     * Opens the confirm sheet for the open group: one line per payment of Settle up's that involves
+     * you, in the group's currency, and, for anyone kept in another currency, the entry their ledger
+     * would get at today's rate. Nothing is written yet.
      */
     fun openMoveToLedger() {
         val detail = openGroup.value ?: return
         val groupId = _uiState.value.openGroupId ?: return
         val self = _selfId.value
-        val pairs = com.kg.merapaisa.data.pairsWithYou(detail.expenses, detail.shares, self)
+        val pairs = com.kg.merapaisa.data.moveLinesFor(detail.transfers, self)
         if (pairs.isEmpty()) return
         val people = persons.value.associateBy { it.id }
         val lines = pairs.map { (id, amount) ->

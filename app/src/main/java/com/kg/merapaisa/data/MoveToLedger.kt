@@ -9,6 +9,25 @@ package com.kg.merapaisa.data
  */
 data class MoveLine(val personId: Long, val groupAmountMinor: Long, val ledgerAmountMinor: Long)
 
+/**
+ * What moving your part of a group to your ledger takes (v3.7.1): Settle up's payments that involve
+ * you, by person, positive when they owe you. So the move writes exactly what the group screen
+ * shows: the fewest payments while that switch is on, the debts as they arose while it is off.
+ *
+ * v3.7.0 always moved pair by pair. Once a fewest-payments payment had gone through you, that
+ * wrote entries Settle up never showed and reopened a debt between two others (audit runs 4 and 6).
+ */
+fun moveLinesFor(transfers: List<Transfer>, selfId: Long): Map<Long, Long> {
+    val lines = LinkedHashMap<Long, Long>()
+    transfers.forEach { t ->
+        when (selfId) {
+            t.toPersonId -> lines[t.fromPersonId] = (lines[t.fromPersonId] ?: 0L) + t.amountMinor
+            t.fromPersonId -> lines[t.toPersonId] = (lines[t.toPersonId] ?: 0L) - t.amountMinor
+        }
+    }
+    return lines.filterValues { it != 0L }
+}
+
 /** What a move wrote, so Undo can take exactly those rows out again. */
 data class MoveReceipt(
     val groupId: Long,

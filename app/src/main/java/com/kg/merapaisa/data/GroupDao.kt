@@ -260,6 +260,12 @@ interface GroupDao {
     )
     suspend fun sharesNow(groupId: Long): List<ExpenseShare>
 
+    @Query("SELECT personId FROM group_members WHERE groupId = :groupId")
+    suspend fun memberIdsNow(groupId: Long): List<Long>
+
+    @Query("SELECT simplifyDebts FROM expense_groups WHERE id = :groupId")
+    suspend fun simplifyNow(groupId: Long): Boolean?
+
     @Insert
     suspend fun insertLedgerEntries(entries: List<Transaction>)
 
@@ -278,14 +284,16 @@ interface GroupDao {
      * cancels it and an entry in that person's ledger, all in one transaction, so neither side can
      * exist without the other.
      *
-     * The pairs are read again here and must still be the ones the confirm sheet showed; if the
-     * group changed meanwhile, nothing is written and null comes back, so a stale sheet can never
-     * move a figure that is no longer true.
+     * The lines are worked out again here, from Settle up's plan as it stands ([moveLinesFor]), and
+     * must still be the ones the confirm sheet showed; if the group or its switch changed meanwhile,
+     * nothing is written and null comes back, so a stale sheet can never move a figure that is no
+     * longer true.
      */
     @androidx.room.Transaction
     suspend fun moveToLedger(groupId: Long, selfId: Long, lines: List<MoveLine>, note: String, now: Long): MoveReceipt? {
-        val pairs = pairsWithYou(expensesNow(groupId), sharesNow(groupId), selfId)
-        if (lines.isEmpty() || pairs != lines.associate { it.personId to it.groupAmountMinor }) return null
+        val plan = settlePlan(memberIdsNow(groupId), expensesNow(groupId), sharesNow(groupId), simplify = simplifyNow(groupId) != false)
+        val current = moveLinesFor(plan.transfers, selfId)
+        if (lines.isEmpty() || current != lines.associate { it.personId to it.groupAmountMinor }) return null
         val expenseIds = lines.map { line ->
             val (row, share) = cancellingPayment(groupId, selfId, line, now)
             val id = insertExpense(row)

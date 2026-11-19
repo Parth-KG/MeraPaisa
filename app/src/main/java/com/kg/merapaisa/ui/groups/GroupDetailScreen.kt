@@ -125,6 +125,9 @@ fun GroupDetailScreen(
     // Some of this group already went to your ledger, so a position you hold now is only what
     // changed since: a new expense, or one edited or deleted after it was moved.
     val movedBefore = settlements.any { it.isMovedToLedger }
+    // The move takes what Settle up shows for you (v3.7.1), so it is offered whenever that lists a
+    // payment of yours, even when you are even overall (owed by one member, owing another).
+    val yourPartToMove = transfers.any { names.isYou(it.fromPersonId) || names.isYou(it.toPersonId) }
     val snackbar = remember { SnackbarHostState() }
     if (lastMove != null) {
         LaunchedEffect(lastMove) {
@@ -258,7 +261,7 @@ fun GroupDetailScreen(
                     amountMinor = b.amountMinor,
                     currency = group.currency
                 )
-                if (isYou && b.amountMinor != 0L) {
+                if (isYou && yourPartToMove) {
                     if (movedBefore) {
                         Text(
                             "Part of this group is already in your ledger. This is what's changed since.",

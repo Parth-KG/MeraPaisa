@@ -78,4 +78,50 @@ class GroupDetailScreenTest {
         // Renamed with the screen: the glossary word for a zero balance is "even".
         compose.onNodeWithText("Everyone is even").assertIsDisplayed()
     }
+
+    private fun showYou(balances: List<MemberBalance>, transfers: List<Transfer>) {
+        compose.setContent {
+            GroupDetailScreen(
+                group = Group(id = 1, name = "Goa", currency = "INR", simplifyDebts = false),
+                members = listOf(
+                    Person(id = 1, name = "You", currency = "INR", isSelf = true),
+                    Person(id = 2, name = "Asha", currency = "INR"),
+                    Person(id = 3, name = "Ravi", currency = "INR")
+                ),
+                expenses = listOf(
+                    Expense(id = 1, groupId = 1, description = "Stay", amountMinor = 200_00, paidByPersonId = 1),
+                    Expense(id = 2, groupId = 1, description = "Fuel", amountMinor = 200_00, paidByPersonId = 3)
+                ),
+                balances = balances,
+                transfers = transfers,
+                simplifyDebts = false,
+                onBack = {},
+                onAddExpense = {},
+                onSettleUp = {},
+                onDeleteExpense = {},
+                onSimplifyChange = {},
+                onMoveToLedger = {}
+            )
+        }
+    }
+
+    @Test
+    fun moveIsOfferedWhenSettleUpListsYouThoughYouAreEvenOverall() {
+        // Audit run 6: Asha owes you 100 and you owe Ravi 100, so you are even overall, but Settle
+        // up lists both payments, and the move takes what it lists (v3.7.1).
+        showYou(
+            balances = listOf(MemberBalance(1, 0), MemberBalance(2, -100_00), MemberBalance(3, 100_00)),
+            transfers = listOf(Transfer(2, 1, 100_00), Transfer(1, 3, 100_00))
+        )
+        compose.onNodeWithText("Move to your ledger").assertExists()
+    }
+
+    @Test
+    fun noMoveWhenSettleUpHasNothingOfYours() {
+        showYou(
+            balances = listOf(MemberBalance(1, 0), MemberBalance(2, -100_00), MemberBalance(3, 100_00)),
+            transfers = listOf(Transfer(2, 3, 100_00))
+        )
+        compose.onNodeWithText("Move to your ledger").assertDoesNotExist()
+    }
 }

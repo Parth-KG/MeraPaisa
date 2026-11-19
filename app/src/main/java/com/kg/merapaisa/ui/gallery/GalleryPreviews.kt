@@ -291,6 +291,38 @@ fun GroupDetailMovedCase() {
     )
 }
 
+/**
+ * You are even overall but not pair by pair, Fewest payments off (v3.7.1): Asha owes you and you
+ * owe Ravi, so Settle up lists both and the move is offered under your zero.
+ */
+@Composable
+fun GroupDetailEvenPairsCase() {
+    val you = com.kg.merapaisa.data.Person(id = 7, name = "You", currency = "INR", isSelf = true)
+    val members = listOf(you) + Fixtures.groupMembers.take(2)
+    val (asha, other) = Fixtures.groupMembers.take(2).map { it.id }
+    GroupDetailScreen(
+        group = Fixtures.group.copy(simplifyDebts = false),
+        members = members,
+        expenses = listOf(
+            com.kg.merapaisa.data.Expense(id = 1, groupId = 1, description = "Houseboat", amountMinor = 2_400_00, paidByPersonId = 7),
+            com.kg.merapaisa.data.Expense(id = 2, groupId = 1, description = "Fuel", amountMinor = 2_400_00, paidByPersonId = other)
+        ),
+        balances = listOf(
+            com.kg.merapaisa.data.MemberBalance(7, 0),
+            com.kg.merapaisa.data.MemberBalance(asha, -1_200_00),
+            com.kg.merapaisa.data.MemberBalance(other, 1_200_00)
+        ),
+        transfers = listOf(
+            com.kg.merapaisa.data.Transfer(asha, 7, 1_200_00),
+            com.kg.merapaisa.data.Transfer(7, other, 1_200_00)
+        ),
+        simplifyDebts = false,
+        onBack = {}, onAddExpense = {}, onSettleUp = {},
+        onDeleteExpense = {}, onSimplifyChange = {},
+        onMoveToLedger = {}
+    )
+}
+
 /** The same group with nothing outstanding, which is a different sentence on screen. */
 @Composable
 fun GroupDetailEvenCase() {
@@ -519,6 +551,7 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "groups-all-archived" to { GroupsAllArchivedCase() },
     "group-detail" to { GroupDetailCase() },
     "group-detail-even" to { GroupDetailEvenCase() },
+    "group-detail-even-pairs" to { GroupDetailEvenPairsCase() },
     "split-amount" to { SplitAmountCase() },
     "split-picker" to { SplitPickerCase() },
     "split-picker-too-few" to { SplitPickerTooFewCase() },
