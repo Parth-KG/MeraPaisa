@@ -616,10 +616,9 @@ fun MainScreen(viewModel: MainViewModel) {
                 ownUpiUnlockedChange = null
                 showOwnUpi = false
             },
-            onDismiss = {
-                ownUpiUnlockedChange = null
-                qrAfterOwnUpiFor = null
-            }
+            // Back to the sheet, still open: whose QR waits on the ID stays, as it does when the
+            // fingerprint is cancelled, so a second Save still opens it. Closing the sheet clears it.
+            onDismiss = { ownUpiUnlockedChange = null }
         )
     }
     val openGroupId = ui.openGroupId
