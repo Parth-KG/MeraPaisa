@@ -356,7 +356,8 @@ class RestorePlanTest {
         val marked = (persons + plan.persons).map { p ->
             if (p.id in plan.photos) p.copy(pfpType = "photo", pfpValue = "/files/pfp_${p.id}.jpg") else p
         }
-        return plus(plan).copy(persons = marked)
+        // A snapshot holds a photo for everyone whose file it could read; the new files can be.
+        return plus(plan).copy(persons = marked, photos = photos + plan.photos)
     }
 
     @Test
@@ -401,9 +402,19 @@ class RestorePlanTest {
     @Test
     fun `Merge leaves someone's own photo alone`() {
         val here = snapshot(persons = listOf(self, Person(id = 2, name = "Asha", currency = "INR", pfpType = "photo", pfpValue = "/files/pfp_mine.jpg")))
+            .copy(photos = mapOf(2L to base64UrlEncode(byteArrayOf(42))))
         val plan = planRestore(here, backupWithPhotos(), RestoreMode.Merge, SELF_ID)
         assertFalse(2L in plan.photos)
         assertEquals(0, plan.photosForPeopleAlreadyHere)
+    }
+
+    @Test
+    fun `Merge fills in a photo whose file is gone, as after Android's own backup`() {
+        // The row says photo, but the file never came across, so the snapshot has none for her.
+        val here = snapshot(persons = listOf(self, Person(id = 2, name = "Asha", currency = "INR", pfpType = "photo", pfpValue = "/files/pfp_lost.jpg")))
+        val plan = planRestore(here, backupWithPhotos(), RestoreMode.Merge, SELF_ID)
+        assertEquals(ashaPhoto, plan.photos[2L])
+        assertEquals(1, plan.photosForPeopleAlreadyHere)
     }
 
     @Test

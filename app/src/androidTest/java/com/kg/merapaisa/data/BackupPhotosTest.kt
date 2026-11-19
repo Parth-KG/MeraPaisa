@@ -140,6 +140,24 @@ class BackupPhotosTest {
     }
 
     @Test
+    fun mergeFillsInAPhotoWhoseFileIsGone() = runBlocking {
+        // Android's own backup used to bring the rows across without the files: Asha's row says
+        // photo and points at a file that is not there.
+        personDao.ensureSelf()
+        val ashaBytes = jpeg(Color.RED)
+        personDao.insertPerson(Person(name = "Asha", currency = "INR", pfpType = "photo", pfpValue = photoFile(ashaBytes)))
+        val read = decodeBackup(backups.exportJson(1, "3.7.0")) as BackupResult.Ok
+        File(personNamed("Asha").pfpValue).delete()
+
+        val plan = backups.plan(read.snapshot, RestoreMode.Merge)
+        assertEquals(1, plan.photosForPeopleAlreadyHere)
+        backups.apply(plan)
+
+        assertArrayEquals(ashaBytes, File(personNamed("Asha").pfpValue).readBytes())
+        assertTrue("and then she has one", backups.plan(read.snapshot, RestoreMode.Merge).changesNothing)
+    }
+
+    @Test
     fun bytesThatAreNotAnImageAreNotSaved() {
         val store = AppPhotoStore(context, dir)
         assertNull(store.save(byteArrayOf(1, 2, 3, 4)))

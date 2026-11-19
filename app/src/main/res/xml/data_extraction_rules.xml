@@ -4,15 +4,15 @@
 
   Same intent as backup_rules.xml: the ledger is included on purpose, because a sideloaded
   app has no other recovery path. See that file for why DataStore needs a "file" rule rather
-  than a "sharedpref" one.
+  than a "sharedpref" one, and why the whole of files/ is included (the profile photos).
 -->
 <data-extraction-rules>
     <cloud-backup>
         <include domain="database" path="." />
-        <include domain="file" path="datastore/" />
+        <include domain="file" path="." />
     </cloud-backup>
     <device-transfer>
         <include domain="database" path="." />
-        <include domain="file" path="datastore/" />
+        <include domain="file" path="." />
     </device-transfer>
 </data-extraction-rules>

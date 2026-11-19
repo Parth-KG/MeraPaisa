@@ -239,8 +239,11 @@ private fun planMerge(
             personIdMap[person.id] = match.id
             peopleAlreadyPresent++
             // Their own photo wins; a photo is only given to someone with none. Once given, they
-            // have one, so the same Merge run again gives nothing.
-            if (photo != null && match.pfpType != "photo") {
+            // have one, so the same Merge run again gives nothing. "None" means no photo this phone
+            // can read (`existing.photos` holds only readable ones), not only no photo set: Android's
+            // own backup carried the row pointing at a photo but, before v3.7.1, not the file, so
+            // after a device transfer she showed initials and Merge never gave her picture back.
+            if (photo != null && match.id !in existing.photos) {
                 photos[match.id] = photo
                 photosForPeopleAlreadyHere++
             }
