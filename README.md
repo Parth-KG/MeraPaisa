@@ -66,18 +66,18 @@ Mera Paisa keeps all of that on your phone.
 | **In-app updates** | Checks GitHub for a newer release and installs it only if it is signed with the same key |
 | **Accessible** | TalkBack reads every figure with its direction in words, and every screen works at large text and on a phone turned sideways |
 | **Ten themes** | Diya, Jamun, Monsoon, Kaapi and Kamal by night, Tulsi, Khadi, Gulab, Kansa and Neel by day, with amounts and grey text at 7:1 in every one |
-| **Backup** | Everything in one file, profile photos included, saved when you like or every week to a folder you pick, with a preview before any restore. Android's own backup also copies your ledger and settings to your Google account |
+| **Backup** | Everything in one file, profile photos included, saved when you like or every week to a folder you pick, with a preview before any restore. Android's own backup also copies your ledger, settings and profile photos to your Google account |
 
 ## Worth a closer look
 
 > **Money is never a floating-point number**
-> Amounts are whole minor units, paise or cents, not `Double`. `10.50` is `1050`, and it is still `10.50` after a hundred additions. Currencies with no minor unit in circulation, like the yen, are stored the same way and only lose their decimals when displayed.
+> Amounts are whole minor units, paise or cents, not `Double`. `10.50` is `1050`, and it is still `10.50` after a hundred additions. Currencies with no minor unit in circulation, like the yen, are stored the same way, in hundredths, and whatever lands in them is whole: a conversion, a split or a share in yen comes out in whole yen.
 
 > **The balance is not a stored number**
 > There is no balance column to drift out of step with the history. A balance is the sum of that person's entries, derived on read, so the figure on screen and the entries behind it cannot disagree.
 
 > **An update never changes what you are owed**
-> The database has been through eleven schema versions with eight hand-written migrations, each tested against a seeded database before release. There is no destructive fallback anywhere, so no update can wipe a ledger. The version that removed the stored balance column had to prove first that the entries summed to it, and wrote a reconciling entry where they did not.
+> The database has been through twelve schema versions with nine hand-written migrations, each tested against a seeded database before release. There is no destructive fallback anywhere, so no update can wipe a ledger. The version that removed the stored balance column had to prove first that the entries summed to it, and wrote a reconciling entry where they did not.
 
 > **Lock-on-edit redistribution**
 > Change one person's share and that row locks, and the remaining unlocked rows split what is left. Leftover paise go to the first person rather than quietly disappearing. If the locked shares leave nothing that adds up, the screen says by how much and why, and the split cannot be saved until it does, because a split that does not add up records money nobody spent.
@@ -124,7 +124,7 @@ Log an expense with a description, an amount and who paid. Shares are equal by d
 
 **Settle up** turns those positions into a list of payments, and records each one when it happens. **Edit group** renames it, brings more people in, or takes out someone nothing in the group involves; someone who joins late owes nothing for what was spent before. A finished trip can be archived from its menu: it moves to a section at the bottom of the Groups tab and still opens. Deleting an expense or a group asks first, and touches nothing outside the group. Deleting a member hands their share of everyone else's expenses to whoever paid, so the group still adds up.
 
-**Move to your ledger**, on your own row, takes your part of a group onto Balances: one entry per person you share costs with, worked out pair by pair as the debts arose (never the simplified plan, which could route you through someone you shared nothing with), at today's rate for anyone kept in another currency. Your part of the group comes to even, and what the others owe each other stays in the group. It asks first, offers Undo, and a later move takes only what is new.
+**Move to your ledger**, on your own row, takes your part of a group onto Balances: one entry for each payment of yours that Settle up shows, at today's rate for anyone kept in another currency. So it follows the group's switch: with fewest payments on, it moves the plan's payments to and from you, which can name someone you never shared a cost with; with it off, it moves the debts as they arose, pair by pair. It is there whenever Settle up lists a payment of yours, even when you are even overall. Your part of the group comes to even, and what the others owe each other stays in the group. It asks first, offers Undo, and a later move takes only what is new.
 
 ### History, corrections and rollback
 
@@ -144,13 +144,13 @@ An **update link** is different: it carries your entries so their app can record
 
 ### Reminders
 
-Long-press a name and choose **Send a reminder**. An editable message appears with the exact amount in it, and you can attach the history. It goes out through Android's share sheet, so anything that accepts text works. Once your own UPI ID is set, a reminder to someone in rupees who owes you can attach your QR for the amount as a picture, which is on each time the sheet opens. The picture carries the amount and your UPI ID under the code, and a line under your message says to scan it or to pay your UPI ID. WhatsApp sends the text as the picture's caption; an app that keeps only the picture still has the amount and the UPI ID on it. Turn it off and your message goes alone.
+Long-press a name and choose **Send a reminder**. An editable message appears with the exact amount in it, and you can attach the history. It goes out through Android's share sheet, so anything that accepts text works. With your own UPI ID set, a reminder to someone in rupees who owes you can attach your QR for the amount as a picture, which is on each time the sheet opens. The picture carries the amount and your UPI ID under the code, and a line under your message says to scan it or to pay your UPI ID. WhatsApp sends the text as the picture's caption; an app that keeps only the picture still has the amount and the UPI ID on it. Turn it off and your message goes alone. With no UPI ID yet, the sheet offers **Add your UPI ID to attach a QR** in its place, and comes back with the QR on.
 
 ### Paid by QR
 
-UPI is rupees only, so this is for people kept in INR. Set your own UPI ID in Settings, under **UPI**; tapping it shows it as a QR with no amount, which is what anyone scanning it would pay. Anyone who sets it before you would collect what your reminders and your QR ask for, so setting or changing it always asks for your fingerprint, face or screen lock, whether the app lock is on or not.
+UPI is rupees only, so this is for people kept in INR. Set your own UPI ID in Settings, under **UPI**, or the first time you use Show QR; tapping it shows it as a QR with no amount, which is what anyone scanning it would pay. Anyone who sets it before you would collect what your reminders and your QR ask for, so setting or changing it always asks for your fingerprint, face or screen lock, whether the app lock is on or not.
 
-**Show QR to pay you**, from the menu of someone who owes you, draws a QR to your UPI ID for what they owe. They scan it with their own UPI app, which opens with the amount filled in and asks for their PIN. Mera Paisa never sees a PIN and never pays or records anything by itself: **Record** writes the full amount as an entry marked "by UPI", and **Not yet** closes the sheet and records nothing. A part payment goes in with Settle up, as before.
+**Show QR to pay you**, in the menu of anyone who owes you rupees, draws a QR to your UPI ID for what they owe; with no UPI ID yet, it asks for one first. They scan it with their own UPI app, which opens with the amount filled in and asks for their PIN. Mera Paisa never sees a PIN and never pays or records anything by itself: **Record** writes the full amount as an entry marked "by UPI", and **Not yet** closes the sheet and records nothing. A part payment goes in with Settle up, as before.
 
 Why a QR and not a link: on a real phone, Google Pay and Paytm refused a payment that another app opened, or that came from a link tapped in a chat, even for ₹1. A QR scanned inside the UPI app, from the screen or from a saved picture, paid. So Mera Paisa never opens a UPI app at all.
 
@@ -162,7 +162,7 @@ Some start from palettes other people made, all under the MIT licence: Monsoon i
 
 ### Backup and restore
 
-Android's own backup carries the database to your Google account. That is a system feature, not something Mera Paisa runs. There is also a backup you control, under **Back up and restore** in Settings: **Save a backup** writes everything to one file, profile photos included, and **Restore from a file** reads it back, either adding what is missing (and a photo for anyone here who has none) or replacing everything. **Choose a folder** and it saves one there every week, keeping the last 12. A restore is previewed before it runs, and the whole thing is one database transaction, so a failure changes nothing.
+Android's own backup carries the database, settings and profile photos to your Google account. That is a system feature, not something Mera Paisa runs. There is also a backup you control, under **Back up and restore** in Settings: **Save a backup** writes everything to one file, profile photos included, and **Restore from a file** reads it back, either adding what is missing (and a photo for anyone here who has none) or replacing everything. **Choose a folder** and it saves one there every week, keeping the last 12. Adding what is missing matches entries by their own id, so an entry you edited since the backup is not brought back beside its edit, and a cleared history does not take its old entries again. A restore is previewed before it runs, and the whole thing is one database transaction, so a failure changes nothing.
 
 </details>
 
@@ -172,7 +172,7 @@ Kotlin and Jetpack Compose with Material 3. Room for storage, with exported sche
 
 Type is Anek Latin by Ek Type for amounts and titles and Figtree for everything else, shipped as static subset instances because API 24 and 25 ignore variable font axes.
 
-536 tests on the JVM covering money arithmetic, settle-up, group pairs and shares, per-currency totals, amount formatting, CSV, summaries, the share codec, exchange-rate replies, backups with photos and the UPI mark, UPI links, QR codes, reminders with a QR and theme contrast, and 241 instrumentation tests covering every migration, the full migration chain, the settle, rollback, edit, delete, reconcile, move-debt, backup-photo, group-edit, archive and move-to-ledger paths against a real database, and the QR picture a reminder sends.
+595 tests on the JVM covering money arithmetic, settle-up, moving a group to your ledger, group pairs and shares, whole yen, Merge by entry id, per-currency totals, amount formatting, CSV, summaries, the share codec, exchange-rate replies, backups with photos and the UPI mark, UPI links, QR codes, reminders with a QR and theme contrast, and 260 instrumentation tests covering every migration, the full migration chain, the settle, rollback, edit, delete, reconcile, move-debt, backup-photo, group-edit, archive and move-to-ledger paths against a real database, and the QR picture a reminder sends.
 
 ## Repository structure
 

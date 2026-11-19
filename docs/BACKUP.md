@@ -42,7 +42,9 @@ means nothing on another phone, so it was never enough on its own.
   in the file is read as strictly as ever.
 - **Replace** brings every photo back, and then removes the old ledger's photo files.
 - **Add what is missing** brings photos with the people it adds, and gives a photo to someone already
-  here only when they have none. Their own photo always wins, and the preview says how many get one.
+  here only when this phone has none it can show for them (after Android's own backup, before
+  v3.7.1, the row came across without the file). Their own photo always wins, and the preview says
+  how many get one.
 
 ### The UPI mark
 
@@ -50,19 +52,42 @@ From v3.6.0 an entry recorded from Show QR's **Record** carries an optional `"pa
 is left out when there is nothing to say, so a backup with no UPI payments reads exactly as before,
 and the format version is still 1: older versions skip keys they do not know and restore the rest.
 
-- **Not in a backup:** your own UPI ID, which lives with the app's settings (Android's own backup
-  carries it). People carry no UPI ID at all.
-- Your UPI ID never goes into the CSV export, a summary or an update link, and the mark does not
-  travel in an update link either. Tests hold that.
+- **Not in this backup:** your own UPI ID, which lives with the app's settings. People carry no UPI
+  ID at all.
+- Your UPI ID never goes into this backup file, the CSV export, a summary or an update link, and
+  the mark does not travel in an update link either. Tests hold that.
+- Android's own backup is another matter: it copies the app's settings to your Google account,
+  your UPI ID and whether the app lock is on included, so a new phone has them. That is a system
+  feature, on your own account.
+
+### `isSettled`
+
+From v3.7.1 the database no longer stores whether someone is settled; the balance decides. Every
+person in a backup still carries `"isSettled"`, true when their balance is zero, and the CSV keeps
+its "settled" column the same way, because every older version calls a file without them damaged,
+and v3.3.0 and older put people on Even by it. A v3.7.1 file restores in older versions. Reading,
+v3.7.1 ignores the field and accepts a file without it.
 
 ## Restoring
 
 Settings → **Back up and restore** → *Restore from a file*. Pick either format and the app works
 out which it is. Then choose:
 
-- **Add what is missing** matches people on name and currency, and entries on person, time, amount
-  and note, then adds only what is absent, plus a photo for anyone here who has none. Running it
-  twice changes nothing the second time. It cannot undo a deletion you made since the backup.
+- **Add what is missing** adds only what is absent, plus a photo for anyone here whose photo this
+  phone cannot show. Running it twice changes nothing the second time. How it matches, from v3.7.1:
+  - **Entries by their uid**, the id an entry keeps through an edit. An entry edited since the
+    backup is not brought back beside its edit, and after **Clear history** the old entries are not
+    added again on top of the opening balance. Entries with no uid in the file (backups written
+    before v2.5, and every CSV) still match on person, time, amount and note.
+  - **People by the entries they share first**, then by name and currency. Someone renamed since
+    the backup comes back as herself. Someone moved to another currency since comes back as a
+    second person, because her old entries are in the old currency; the preview names her.
+  - **A backup made after Clear history**, added to a phone that still has the old entries, leaves
+    its opening balance out when every entry it replaced is still here. If only some of them are,
+    the opening balance is added, and with the entries still here that counts some of the debt
+    twice: delete the opening balance or the old entries by hand.
+  - **What can still come back:** an entry you deleted since the backup, and a group expense you
+    edited since (group expenses match on what they say, and come back beside their edit).
 - **Replace everything** deletes the current ledger, then lays the file down exactly. Right on a
   fresh install, destructive anywhere else, so the preview counts what it would delete first.
 
@@ -95,9 +120,11 @@ rather than retrying forever. Choose the folder again.
 
 ## Android's own backup
 
-Separate from all of the above. Android backs up the app's database to your Google account as a
-system feature, and restores it when you set up a new phone signed into the same account. Mera
-Paisa has no account and no server of its own; that backup is Android's, not the app's.
+Separate from all of the above. Android backs up the app's database, its settings and, from
+v3.7.1, the profile photos to your Google account as a system feature, and restores them when you
+set up a new phone signed into the same account. Mera Paisa has no account and no server of its own;
+that backup is Android's, not the app's. The settings include your UPI ID and whether the app lock
+is on.
 
 ## Verifying it by hand
 
