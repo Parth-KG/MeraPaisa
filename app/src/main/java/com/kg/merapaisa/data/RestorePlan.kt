@@ -40,6 +40,14 @@ data class RestorePlan(
     val groupMembers: List<GroupMember>,
     val expenses: List<Expense>,
     val expenseShares: List<ExpenseShare>,
+    /**
+     * Merge only: shares on expenses already here to set back, for a payer who was handed the
+     * share of someone deleted since the backup who now comes back ([expenseShares] carries
+     * theirs). Applied by replacing the payer's row.
+     */
+    val sharesHandedBack: List<ExpenseShare> = emptyList(),
+    /** Merge only: as [sharesHandedBack], where the payer had no share of their own before. */
+    val sharesTakenBack: List<ExpenseShare> = emptyList(),
     val appliedPayloads: List<AppliedPayload>,
     val retiredUids: List<RetiredUid> = emptyList(),
     /**
@@ -68,7 +76,8 @@ data class RestorePlan(
 
     /** True when the restore would leave the ledger exactly as it is. */
     val changesNothing: Boolean
-        get() = inserts.isZero && deletes.isZero && photosForPeopleAlreadyHere == 0
+        get() = inserts.isZero && deletes.isZero && photosForPeopleAlreadyHere == 0 &&
+            sharesHandedBack.isEmpty() && sharesTakenBack.isEmpty()
 }
 
 data class RestoreCounts(
@@ -243,13 +252,44 @@ private fun planMerge(
     fun payeesOf(e: Expense, payees: Map<Long, List<Long?>>): String =
         if (!e.isSettlement) "" else "\u0000to " + payees[e.id].orEmpty().map { it ?: -1L }.sorted().joinToString(",")
 
-    val existingExpenseKeys = existing.expenses
-        .map { expenseKey(it.groupId, it.description, it.amountMinor, it.paidByPersonId, it.timestamp) + payeesOf(it, existingPayees) }
-        .toHashSet()
+    val existingExpenseByKey = existing.expenses.associateBy {
+        expenseKey(it.groupId, it.description, it.amountMinor, it.paidByPersonId, it.timestamp) + payeesOf(it, existingPayees)
+    }
+    val existingExpenseKeys = existingExpenseByKey.keys.toHashSet()
 
     val expenseIdMap = HashMap<Long, Long>()
     val newExpenses = mutableListOf<Expense>()
     var expensesAlreadyPresent = 0
+
+    // Deleting someone hands their share of an expense somebody else paid to the payer (see
+    // `PersonDao.reassignGroupSharesToPayer`), and that expense stays, so Merge finds it already
+    // here. Bringing them back then restored only the expenses they paid, and the group's
+    // positions came out the other way. So where an expense here holds exactly what that deletion
+    // would have left, the share goes back from the payer to the person coming back.
+    val newPersonIds = newPersons.map { it.id }.toHashSet()
+    val incomingSharesByExpense = incoming.expenseShares.groupBy { it.expenseId }
+    val existingSharesByExpense = existing.expenseShares.groupBy { it.expenseId }
+    val returnedShares = mutableListOf<ExpenseShare>()
+    val sharesHandedBack = mutableListOf<ExpenseShare>()
+    val sharesTakenBack = mutableListOf<ExpenseShare>()
+    fun giveBackShares(here: Expense, from: Expense) {
+        val backup = incomingSharesByExpense[from.id].orEmpty()
+        if (backup.any { it.personId !in personIdMap }) return
+        val shares = backup.associate { personIdMap.getValue(it.personId) to it.shareMinor }
+        val payer = here.paidByPersonId
+        val returning = shares.filterKeys { it in newPersonIds && it != payer }
+        if (returning.isEmpty()) return
+        val afterDeletion = (shares - returning.keys).toMutableMap()
+        if (returning.values.any { it != 0L }) afterDeletion[payer] = (afterDeletion[payer] ?: 0L) + returning.values.sum()
+        val onPhone = existingSharesByExpense[here.id].orEmpty().associate { it.personId to it.shareMinor }
+        if (onPhone != afterDeletion) return
+        returning.forEach { (personId, share) -> returnedShares += ExpenseShare(here.id, personId, share) }
+        val payerShare = shares[payer]
+        when {
+            payerShare != null && payerShare != onPhone[payer] -> sharesHandedBack += ExpenseShare(here.id, payer, payerShare)
+            payerShare == null && payer in onPhone -> sharesTakenBack += ExpenseShare(here.id, payer, onPhone.getValue(payer))
+        }
+    }
 
     incoming.expenses.forEach { e ->
         val groupId = groupIdMap[e.groupId] ?: return@forEach
@@ -257,6 +297,7 @@ private fun planMerge(
         val key = expenseKey(groupId, e.description, e.amountMinor, paidBy, e.timestamp) + payeesOf(e, incomingPayees)
         if (!existingExpenseKeys.add(key)) {
             expensesAlreadyPresent++
+            existingExpenseByKey[key]?.let { here -> giveBackShares(here, e) }
             return@forEach
         }
         val id = nextExpenseId++
@@ -271,7 +312,7 @@ private fun planMerge(
         val expenseId = expenseIdMap[s.expenseId] ?: return@mapNotNull null
         val personId = personIdMap[s.personId] ?: return@mapNotNull null
         ExpenseShare(expenseId, personId, s.shareMinor)
-    }
+    } + returnedShares
 
     // Keyed by payload id, which is the point of that table: a link applied before the backup must
     // stay applied after the restore, or tapping it again would land its entries twice.
@@ -297,6 +338,8 @@ private fun planMerge(
         groupMembers = newMembers,
         expenses = newExpenses,
         expenseShares = newShares,
+        sharesHandedBack = sharesHandedBack,
+        sharesTakenBack = sharesTakenBack,
         appliedPayloads = newPayloads,
         retiredUids = newRetired,
         photos = photos,

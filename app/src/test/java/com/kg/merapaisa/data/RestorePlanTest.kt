@@ -39,7 +39,9 @@ class RestorePlanTest {
         groups = groups + plan.groups,
         groupMembers = groupMembers + plan.groupMembers,
         expenses = expenses + plan.expenses,
-        expenseShares = expenseShares + plan.expenseShares,
+        expenseShares = expenseShares
+            .filterNot { s -> (plan.sharesHandedBack + plan.sharesTakenBack).any { it.expenseId == s.expenseId && it.personId == s.personId } } +
+            plan.sharesHandedBack + plan.expenseShares,
         appliedPayloads = appliedPayloads + plan.appliedPayloads,
         retiredUids = retiredUids + plan.retiredUids
     )
@@ -560,6 +562,18 @@ class RestorePlanTest {
         )
     }
 
+    /** Each member's position in [groupId]: what they paid, less their shares. */
+    private fun BackupSnapshot.positions(groupId: Long): Map<String, Long> {
+        val inGroup = expenses.filter { it.groupId == groupId }
+        val ids = inGroup.map { it.id }.toSet()
+        val name = persons.associate { it.id to it.name }
+        return groupMembers.filter { it.groupId == groupId }.associate { m ->
+            name.getValue(m.personId) to
+                inGroup.filter { it.paidByPersonId == m.personId }.sumOf { it.amountMinor } -
+                expenseShares.filter { it.expenseId in ids && it.personId == m.personId }.sumOf { it.shareMinor }
+        }
+    }
+
     @Test
     fun `merging back one of two people of one name, deleted since, restores her and leaves the other alone`() {
         val ledger = emptyLedger().plus(merge(emptyLedger(), backupWithTwoAshas()))
@@ -572,5 +586,43 @@ class RestorePlanTest {
         assertEquals("only the deleted Asha comes back", 1, plan.persons.count { it.name == "Asha" })
         assertEquals("her one entry, and nothing of the other's again", 1, plan.transactions.size)
         assertEquals(listOf(-7_000L, 20_000L), afterDelete.plus(plan).balances())
+    }
+
+    /**
+     * You paid a ₹200 dinner shared with Asha, she paid a ₹100 taxi shared with you: she owes you
+     * ₹50. Deleting her hands her dinner share to you and takes the taxi with her. Merging the
+     * backup back must bring both halves of her group history, not only the taxi.
+     */
+    private fun backupWithAshaInAGroup() = snapshot(
+        persons = listOf(
+            Person(id = 10, name = "You", isSelf = true, sortOrder = -1),
+            Person(id = 11, name = "Asha", currency = "INR")
+        ),
+        groups = listOf(Group(id = 20, name = "Goa", currency = "INR", createdAt = 500)),
+        groupMembers = listOf(GroupMember(20, 10), GroupMember(20, 11)),
+        expenses = listOf(
+            Expense(id = 30, groupId = 20, description = "Dinner", amountMinor = 20_000, paidByPersonId = 10, timestamp = 600),
+            Expense(id = 31, groupId = 20, description = "Taxi", amountMinor = 10_000, paidByPersonId = 11, timestamp = 700)
+        ),
+        expenseShares = listOf(
+            ExpenseShare(30, 10, 10_000), ExpenseShare(30, 11, 10_000),
+            ExpenseShare(31, 10, 5_000), ExpenseShare(31, 11, 5_000)
+        )
+    )
+
+    @Test
+    fun `merging back a deleted member restores her share of what others paid`() {
+        val ledger = emptyLedger().plus(merge(emptyLedger(), backupWithAshaInAGroup()))
+        val goa = ledger.groups.single().id
+        assertEquals(mapOf("You" to 5_000L, "Asha" to -5_000L), ledger.positions(goa))
+        val asha = ledger.persons.single { it.name == "Asha" }.id
+        val afterDelete = ledger.deleting(asha)
+
+        val restored = afterDelete.plus(merge(afterDelete, backupWithAshaInAGroup()))
+
+        assertEquals(mapOf("You" to 5_000L, "Asha" to -5_000L), restored.positions(goa))
+        assertEquals("both expenses there once each", 2, restored.expenses.size)
+        val again = merge(restored, backupWithAshaInAGroup())
+        assertTrue("a second identical restore must be a no-op, got ${again.inserts}", again.changesNothing)
     }
 }

@@ -128,6 +128,8 @@ class BackupRepository(
         if (plan.groupMembers.isNotEmpty()) groupDao.addMembers(plan.groupMembers)
         if (plan.expenses.isNotEmpty()) groupDao.insertExpenses(plan.expenses)
         if (plan.expenseShares.isNotEmpty()) groupDao.insertShares(plan.expenseShares)
+        plan.sharesHandedBack.forEach { personDao.putShare(it) }
+        plan.sharesTakenBack.forEach { groupDao.deleteShare(it.expenseId, it.personId) }
         if (plan.appliedPayloads.isNotEmpty()) personDao.insertAppliedPayloads(plan.appliedPayloads)
         if (plan.retiredUids.isNotEmpty()) personDao.insertRetiredUids(plan.retiredUids)
     }

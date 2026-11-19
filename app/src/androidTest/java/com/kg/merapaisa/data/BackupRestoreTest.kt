@@ -219,6 +219,34 @@ class BackupRestoreTest {
         assertEquals(before + 1_000, personDao.getBalanceNow(asha))
     }
 
+    /**
+     * Deleting Asha hands her share of your dinner to you and takes her taxi with her. Merging the
+     * backup back must bring both halves of her group history: she owes you ₹50 again, not you her.
+     */
+    @Test
+    fun mergingBackADeletedMemberRestoresHerGroupPosition() = runBlocking {
+        val selfId = personDao.ensureSelf().id
+        val asha = personDao.insertPerson(Person(name = "Asha", currency = "INR", sortOrder = 0))
+        val groupId = groups.createGroup("Goa", "INR", listOf(selfId, asha))
+        groups.addExpense(groupId, "Dinner", 20_000, selfId, listOf(selfId, asha))
+        groups.addExpense(groupId, "Taxi", 10_000, asha, listOf(selfId, asha))
+        val json = backups.exportJson(1, "3.7.0")
+
+        people.deletePerson(personDao.getPersonNow(asha)!!)
+        val decoded = decodeBackup(json) as BackupResult.Ok
+        backups.apply(backups.plan(decoded.snapshot, RestoreMode.Merge))
+
+        val back = personDao.getAllPersonsForBackup().single { it.name == "Asha" }.id
+        val positions = groupDao.paidByMember(groupId).associate { it.personId to it.amountMinor }
+            .let { paid ->
+                groupDao.owedByMember(groupId).associate { it.personId to (paid[it.personId] ?: 0L) - it.amountMinor }
+            }
+        assertEquals(mapOf(selfId to 5_000L, back to -5_000L), positions)
+
+        val again = backups.plan(decoded.snapshot, RestoreMode.Merge)
+        assertTrue("a second Merge changes nothing", again.changesNothing)
+    }
+
     // -----------------------------------------------------------------------------------------
     // CSV
     // -----------------------------------------------------------------------------------------

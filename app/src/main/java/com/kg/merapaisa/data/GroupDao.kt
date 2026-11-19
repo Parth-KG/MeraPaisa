@@ -221,6 +221,10 @@ interface GroupDao {
     @Query("DELETE FROM expense_shares WHERE expenseId = :expenseId")
     suspend fun deleteSharesFor(expenseId: Long)
 
+    /** One member's share of one expense, for a Merge giving a share back to someone restored. */
+    @Query("DELETE FROM expense_shares WHERE expenseId = :expenseId AND personId = :personId")
+    suspend fun deleteShare(expenseId: Long, personId: Long)
+
     @Query("SELECT * FROM expenses WHERE id = :expenseId")
     suspend fun expenseNow(expenseId: Long): Expense?
 
