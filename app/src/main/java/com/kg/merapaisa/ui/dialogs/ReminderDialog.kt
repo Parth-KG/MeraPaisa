@@ -192,7 +192,14 @@ fun ReminderSheet(
                         }
                     }
                     sheetState.hide()
-                }.invokeOnCompletion {
+                }.invokeOnCompletion { cause ->
+                    // Cut short (the sheet closed, or the screen turned, while the picture was
+                    // drawn): nothing is shared. Sharing anyway opened the chooser after Back,
+                    // and without the QR the switch had asked for.
+                    if (cause != null) {
+                        sending = false
+                        return@invokeOnCompletion
+                    }
                     // Without the picture (it could not be written), the UPI line goes too, so
                     // the message never points at a QR that isn't there.
                     val shared = picture
