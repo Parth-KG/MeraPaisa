@@ -220,8 +220,12 @@ private fun planMerge(
             val content = entryKey(it.timestamp, it.amountMinor, it.note)
             if (it.uid in minted) setOf(content) else setOf(content, uidKey(it.uid))
         })
+    // Not someone whose entries are here on a person kept in another currency now: they are that
+    // person, so the old entries are counted already, and pairing her by name with someone else of
+    // her old currency (a new "Asha" added for rupees after the first moved to dollars) put them on
+    // the wrong person a second time, and the preview did not name her.
     incoming.persons
-        .filter { !it.isSelf && it.id !in matchOf }
+        .filter { !it.isSelf && it.id !in matchOf && it.id !in inOtherCurrency }
         .groupBy { personKey(it.name, it.currency) }
         .forEach { (key, people) ->
             matchOf.putAll(pairSameNamed(people, existingByKey[key].orEmpty(), incomingEntries, existingEntries))

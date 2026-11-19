@@ -133,6 +133,18 @@ class MergeByUidTest {
     }
 
     @Test
+    fun `moved to another currency, with a new person of her old name and currency here, she still comes back as a second person`() {
+        val here = snap(
+            listOf(Person(id = 2, name = "Asha", currency = "USD"), Person(id = 3, name = "Asha", currency = "INR")),
+            listOf(t(1, 2, 2_40, 1_000, "a1", "Dinner"), t(2, 2, 3_60, 2_000, "a2", "Cab"), t(3, 3, 50_00, 30_000, "z1", "Lunch"))
+        )
+        val plan = merge(here, backup())
+        assertTrue("nothing lands on the rupee Asha", plan.transactions.none { it.personId == 3L })
+        assertEquals(listOf("Asha"), plan.persons.map { it.name })
+        assertEquals(listOf("Asha"), plan.secondPeople)
+    }
+
+    @Test
     fun `an entry the other phone holds with the sign turned is not taken as hers`() {
         // An update link puts the same uid on both phones, opposite ways round. A backup from the
         // other phone does not make its "You" into the person here.
