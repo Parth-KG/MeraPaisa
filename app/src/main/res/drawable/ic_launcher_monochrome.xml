@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The launcher icon's mark in one colour, for Android 13's themed icons (v3.7.1). The launcher
+  tints it and uses only its shape, so it has to be the mark alone: the colour foreground carries
+  its own dark tile, and a themed icon drawn from it was a blank rounded square.
+
+  The rupee sign between the two people, as in the colour icon, scaled into the 66dp circle a
+  themed icon may show.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.82"
+        android:scaleY="0.82">
+        <path
+            android:pathData="M44.5,37.5 H65.5 M44.5,46.5 H65.5 M51,37.5 C60.5,37.5 61,56 51,56 H46 L61.5,72"
+            android:strokeWidth="5.2"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M22.5,49 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z M73.5,49 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M20,70 C19,61 23.5,57 29,57 C34.5,57 37,61.5 39,65 C40.5,67.5 42.5,67.5 44,68 C46.5,69 45.5,73.5 43,73.5 H25 C22,73.5 20.2,72.5 20,70 Z M88,70 C89,61 84.5,57 79,57 C73.5,57 71,61.5 69,65 C67.5,67.5 65.5,67.5 64,68 C61.5,69 62.5,73.5 65,73.5 H83 C86,73.5 87.8,72.5 88,70 Z" />
+    </group>
+</vector>

@@ -1,6 +1,10 @@
 package com.kg.merapaisa.ui.gallery
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -528,7 +532,41 @@ fun LockedCase() = LockedScreen(onUnlock = {})
  * The gallery's running order. The harness renders each of these in every theme, so this list is
  * the single place that decides what gets reviewed.
  */
+/**
+ * The launcher icon's one-colour layer (v3.7.1), as a themed icon draws it: the mark in the theme's
+ * ink on a tinted circle, at a launcher's size and larger. Not on the launcher itself, where the
+ * release app sits beside the debug one.
+ */
+@Composable
+fun ThemedIconCase() {
+    val theme = LocalAppTheme.current
+    androidx.compose.foundation.layout.Row(
+        modifier = Modifier.fillMaxWidth().background(theme.background)
+            .padding(com.kg.merapaisa.ui.theme.Spacing.lg),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(com.kg.merapaisa.ui.theme.Spacing.lg),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    ) {
+        listOf(48, 96, 192).forEach { size ->
+            Box(
+                modifier = Modifier
+                    .size(size.dp)
+                    .background(theme.highlight, androidx.compose.foundation.shape.CircleShape),
+                contentAlignment = androidx.compose.ui.Alignment.Center
+            ) {
+                androidx.compose.material3.Icon(
+                    painter = androidx.compose.ui.res.painterResource(com.kg.merapaisa.R.drawable.ic_launcher_monochrome),
+                    contentDescription = null,
+                    tint = theme.primary,
+                    // The layer is 108dp with the icon's 72dp in its middle, as an adaptive icon is.
+                    modifier = Modifier.requiredSize((size * 1.5f).dp)
+                )
+            }
+        }
+    }
+}
+
 val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
+    "icon-themed" to { ThemedIconCase() },
     "people-rows" to { PeopleRowsCase() },
     "people-rows-whole" to { PeopleRowsWholeCase() },
     "people-list-long" to { PeopleListLongCase() },
