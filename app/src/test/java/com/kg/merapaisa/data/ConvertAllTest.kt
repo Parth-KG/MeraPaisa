@@ -128,4 +128,40 @@ class ConvertAllTest {
         sumsMatch(many, 0.0121)
         sumsMatch(many, 87.61)
     }
+
+
+    // ---------------------------------------------------------------------------------------
+    // A residue bigger than the largest entry
+    // ---------------------------------------------------------------------------------------
+
+    /**
+     * Ten ₹1.25 entries at 0.012 each round to 2 cents, 20 in all, while the ₹12.50 they add up to
+     * is 15 cents. Giving all of the 5 cents' residue to one entry made it −3: an entry that ran
+     * one way now ran the other.
+     */
+    @Test
+    fun `a residue never turns an entry the other way`() {
+        val out = convertAll(List(10) { 125L }, 0.012)
+        assertEquals(15L, out.sum())
+        assertTrue("every entry still runs the way it did, got $out", out.all { it > 0 })
+    }
+
+    @Test
+    fun `a residue never turns an entry the other way when you owe`() {
+        val out = convertAll(List(10) { -125L }, 0.012)
+        assertEquals(-15L, out.sum())
+        assertTrue("every entry still runs the way it did, got $out", out.all { it < 0 })
+    }
+
+    @Test
+    fun `a spread residue leaves each entry within a unit of its exact value`() {
+        val amounts = List(8) { 50L } + listOf(37L, 61L)
+        val rate = 0.01
+        val out = convertAll(amounts, rate)
+        assertEquals(Math.round(amounts.sum() * rate), out.sum())
+        amounts.indices.forEach { i ->
+            assertTrue("entry $i: ${out[i]} against ${amounts[i] * rate}", Math.abs(out[i] - amounts[i] * rate) < 1.0)
+            assertTrue("entry $i turned the other way", out[i] >= 0)
+        }
+    }
 }

@@ -238,7 +238,21 @@ fun convertAll(amounts: List<Long>, rate: Double): List<Long> {
         for (i in converted.indices) {
             if (Math.abs(converted[i]) > Math.abs(converted[pick])) pick = i
         }
-        converted[pick] += residue
+        val absorbed = converted[pick] + residue
+        if (absorbed != 0L && (absorbed > 0) == (converted[pick] > 0)) {
+            converted[pick] = absorbed
+        } else {
+            // Many small entries can leave a residue bigger than the largest of them, and adding
+            // it there turned that entry the other way: a "you paid for them" became "they paid
+            // for you". Then a unit goes to each of the entries rounding moved furthest from
+            // their exact value instead, so no entry ends more than a unit from it.
+            val step = if (residue > 0) 1L else -1L
+            val error = amounts.indices.map { converted[it] - amounts[it] * rate }
+            val order = amounts.indices.sortedWith(
+                if (residue > 0) compareBy<Int> { error[it] } else compareByDescending<Int> { error[it] }
+            )
+            order.take(Math.abs(residue).toInt()).forEach { converted[it] += step }
+        }
     }
     return converted
 }
