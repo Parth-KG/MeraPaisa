@@ -219,8 +219,17 @@ private fun planMerge(
         }
     }
 
+    // A payment also names who it went to, which lives only in its share. Moving your part of a
+    // group to your ledger writes one payment per person at the same moment, so two people you owe
+    // the same amount give two payments that differ only there; without it the second was taken
+    // for the first and skipped, and that debt came back in the group beside its ledger entry.
+    val existingPayees = existing.expenseShares.groupBy({ it.expenseId }, { it.personId })
+    val incomingPayees = incoming.expenseShares.groupBy({ it.expenseId }, { personIdMap[it.personId] })
+    fun payeesOf(e: Expense, payees: Map<Long, List<Long?>>): String =
+        if (!e.isSettlement) "" else "\u0000to " + payees[e.id].orEmpty().map { it ?: -1L }.sorted().joinToString(",")
+
     val existingExpenseKeys = existing.expenses
-        .map { expenseKey(it.groupId, it.description, it.amountMinor, it.paidByPersonId, it.timestamp) }
+        .map { expenseKey(it.groupId, it.description, it.amountMinor, it.paidByPersonId, it.timestamp) + payeesOf(it, existingPayees) }
         .toHashSet()
 
     val expenseIdMap = HashMap<Long, Long>()
@@ -230,7 +239,7 @@ private fun planMerge(
     incoming.expenses.forEach { e ->
         val groupId = groupIdMap[e.groupId] ?: return@forEach
         val paidBy = personIdMap[e.paidByPersonId] ?: return@forEach
-        val key = expenseKey(groupId, e.description, e.amountMinor, paidBy, e.timestamp)
+        val key = expenseKey(groupId, e.description, e.amountMinor, paidBy, e.timestamp) + payeesOf(e, incomingPayees)
         if (!existingExpenseKeys.add(key)) {
             expensesAlreadyPresent++
             return@forEach

@@ -418,4 +418,69 @@ class RestorePlanTest {
         assertEquals(emptyMap<Long, String>(), planRestore(emptyLedger(), backup(), RestoreMode.Merge, SELF_ID).photos)
         assertEquals(emptyMap<Long, String>(), planRestore(emptyLedger(), backup(), RestoreMode.Replace, SELF_ID).photos)
     }
+
+
+    // -----------------------------------------------------------------------------------------
+    // Payments written by moving your part of a group to your ledger (v3.7.0)
+    // -----------------------------------------------------------------------------------------
+
+    /**
+     * You owed Asha and Ravi ₹100 each and moved both to your ledger: two payments by you, at the
+     * same moment, for the same amount, told apart only by who each went to.
+     */
+    private fun backupWithTwoMovedPayments() = snapshot(
+        persons = listOf(
+            Person(id = 10, name = "You", isSelf = true, sortOrder = -1),
+            Person(id = 11, name = "Asha", currency = "INR"),
+            Person(id = 12, name = "Ravi", currency = "INR")
+        ),
+        transactions = listOf(
+            Transaction(id = 1, personId = 11, amountMinor = -10_000, timestamp = 9_000, note = "From Goa"),
+            Transaction(id = 2, personId = 12, amountMinor = -10_000, timestamp = 9_000, note = "From Goa")
+        ),
+        groups = listOf(Group(id = 20, name = "Goa", currency = "INR", createdAt = 500)),
+        groupMembers = listOf(GroupMember(20, 10), GroupMember(20, 11), GroupMember(20, 12)),
+        expenses = listOf(
+            Expense(id = 30, groupId = 20, description = "Cab", amountMinor = 20_000, paidByPersonId = 11, timestamp = 600),
+            Expense(id = 33, groupId = 20, description = "Boat", amountMinor = 20_000, paidByPersonId = 12, timestamp = 700),
+            Expense(id = 31, groupId = 20, description = MOVED_TO_LEDGER, amountMinor = 10_000, paidByPersonId = 10, timestamp = 9_000, isSettlement = true),
+            Expense(id = 32, groupId = 20, description = MOVED_TO_LEDGER, amountMinor = 10_000, paidByPersonId = 10, timestamp = 9_000, isSettlement = true)
+        ),
+        expenseShares = listOf(
+            ExpenseShare(30, 10, 10_000), ExpenseShare(30, 11, 10_000),
+            ExpenseShare(33, 10, 10_000), ExpenseShare(33, 12, 10_000),
+            ExpenseShare(31, 11, 10_000),
+            ExpenseShare(32, 12, 10_000)
+        )
+    )
+
+    @Test
+    fun `two moved payments that differ only in who they went to both come back`() {
+        val plan = merge(emptyLedger(), backupWithTwoMovedPayments())
+
+        assertEquals(4, plan.expenses.size)
+        assertEquals(6, plan.expenseShares.size)
+        assertEquals(0, plan.alreadyPresent.expenses)
+    }
+
+    @Test
+    fun `after a merge your part of the group is still even, as it was when moved`() {
+        val after = emptyLedger().plus(merge(emptyLedger(), backupWithTwoMovedPayments()))
+        val goa = after.groups.single()
+        val ravi = after.persons.single { it.name == "Ravi" }
+        val pairs = pairsWithYou(after.expenses.filter { it.groupId == goa.id }, after.expenseShares, SELF_ID)
+
+        assertTrue("nothing left between you and anyone in the group, got $pairs", pairs.isEmpty())
+        assertEquals("Ravi's debt lives in the ledger only", -10_000L,
+            after.transactions.filter { it.personId == ravi.id }.sumOf { it.amountMinor })
+    }
+
+    @Test
+    fun `merging moved payments twice changes nothing the second time`() {
+        val after = emptyLedger().plus(merge(emptyLedger(), backupWithTwoMovedPayments()))
+        val second = merge(after, backupWithTwoMovedPayments())
+
+        assertTrue("a second identical restore must be a no-op, got ${second.inserts}", second.changesNothing)
+        assertEquals(4, second.alreadyPresent.expenses)
+    }
 }
