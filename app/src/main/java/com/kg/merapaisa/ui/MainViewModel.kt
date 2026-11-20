@@ -950,7 +950,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 backup = BackupFlowState.Menu(
-                    folderName = folder?.let(::folderLabel),
+                    folderName = folder?.let(::backupFolderLabel),
                     lastRun = lastRun,
                     lastResult = lastResult
                 )
@@ -1191,10 +1191,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** The tail of a tree uri is the closest thing to a folder name SAF will give us. */
-    private fun folderLabel(uri: String): String =
-        uri.substringAfterLast("%2F").substringAfterLast("/").ifBlank { "the folder you chose" }
-
     // =========================================================================================
     // In-app updates
     // =========================================================================================
@@ -1421,3 +1417,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 }
 
 private const val RATE_REUSE_MS = 10 * 60 * 1000L
+
+/** The tail of a tree uri is the closest thing to a folder name SAF will give us. */
+internal fun backupFolderLabel(uri: String): String =
+    uri.substringAfterLast("%2F").substringAfterLast("/").ifBlank { "the folder you chose" }

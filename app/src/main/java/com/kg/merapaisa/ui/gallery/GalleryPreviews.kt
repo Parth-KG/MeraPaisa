@@ -610,8 +610,36 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "update-available" to { UpdateAvailableCase() },
     "update-downloading" to { UpdateDownloadingCase() },
     "update-installer-failed" to { UpdateInstallerFailedCase() },
-    "locked" to { LockedCase() }
+    "locked" to { LockedCase() },
+    "walkthrough-1-welcome" to { WalkthroughCase(0) },
+    "walkthrough-2-balances" to { WalkthroughCase(1) },
+    "walkthrough-2-balances-end" to { WalkthroughCase(1, end = true) },
+    "walkthrough-3-keypad" to { WalkthroughCase(2) },
+    "walkthrough-3-keypad-end" to { WalkthroughCase(2, end = true) },
+    "walkthrough-4-person" to { WalkthroughCase(3) },
+    "walkthrough-4-person-end" to { WalkthroughCase(3, end = true) },
+    "walkthrough-5-split" to { WalkthroughCase(4) },
+    "walkthrough-5-split-end" to { WalkthroughCase(4, end = true) },
+    "walkthrough-6-groups" to { WalkthroughCase(5) },
+    "walkthrough-6-groups-end" to { WalkthroughCase(5, end = true) }
 )
+
+/**
+ * One page of the walkthrough, as a first run shows it. [end] scrolls a tall page to its foot, so
+ * the callouts under the picture are photographed too. Keyed, so moving from one page's case to
+ * the next starts a fresh pager rather than keeping the last one's page.
+ */
+@Composable
+fun WalkthroughCase(page: Int, end: Boolean = false) {
+    androidx.compose.runtime.key(page, end) {
+        com.kg.merapaisa.ui.walkthrough.WalkthroughScreen(
+            finishLabel = "Start",
+            onFinish = {},
+            initialPage = page,
+            scrolledToEnd = end
+        )
+    }
+}
 
 // -- sheets and dialogs -----------------------------------------------------------------------
 

@@ -270,7 +270,7 @@ internal fun SplitStepHeading(title: String, supporting: String? = null) {
  * colour of money owed to you is a button pretending to be a balance.
  */
 @Composable
-internal fun SplitPrimaryButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+internal fun SplitPrimaryButton(label: String, enabled: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val theme = LocalAppTheme.current
     Button(
         onClick = onClick,
@@ -282,6 +282,7 @@ internal fun SplitPrimaryButton(label: String, enabled: Boolean, onClick: () -> 
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
             )
             .padding(horizontal = Spacing.lg, vertical = Spacing.md)
+            .then(modifier)
             .heightIn(min = 56.dp),
         // Disabled, it looks like every other button that can't be pressed yet. It was the
         // highlight under grey text, which since grey text reached 7:1 read as a button you could.

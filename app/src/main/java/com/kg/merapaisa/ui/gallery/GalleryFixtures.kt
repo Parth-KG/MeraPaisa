@@ -35,8 +35,9 @@ import com.kg.merapaisa.ui.UpdateFlowState
  * only that the happy path fits: it is the twelve lakh figure, the sixty character note and the
  * three currencies sitting in one column that show whether the design actually holds.
  *
- * Nothing here is used by the app itself. R8 drops it from the release build because no release
- * code path reaches it.
+ * The app itself uses only Asha, Bilal and the group's name, for the walkthrough's sample ledger
+ * (`ui/walkthrough/WalkthroughSamples.kt`). R8 keeps those and drops the rest from the release
+ * build, because no other release code path reaches it.
  */
 object Fixtures {
 

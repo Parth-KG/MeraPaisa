@@ -73,7 +73,7 @@ class DesignGalleryTest {
             "split-adjustments", "split-adjustments-locked", "history", "settings",
             "import-confirm", "import-held-back", "split-amount", "settings-upi", "groups-archived", "groups-all-archived", "group-detail-moved",
             "group-detail-even-pairs", "backup-review-merge"
-        )
+        ) + GalleryCases.map { it.first }.filter { it.startsWith("walkthrough-") }
     )
 
     private fun capture(fontScale: Float, label: String, only: Set<String>? = null) {

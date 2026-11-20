@@ -160,7 +160,7 @@ fun NumPad(
         }
 
         Row(
-            modifier = Modifier.height(IntrinsicSize.Min).tourTarget(TourId.KeypadDirection),
+            modifier = Modifier.height(IntrinsicSize.Min),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             DirectionButton(
@@ -169,7 +169,7 @@ fun NumPad(
                 ink = theme.textPrimary,
                 enabled = amountIsUsable,
                 onClick = onAdd,
-                modifier = Modifier.weight(1f).fillMaxHeight()
+                modifier = Modifier.weight(1f).fillMaxHeight().tourTarget(TourId.KeypadDirection)
             )
             DirectionButton(
                 label = "They paid for you",
