@@ -145,6 +145,24 @@ class MergeByUidTest {
     }
 
     @Test
+    fun `moved to another currency, with a copy of her old self from a CSV here, nothing comes back a third time`() {
+        // A CSV made before the move, restored after it, put her old entries on a rupee Asha with
+        // new uids. Then the backup: its Asha is that copy, not a third person.
+        val here = snap(
+            listOf(Person(id = 2, name = "Asha", currency = "USD"), Person(id = 3, name = "Asha", currency = "INR")),
+            listOf(
+                t(1, 2, 2_40, 1_000, "a1", "Dinner"), t(2, 2, 3_60, 2_000, "a2", "Cab"),
+                t(3, 3, 200_00, 1_000, "c1", "Dinner"), t(4, 3, 300_00, 2_000, "c2", "Cab")
+            ),
+            minted = emptySet()
+        )
+        val plan = merge(here, backup())
+        assertTrue("no third Asha", plan.persons.isEmpty())
+        assertTrue("her entries are on the copy already", plan.transactions.isEmpty())
+        assertTrue("nobody comes back as a second person", plan.secondPeople.isEmpty())
+    }
+
+    @Test
     fun `a group member moved to another currency keeps her place in the group, merged once or twice`() {
         // Goa, in rupees: a taxi Asha paid, split with you. She owes nothing, you owe her 50.
         val goa = Group(id = 5, name = "Goa", currency = "INR", createdAt = 100)

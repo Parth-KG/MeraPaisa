@@ -220,15 +220,17 @@ private fun planMerge(
             val content = entryKey(it.timestamp, it.amountMinor, it.note)
             if (it.uid in minted) setOf(content) else setOf(content, uidKey(it.uid))
         })
-    // Not someone whose entries are here on a person kept in another currency now: they are that
-    // person, so the old entries are counted already, and pairing her by name with someone else of
-    // her old currency (a new "Asha" added for rupees after the first moved to dollars) put them on
-    // the wrong person a second time, and the preview did not name her.
+    // Someone whose entries are here on a person kept in another currency now is that person, so
+    // her old entries are counted already. Pairing her by name alone with someone else of her old
+    // currency (a new "Asha" added for rupees after the first moved to dollars) put them on the
+    // wrong person a second time, and the preview did not name her. She is paired only with
+    // someone who holds the same entries: a copy of her old self, which a CSV restore makes with
+    // new uids. Leaving her out altogether added a third copy beside that one.
     incoming.persons
-        .filter { !it.isSelf && it.id !in matchOf && it.id !in inOtherCurrency }
+        .filter { !it.isSelf && it.id !in matchOf }
         .groupBy { personKey(it.name, it.currency) }
         .forEach { (key, people) ->
-            matchOf.putAll(pairSameNamed(people, existingByKey[key].orEmpty(), incomingEntries, existingEntries))
+            matchOf.putAll(pairSameNamed(people, existingByKey[key].orEmpty(), incomingEntries, existingEntries, inOtherCurrency))
         }
 
     incoming.persons.forEach { person ->
@@ -517,13 +519,15 @@ private fun planMerge(
 /**
  * Pairs the people of one name and currency in the file with those here. First by the entries
  * they share, most first, so someone deleted since the backup is not paired with the one who
- * stayed; then by the same id, as in a backup of this phone; then the rest in id order.
+ * stayed; then by the same id, as in a backup of this phone; then the rest in id order. People in
+ * [byEntriesOnly] are paired by their entries or not at all.
  */
 private fun pairSameNamed(
     incoming: List<Person>,
     here: List<Person>,
     incomingEntries: Map<Long, List<Set<String>>>,
-    hereEntries: Map<Long, Set<String>>
+    hereEntries: Map<Long, Set<String>>,
+    byEntriesOnly: Set<Long>
 ): Map<Long, Person> {
     val pairs = HashMap<Long, Person>()
     val taken = HashSet<Long>()
@@ -543,8 +547,9 @@ private fun pairSameNamed(
                 .thenBy { it.second.id }
         )
         .forEach { (i, h, _) -> pair(i, h) }
-    incoming.forEach { i -> here.firstOrNull { it.id == i.id }?.let { h -> pair(i, h) } }
-    incoming.filter { it.id !in pairs }.sortedBy { it.id }
+    val byName = incoming.filter { it.id !in byEntriesOnly }
+    byName.forEach { i -> here.firstOrNull { it.id == i.id }?.let { h -> pair(i, h) } }
+    byName.filter { it.id !in pairs }.sortedBy { it.id }
         .zip(here.filter { it.id !in taken }.sortedBy { it.id })
         .forEach { (i, h) -> pair(i, h) }
     return pairs
