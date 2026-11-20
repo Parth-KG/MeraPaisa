@@ -665,6 +665,20 @@ fun WalkthroughCase(page: Int, end: Boolean = false, replay: Boolean = false) {
  * dialog, over the scrim, over the themed background.
  */
 val GalleryWindowCases: List<Pair<String, @Composable () -> Unit>> = listOf(
+    "sheet-whats-new" to {
+        com.kg.merapaisa.ui.whatsnew.WhatsNewSheet(
+            whatsNew = com.kg.merapaisa.ui.whatsnew.whatsNewSince(lastSeen = 24)!!,
+            onClose = {},
+            onShowWalkthrough = {}
+        )
+    },
+    "sheet-whats-new-skipped" to {
+        com.kg.merapaisa.ui.whatsnew.WhatsNewSheet(
+            whatsNew = com.kg.merapaisa.ui.whatsnew.whatsNewSince(lastSeen = 24, releases = Fixtures.skippedReleases)!!,
+            onClose = {},
+            onShowWalkthrough = {}
+        )
+    },
     "sheet-add-person" to { AddPersonDialog(onDismiss = {}, onAdd = { _, _, _, _, _ -> }) },
     "sheet-edit-person" to {
         EditPersonDialog(

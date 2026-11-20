@@ -160,6 +160,32 @@ object Fixtures {
         )
     )
 
+    // -- what's new -----------------------------------------------------------------------
+
+    /**
+     * Three releases skipped at once, the newest with three lines, so the sheet has to choose four
+     * and the longest line has to wrap at double type. Made up: no such versions exist yet.
+     */
+    val skippedReleases = listOf(
+        com.kg.merapaisa.ui.whatsnew.ReleaseLines(
+            25, "3.8.0",
+            listOf(
+                "Settings has a new row, How Mera Paisa works: a short tour of the app, with arrows " +
+                    "on its real screens.",
+                "After an update, this sheet says what's changed, once."
+            )
+        ),
+        com.kg.merapaisa.ui.whatsnew.ReleaseLines(26, "3.9.0", emptyList()),
+        com.kg.merapaisa.ui.whatsnew.ReleaseLines(
+            27, "3.10.0",
+            listOf(
+                "A person's history can be searched by note, so an old dinner is easy to find again.",
+                "Groups show what each member spent in all.",
+                "Reminders can go at a time you pick."
+            )
+        )
+    )
+
     // -- history ---------------------------------------------------------------------------
 
     private const val HOUR = 60 * 60 * 1000L
