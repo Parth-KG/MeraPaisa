@@ -3,6 +3,7 @@ package com.kg.merapaisa.ui.walkthrough
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -80,6 +81,25 @@ class WalkthroughTest {
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()
         assertEquals(1, finished)
+    }
+
+    @Test
+    fun turningThePhoneKeepsThePage() {
+        val theme = themes.first()
+        val restore = StateRestorationTester(compose)
+        restore.setContent {
+            MeraPaisaTheme(theme) {
+                CompositionLocalProvider(LocalAppTheme provides theme) {
+                    WalkthroughScreen(finishLabel = "Start", onFinish = { finished++ })
+                }
+            }
+        }
+        compose.onNodeWithText("Next").performClick()
+        compose.onNodeWithText("Next").performClick()
+        onPage(3)
+        restore.emulateSavedInstanceStateRestore()
+        onPage(3)
+        compose.onNodeWithText("Recording an entry").assertIsDisplayed()
     }
 
     @Test
