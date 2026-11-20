@@ -193,6 +193,9 @@ class PersonRepository(
     /** The row that is you, created on first use. Its name is what a share link says it is from. */
     suspend fun self(): Person = dao.ensureSelf()
 
+    /** True once anyone but you is in the ledger. */
+    suspend fun hasAnyoneButYou(): Boolean = dao.countOthers() > 0
+
     /**
      * Renames the self row.
      *

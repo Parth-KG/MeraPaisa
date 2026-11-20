@@ -163,6 +163,10 @@ interface GroupDao {
     @Query("SELECT COUNT(*) FROM expenses WHERE paidByPersonId = :personId")
     fun expenseCountPaidBy(personId: Long): Flow<Int>
 
+    /** Every group, archived ones too. */
+    @Query("SELECT COUNT(*) FROM expense_groups")
+    suspend fun countGroups(): Int
+
     /**
      * Expenses this person has a share of but did not pay for.
      *

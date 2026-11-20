@@ -34,6 +34,9 @@ class GroupRepository(
 
     suspend fun self(): Person = personDao.ensureSelf()
 
+    /** True once any group exists, archived or not. */
+    suspend fun hasAnyGroup(): Boolean = groupDao.countGroups() > 0
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     fun groupSummaries(): Flow<List<GroupSummary>> =
         selfIds().flatMapLatest { groupDao.getGroupSummaries(it) }

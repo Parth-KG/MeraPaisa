@@ -84,6 +84,10 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewModelScope
 import com.kg.merapaisa.widget.WidgetLedgerNotifier
+import com.kg.merapaisa.BackupStore
+import com.kg.merapaisa.ui.walkthrough.WalkthroughScreen
+import com.kg.merapaisa.ui.walkthrough.WalkthroughSetUp
+import com.kg.merapaisa.ui.whatsnew.WhatsNewSheet
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
@@ -178,6 +182,21 @@ fun MainScreen(viewModel: MainViewModel) {
     val pendingGroupDelete = (groups + archivedGroups).find { it.group.id == ui.pendingGroupDeleteId }
     val pendingReminder = persons.find { it.id == ui.pendingReminderId }
 
+    // The folder weekly backups go to: chosen from Backup and restore, or the walkthrough's last page.
+    val pickFolderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            // Without taking the permission persistably, the weekly job loses access to the folder
+            // the moment this process dies, which is exactly when it needs it.
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        }
+        viewModel.setBackupFolder(uri?.toString())
+    }
+
     // Turning the app lock on or off, asked first. Settings and the walkthrough's last page share it.
     val changeLock: (Boolean) -> Unit = { enabled ->
         changeAppLock(
@@ -213,7 +232,8 @@ fun MainScreen(viewModel: MainViewModel) {
     // its scroll position survives, but TalkBack must not read or reach it: it was still offering
     // the tabs and Settings from behind a person's history.
     val covered = historyPerson != null || ui.showSettingsDialog || ui.openGroupId != null ||
-        ui.split != null || ui.backup != null || ui.import != null || ui.update != null
+        ui.split != null || ui.backup != null || ui.import != null || ui.update != null ||
+        ui.walkthrough != null
 
     Box(modifier = Modifier.fillMaxSize().background(theme.background)) {
         Column(
@@ -470,7 +490,8 @@ fun MainScreen(viewModel: MainViewModel) {
             val appLockEnabled by SecurityStore.isAppLockEnabled(context).collectAsState(initial = false)
             // Settings stays open under Backup, Update and Import, which are opened from it, and
             // TalkBack could still reach its controls from behind them, as it once could the ledger.
-            val settingsCovered = ui.backup != null || ui.import != null || ui.update != null
+            val settingsCovered = ui.backup != null || ui.import != null || ui.update != null ||
+                ui.walkthrough != null
             Box(Modifier.fillMaxSize().then(if (settingsCovered) Modifier.clearAndSetSemantics { } else Modifier)) {
             SettingsScreen(
                 people = activePersons,
@@ -489,6 +510,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 onAppLockChange = changeLock,
                 myUpiId = myUpiId,
                 onMyUpiId = { showOwnUpi = true },
+                onHowItWorks = { viewModel.openWalkthrough(WalkthroughOrigin.Settings) },
                 onDismiss = { viewModel.showSettingsDialog(false) },
                 // Settings stays open, now in the theme just chosen, so you see it at once on a
                 // screen you know and can try another without finding your way back.
@@ -503,6 +525,40 @@ fun MainScreen(viewModel: MainViewModel) {
             )
             }
         }
+    }
+    // The walkthrough: a first run, once unlocked, or again from Settings or What's new. A share
+    // link that brought someone here is read first, and the walkthrough follows it.
+    val walkthrough = ui.walkthrough
+    if (walkthrough != null && ui.import == null) {
+        val lockOn by SecurityStore.isAppLockEnabled(context).collectAsState(initial = false)
+        val folder by BackupStore.folderUri(context).collectAsState(initial = null)
+        WalkthroughScreen(
+            finishLabel = when (walkthrough) {
+                WalkthroughOrigin.FirstRun -> "Start"
+                WalkthroughOrigin.Settings -> "Back to Settings"
+                WalkthroughOrigin.WhatsNew -> "Back to your ledger"
+            },
+            onFinish = viewModel::closeWalkthrough,
+            setUp = {
+                WalkthroughSetUp(
+                    appLockEnabled = lockOn,
+                    appLockAvailable = remember { canAuthenticate(context) },
+                    onAppLockChange = changeLock,
+                    myUpiId = myUpiId,
+                    onMyUpiId = { showOwnUpi = true },
+                    backupFolder = folder?.let(::backupFolderLabel),
+                    onPickFolder = { pickFolderLauncher.launch(null) }
+                )
+            }
+        )
+    }
+    // What changed, the first time an update is opened. After a link being read, never over it.
+    ui.whatsNew?.takeIf { ui.import == null && ui.walkthrough == null }?.let { news ->
+        WhatsNewSheet(
+            whatsNew = news,
+            onClose = { viewModel.closeWhatsNew(showWalkthrough = false) },
+            onShowWalkthrough = { viewModel.closeWhatsNew(showWalkthrough = true) }
+        )
     }
     ui.payQrPersonId?.let { id ->
         val payer = persons.find { it.id == id }
@@ -889,24 +945,12 @@ fun MainScreen(viewModel: MainViewModel) {
         ActivityResultContracts.OpenDocument()
     ) { uri -> viewModel.readRestoreFrom(uri?.toString()) }
 
-    val pickFolderLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri != null) {
-            // Without taking the permission persistably, the weekly job loses access to the folder
-            // the moment this process dies, which is exactly when it needs it.
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            )
-        }
-        viewModel.setBackupFolder(uri?.toString())
-    }
 
-    // The quiet once-a-day check. Runs on first composition only, and stays silent unless there
-    // is genuinely a newer release. An app that interrupts you to say nothing has changed is
-    // worse than one that never looks.
-    LaunchedEffect(Unit) { viewModel.checkForUpdatesQuietly() }
+    // The quiet once-a-day check. Runs once per launch, and stays silent unless there is genuinely
+    // a newer release. An app that interrupts you to say nothing has changed is worse than one
+    // that never looks. It waits until the walkthrough or What's new has closed, so an offer to
+    // update never lands on top of either.
+    LaunchedEffect(ui.firstOpenDone) { if (ui.firstOpenDone) viewModel.checkForUpdatesQuietly() }
 
     ui.moveDebt?.let { move ->
         MoveDebtDialog(

@@ -55,8 +55,20 @@ data class MainUiState(
     /** Moving your part of the open group to your ledger: the confirm sheet, while it is open. */
     val moveToLedger: MoveFlowState? = null,
     /** The move just made, while its Undo is offered. */
-    val lastMove: com.kg.merapaisa.data.MoveReceipt? = null
+    val lastMove: com.kg.merapaisa.data.MoveReceipt? = null,
+    /** The walkthrough while it is open, and where it was opened from. */
+    val walkthrough: WalkthroughOrigin? = null,
+    /** "What's new" after an update, while it waits to be read. */
+    val whatsNew: com.kg.merapaisa.ui.whatsnew.WhatsNew? = null,
+    /**
+     * True once the first open has been decided and whatever it showed has closed. The daily
+     * update check waits for it, so an offer to update never lands on top of either.
+     */
+    val firstOpenDone: Boolean = false
 )
+
+/** Where the walkthrough was opened from, which decides the words on its last button. */
+enum class WalkthroughOrigin { FirstRun, WhatsNew, Settings }
 
 /** One person in the move's confirm sheet. */
 data class MoveLineState(

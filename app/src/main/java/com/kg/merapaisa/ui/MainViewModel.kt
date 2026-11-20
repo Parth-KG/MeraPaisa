@@ -22,6 +22,10 @@ import com.kg.merapaisa.AppPhotoStore
 import com.kg.merapaisa.UpiStore
 import com.kg.merapaisa.BackupStore
 import com.kg.merapaisa.BuildConfig
+import com.kg.merapaisa.FirstOpenStore
+import com.kg.merapaisa.ui.whatsnew.FirstOpen
+import com.kg.merapaisa.ui.whatsnew.firstOpen
+import com.kg.merapaisa.ui.whatsnew.seenAfter
 import com.kg.merapaisa.backup.AutoExportWorker
 import com.kg.merapaisa.backup.BackupWriter
 import com.kg.merapaisa.update.UpdateCheck
@@ -154,6 +158,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState = _uiState.asStateFlow()
+
+    // --- The first open: the walkthrough, or "What's new" (v3.8.0) ---
+
+    init {
+        // Decided once, as soon as the ledger is unlocked, which is when this ViewModel is made.
+        // Before a held share link can be confirmed, too, so someone who arrived by a link is still
+        // a first run: the link goes first, and the walkthrough once it is done.
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            val current = BuildConfig.VERSION_CODE
+            val lastSeen = FirstOpenStore.lastSeen(context)
+            val hasData = lastSeen == null && (repository.hasAnyoneButYou() || groupRepository.hasAnyGroup())
+            when (val open = firstOpen(lastSeen, hasData, current)) {
+                FirstOpen.Walkthrough -> _uiState.update { it.copy(walkthrough = WalkthroughOrigin.FirstRun) }
+                is FirstOpen.News -> _uiState.update { it.copy(whatsNew = open.whatsNew) }
+                FirstOpen.Nothing -> {
+                    FirstOpenStore.markSeen(context, seenAfter(open, current))
+                    _uiState.update { it.copy(firstOpenDone = true) }
+                }
+            }
+        }
+    }
+
+    /** "How Mera Paisa works" from Settings, or "Show me how it works" from What's new. */
+    fun openWalkthrough(origin: WalkthroughOrigin) = _uiState.update { it.copy(walkthrough = origin) }
+
+    /** Skip, Start, or Back from the first page. A first run is remembered as seen from here. */
+    fun closeWalkthrough() {
+        val origin = _uiState.value.walkthrough ?: return
+        _uiState.update { it.copy(walkthrough = null, firstOpenDone = true) }
+        if (origin == WalkthroughOrigin.FirstRun) {
+            viewModelScope.launch {
+                FirstOpenStore.markSeen(getApplication(), seenAfter(FirstOpen.Walkthrough, BuildConfig.VERSION_CODE))
+            }
+        }
+    }
+
+    /** What's new read, remembered as seen; [showWalkthrough] goes on to the walkthrough. */
+    fun closeWhatsNew(showWalkthrough: Boolean) {
+        val news = _uiState.value.whatsNew ?: return
+        _uiState.update {
+            it.copy(
+                whatsNew = null,
+                walkthrough = if (showWalkthrough) WalkthroughOrigin.WhatsNew else null,
+                firstOpenDone = !showWalkthrough
+            )
+        }
+        viewModelScope.launch {
+            FirstOpenStore.markSeen(getApplication(), seenAfter(FirstOpen.News(news), BuildConfig.VERSION_CODE))
+        }
+    }
 
     /** Set while a currency conversion is in flight, so the edit dialog can block its save. */
     private val _converting = MutableStateFlow(false)

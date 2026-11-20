@@ -74,7 +74,9 @@ fun SettingsScreen(
     onApply: (String) -> Unit,
     /** Your own UPI ID, or null when it is not set. */
     myUpiId: String? = null,
-    onMyUpiId: () -> Unit = {}
+    onMyUpiId: () -> Unit = {},
+    /** The walkthrough again (v3.8.0). */
+    onHowItWorks: () -> Unit = {}
 ) {
     val theme = LocalAppTheme.current
     // Turning the phone keeps the sheet open, and the sheet keeps the theme being tried.
@@ -184,6 +186,14 @@ fun SettingsScreen(
             }
 
             item { SectionHeading("This app") }
+            item {
+                ActionRow(
+                    title = "How Mera Paisa works",
+                    subtitle = "A short tour of the app, with arrows on its real screens.",
+                    onClick = onHowItWorks
+                )
+            }
+            item { RowDivider(TextRowInset) }
             item {
                 ActionRow(
                     title = "Check for updates",

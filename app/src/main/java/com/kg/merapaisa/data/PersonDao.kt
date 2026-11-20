@@ -114,6 +114,10 @@ interface PersonDao {
      * A transaction, because on first launch several readers ask at once and each would
      * otherwise find no row and insert its own.
      */
+    /** Everyone but you. Nobody else means a ledger nobody has used yet. */
+    @Query("SELECT COUNT(*) FROM persons WHERE isSelf = 0")
+    suspend fun countOthers(): Int
+
     @androidx.room.Transaction
     suspend fun ensureSelf(): Person {
         getSelf()?.let { return it }

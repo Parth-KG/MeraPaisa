@@ -50,6 +50,10 @@ data class WhatsNew(
  *
  * Every version after [lastSeen] counts, newest first, taking each version's first line, then
  * each one's second, and so on, up to [MAX_WHATS_NEW_LINES]. A version with no lines adds nothing.
+ *
+ * There is no upper bound at the version running. A release never carries lines for a later
+ * version than its own, and while a version is being made its lines are already written under
+ * the coming versionCode, so the debug build shows the sheet it will ship with.
  */
 fun whatsNewSince(lastSeen: Int, releases: List<ReleaseLines> = RELEASE_LINES): WhatsNew? {
     val shown = releases.filter { it.versionCode > lastSeen }.sortedByDescending { it.versionCode }
