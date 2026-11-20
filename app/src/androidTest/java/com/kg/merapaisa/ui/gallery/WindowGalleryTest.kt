@@ -62,7 +62,7 @@ class WindowGalleryTest {
             "sheet-create-group", "sheet-edit-group", "sheet-add-expense", "sheet-share",
             "dialog-replace-ledger", "sheet-own-upi", "sheet-reminder-qr", "sheet-pay-qr", "sheet-create-group-empty", "sheet-edit-expense",
             "sheet-move-to-ledger", "sheet-move-to-ledger-no-rate", "sheet-edit-expense-unequal",
-            "sheet-reminder-add-upi"
+            "sheet-reminder-add-upi", "sheet-whats-new", "sheet-whats-new-skipped"
         )
     )
 
