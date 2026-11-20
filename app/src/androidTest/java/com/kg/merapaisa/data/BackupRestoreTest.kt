@@ -215,6 +215,25 @@ class BackupRestoreTest {
     }
 
     @Test
+    fun aClearHistoryAfterMergingAClearedBackupThenTheSameMergeAgainCountsNothingTwice() = runBlocking {
+        val (asha, _) = seed()
+        val balance = personDao.getBalanceNow(asha)
+        val older = decodeBackup(backups.exportJson(1, "3.7.1")) as BackupResult.Ok
+        people.clearTransactions(asha)
+        val cleared = decodeBackup(backups.exportJson(2, "3.7.1")) as BackupResult.Ok
+        // Back to the old entries, as a phone restored from the older backup would be.
+        backups.apply(backups.plan(older.snapshot, RestoreMode.Replace))
+        backups.apply(backups.plan(cleared.snapshot, RestoreMode.Merge))
+        assertEquals("the opening balance is left out beside the entries it replaced", balance, personDao.getBalanceNow(asha))
+
+        people.clearTransactions(asha)
+        assertEquals(balance, personDao.getBalanceNow(asha))
+        backups.apply(backups.plan(cleared.snapshot, RestoreMode.Merge))
+
+        assertEquals("this phone's own opening balance holds the same entries", balance, personDao.getBalanceNow(asha))
+    }
+
+    @Test
     fun mergingAnOlderBackupAfterAnEditKeepsTheEdit() = runBlocking {
         val (asha, _) = seed()
         val older = decodeBackup(backups.exportJson(1, "3.7.0")) as BackupResult.Ok
