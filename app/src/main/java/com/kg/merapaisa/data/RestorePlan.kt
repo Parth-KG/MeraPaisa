@@ -375,11 +375,42 @@ private fun planMerge(
         .groupBy({ it.key.first }, { it.key.second })
     val existingGroupIds = existing.groups.map { it.id }.toHashSet()
     val membersHere = existing.groupMembers.map { it.groupId to it.personId }.toHashSet()
+
+    // Someone with no entries of her own has no uids to be found by, and many members of a group
+    // have none: renamed, or moved to another currency, she came back as someone new and every
+    // expense she paid in the group was counted twice. So the group's own rows say who she is
+    // too: an expense here at the same moment, for the same amount and description, was paid by
+    // the same person, and a payment then went to the same person. Never "you", and never someone
+    // another person in the file's group already is, so an expense whose payer was edited, or a
+    // payment left to its payer by a deletion, names nobody.
+    val hereByMoment = existing.expenses.groupBy { expenseMoment(it.groupId, it.description, it.amountMinor, it.timestamp) }
+    val hereSharesOf = existing.expenseShares.groupBy { it.expenseId }
+    val fileSharesOf = incoming.expenseShares.groupBy { it.expenseId }
+    val byRows = HashMap<Pair<Long, Long>, HashMap<Long, Int>>()
+    incoming.expenses.forEach { e ->
+        val groupId = groupIdMap[e.groupId]?.takeIf { it in existingGroupIds } ?: return@forEach
+        val here = hereByMoment[expenseMoment(groupId, e.description, e.amountMinor, e.timestamp)]
+            ?.singleOrNull { it.isSettlement == e.isSettlement } ?: return@forEach
+        val pairs = mutableListOf(e.paidByPersonId to here.paidByPersonId)
+        val fileTo = fileSharesOf[e.id].orEmpty()
+        val hereTo = hereSharesOf[here.id].orEmpty()
+        if (e.isSettlement && fileTo.size == 1 && hereTo.size == 1) pairs += fileTo[0].personId to hereTo[0].personId
+        pairs.forEach { (filePerson, herePerson) ->
+            byRows.getOrPut(groupId to filePerson) { HashMap() }.merge(herePerson, 1, Int::plus)
+        }
+    }
+    val fileMembersOf = incoming.groupMembers.groupBy({ it.groupId }, { it.personId })
+
     fun inGroup(fileGroupId: Long, filePersonId: Long): Long? {
         val mapped = personIdMap[filePersonId] ?: return null
         val groupId = groupIdMap[fileGroupId] ?: return mapped
         if (groupId !in existingGroupIds || (groupId to mapped) in membersHere) return mapped
-        return holders[filePersonId].orEmpty().firstOrNull { (groupId to it) in membersHere } ?: mapped
+        holders[filePersonId].orEmpty().firstOrNull { (groupId to it) in membersHere }?.let { return it }
+        val others = fileMembersOf[fileGroupId].orEmpty().filter { it != filePersonId }.mapNotNull { personIdMap[it] }.toHashSet()
+        return byRows[groupId to filePersonId].orEmpty().entries
+            .filter { it.key != localSelfId && it.key !in others && (groupId to it.key) in membersHere }
+            .sortedWith(compareByDescending<Map.Entry<Long, Int>> { it.value }.thenBy { it.key })
+            .firstOrNull()?.key ?: mapped
     }
     val incomingGroupOf = incoming.expenses.associate { it.id to it.groupId }
     fun shareHolder(s: ExpenseShare): Long? = incomingGroupOf[s.expenseId]?.let { inGroup(it, s.personId) }
@@ -572,6 +603,9 @@ private fun sameName(a: String, b: String): Boolean = a.trim().lowercase() == b.
 
 private fun transactionKey(personId: Long, timestamp: Long, amountMinor: Long, note: String): String =
     "$personId\u0000$timestamp\u0000$amountMinor\u0000${note.trim()}"
+
+private fun expenseMoment(groupId: Long, description: String, amountMinor: Long, timestamp: Long): String =
+    "$groupId\u0000${description.trim().lowercase()}\u0000$amountMinor\u0000$timestamp"
 
 private fun expenseKey(
     groupId: Long,

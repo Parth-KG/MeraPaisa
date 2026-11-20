@@ -197,6 +197,65 @@ class MergeByUidTest {
         assertTrue(again.groupMembers.isEmpty())
     }
 
+    /**
+     * Goa in rupees with You and Ravi, who has no entries of his own: a taxi and a dinner Ravi
+     * paid, each split with you, and a payment of 100 you made him. You owe him 100.
+     */
+    private fun goaWithRavi(ravi: Long, name: String = "Ravi", currency: String = "INR"): BackupSnapshot {
+        val goa = Group(id = 5, name = "Goa", currency = "INR", createdAt = 100)
+        return snap(listOf(Person(id = ravi, name = name, currency = currency)), emptyList()).copy(
+            groups = listOf(goa),
+            groupMembers = listOf(GroupMember(5, selfId), GroupMember(5, ravi)),
+            expenses = listOf(
+                Expense(1, 5, "Taxi", 100_00, ravi, 3_000),
+                Expense(2, 5, "Dinner", 300_00, ravi, 4_000),
+                Expense(3, 5, MOVED_TO_LEDGER, 100_00, selfId, 5_000, isSettlement = true)
+            ),
+            expenseShares = listOf(
+                ExpenseShare(1, selfId, 50_00), ExpenseShare(1, ravi, 50_00),
+                ExpenseShare(2, selfId, 150_00), ExpenseShare(2, ravi, 150_00),
+                ExpenseShare(3, ravi, 100_00)
+            )
+        )
+    }
+
+    private fun positions(s: BackupSnapshot): Map<Long, Long> {
+        val out = HashMap<Long, Long>()
+        s.expenses.forEach { out.merge(it.paidByPersonId, it.amountMinor, Long::plus) }
+        s.expenseShares.forEach { out.merge(it.personId, -it.shareMinor, Long::plus) }
+        return out.filterValues { it != 0L }
+    }
+
+    private fun applied(here: BackupSnapshot, plan: RestorePlan) = here.copy(
+        persons = here.persons + plan.persons,
+        transactions = here.transactions + plan.transactions,
+        groupMembers = here.groupMembers + plan.groupMembers,
+        expenses = here.expenses + plan.expenses,
+        expenseShares = here.expenseShares + plan.expenseShares
+    )
+
+    @Test
+    fun `a group member with no entries of his own, renamed since the backup, has nothing he paid counted twice`() {
+        val here = goaWithRavi(3, name = "Ravi K")
+        val plan = merge(here, goaWithRavi(12))
+        assertTrue("the taxi, the dinner and the payment are here already", plan.expenses.isEmpty() && plan.expenseShares.isEmpty())
+        assertTrue("no second Ravi in the group", plan.groupMembers.isEmpty())
+        assertEquals(mapOf(selfId to -100_00L, 3L to 100_00L), positions(here))
+        val merged = applied(here, plan)
+        assertEquals("you still owe him 100", positions(here), positions(merged))
+        assertTrue("a second Merge adds nothing", merge(merged, goaWithRavi(12)).let { it.expenses.isEmpty() && it.groupMembers.isEmpty() })
+    }
+
+    @Test
+    fun `a group member with no entries of his own, moved to another currency, has nothing he paid counted twice`() {
+        val here = goaWithRavi(3, currency = "USD")
+        val plan = merge(here, goaWithRavi(12))
+        assertTrue(plan.expenses.isEmpty() && plan.expenseShares.isEmpty() && plan.groupMembers.isEmpty())
+        val merged = applied(here, plan)
+        assertEquals(positions(here), positions(merged))
+        assertTrue(merge(merged, goaWithRavi(12)).let { it.expenses.isEmpty() && it.groupMembers.isEmpty() })
+    }
+
     @Test
     fun `an entry the other phone holds with the sign turned is not taken as hers`() {
         // An update link puts the same uid on both phones, opposite ways round. A backup from the
