@@ -81,6 +81,17 @@ android {
 
 No signing config is committed here on purpose.
 
+## What's new, before the version bump
+
+The first open after an update shows a sheet saying what changed. Its words are written at every
+release, in `app/src/main/java/com/kg/merapaisa/ui/whatsnew/WhatsNewLines.kt`: two to four plain
+sentences about what changed for the person using the app, the most important first, because after
+skipped updates the sheet takes each version's first line before anyone's second. A release with
+nothing worth telling gets an entry with no lines, and then shows nothing.
+
+Write them before bumping `versionCode`. After the bump, `./gradlew testDebugUnitTest` fails
+(`WhatsNewLinesTest`) until the new version has its entry, so a release can't ship with none.
+
 ## Building
 
 ```sh

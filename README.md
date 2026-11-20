@@ -66,6 +66,7 @@ Mera Paisa keeps all of that on your phone.
 | **In-app updates** | Checks GitHub for a newer release and installs it only if it is signed with the same key |
 | **Accessible** | TalkBack reads every figure with its direction in words, and every screen works at large text and on a phone turned sideways |
 | **Ten themes** | Diya, Jamun, Monsoon, Kaapi and Kamal by night, Tulsi, Khadi, Gulab, Kansa and Neel by day, with amounts and grey text at 7:1 in every one |
+| **How it works** | A short tour on a first run, drawn from the app's own screens with arrows to their buttons, and again from Settings. After an update, one sheet says what changed |
 | **Backup** | Everything in one file, profile photos included, saved when you like or every week to a folder you pick, with a preview before any restore. Android's own backup also copies your ledger, settings and profile photos to your Google account |
 
 ## Worth a closer look
@@ -164,6 +165,12 @@ Some start from palettes other people made, all under the MIT licence: Monsoon i
 
 Android's own backup carries the database, settings and profile photos to your Google account. That is a system feature, not something Mera Paisa runs. There is also a backup you control, under **Back up and restore** in Settings: **Save a backup** writes everything to one file, profile photos included, and **Restore from a file** reads it back, either adding what is missing (and a photo for anyone here who has none) or replacing everything. **Choose a folder** and it saves one there every week, keeping the last 12. Adding what is missing matches entries by their own id, so an entry you edited since the backup is not brought back beside its edit, and a cleared history does not take its old entries again. A restore is previewed before it runs, and the whole thing is one database transaction, so a failure changes nothing.
 
+### A first run, and after an update
+
+The first time Mera Paisa opens, after the app lock if there is one, a few pages show where everything is: Balances, the keypad, a person's menu, a split and a group. Each is drawn by the app's own components with a sample ledger, so it matches the theme in use and the phone's text size, and arrows point at the buttons that matter. Each arrow finds its button by a name the component itself carries, so the arrows follow any layout and a test fails if one would point at nothing. The last page offers the app lock, your UPI ID and a folder for weekly backups, each optional. **How Mera Paisa works**, in Settings, shows it again.
+
+After an update, the first open shows one sheet saying what changed, once; after several skipped updates, what matters across them. A phone that already has a ledger gets that sheet, never the walkthrough. One saved number decides it, the newest version shown, and it travels in Android's own backup with your settings, so a new phone restored with its ledger is not treated as new.
+
 </details>
 
 ## Tech
@@ -172,7 +179,7 @@ Kotlin and Jetpack Compose with Material 3. Room for storage, with exported sche
 
 Type is Anek Latin by Ek Type for amounts and titles and Figtree for everything else, shipped as static subset instances because API 24 and 25 ignore variable font axes.
 
-603 tests on the JVM covering money arithmetic, settle-up, moving a group to your ledger, group pairs and shares, whole yen, Merge by entry id, per-currency totals, amount formatting, CSV, summaries, the share codec, exchange-rate replies, backups with photos and the UPI mark, UPI links, QR codes, reminders with a QR and theme contrast, and 262 instrumentation tests covering every migration, the full migration chain, the settle, rollback, edit, delete, reconcile, move-debt, backup-photo, group-edit, archive and move-to-ledger paths against a real database, and the QR picture a reminder sends.
+625 tests on the JVM covering money arithmetic, settle-up, moving a group to your ledger, group pairs and shares, whole yen, Merge by entry id, per-currency totals, amount formatting, CSV, summaries, the share codec, exchange-rate replies, backups with photos and the UPI mark, UPI links, QR codes, reminders with a QR, theme contrast, the walkthrough's arrows and what's new after an update, and 273 instrumentation tests covering every migration, the full migration chain, the settle, rollback, edit, delete, reconcile, move-debt, backup-photo, group-edit, archive and move-to-ledger paths against a real database, the QR picture a reminder sends, and every walkthrough arrow at normal and double type.
 
 ## Repository structure
 
