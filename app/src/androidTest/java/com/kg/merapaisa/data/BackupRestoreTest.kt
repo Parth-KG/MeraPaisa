@@ -321,6 +321,31 @@ class BackupRestoreTest {
         assertTrue("a second Merge changes nothing", backups.plan(decoded.snapshot, RestoreMode.Merge).changesNothing)
     }
 
+    /**
+     * Ravi is in Goa and has no entries of his own: a taxi he paid, split with you. Renamed "Ravi K"
+     * since the backup, nothing finds him by uid, so a Merge brought him back as someone new and
+     * the taxi again with him: you owed ₹100 instead of ₹50.
+     */
+    @Test
+    fun mergingAfterRenamingAMemberWithNoEntriesCountsNothingHePaidTwice() = runBlocking {
+        val selfId = personDao.ensureSelf().id
+        val ravi = personDao.insertPerson(Person(name = "Ravi", currency = "INR", sortOrder = 0))
+        val groupId = groups.createGroup("Goa", "INR", listOf(selfId, ravi))
+        groups.addExpense(groupId, "Taxi", 10_000, ravi, listOf(selfId, ravi))
+        val json = backups.exportJson(1, "3.7.1")
+
+        people.updatePerson(personDao.getPersonNow(ravi)!!.copy(name = "Ravi K"))
+        val decoded = decodeBackup(json) as BackupResult.Ok
+        backups.apply(backups.plan(decoded.snapshot, RestoreMode.Merge))
+
+        val positions = groupDao.paidByMember(groupId).associate { it.personId to it.amountMinor }
+            .let { paid ->
+                groupDao.owedByMember(groupId).associate { it.personId to (paid[it.personId] ?: 0L) - it.amountMinor }
+            }
+        assertEquals("you still owe Ravi ₹50", mapOf(selfId to -5_000L, ravi to 5_000L), positions.filterValues { it != 0L })
+        assertEquals(listOf(selfId, ravi).sorted(), groupDao.getMemberIds(groupId).sorted())
+    }
+
     // -----------------------------------------------------------------------------------------
     // CSV
     // -----------------------------------------------------------------------------------------
