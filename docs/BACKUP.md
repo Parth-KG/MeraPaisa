@@ -79,13 +79,21 @@ out which it is. Then choose:
     backup is not brought back beside its edit, and after **Clear history** the old entries are not
     added again on top of the opening balance. Entries with no uid in the file (backups written
     before v2.5, and every CSV) still match on person, time, amount and note.
-  - **People by the entries they share first**, then by name and currency. Someone renamed since
-    the backup comes back as herself. Someone moved to another currency since comes back as a
-    second person, because her old entries are in the old currency; the preview names her.
+  - **People by the entries they share first**, then, for a group member with no entries of her
+    own, by the group's rows (an expense here at the same moment, for the same amount and
+    description, paid by her), then by name and currency. Someone renamed since the backup comes
+    back as herself.
+  - **Someone moved to another currency since** comes back as a second person for her old entries,
+    because they are in the old currency; the preview names her. She is never put on someone else
+    of her old name, and if a CSV restore already made a copy of her old self, the file's entries
+    go on that copy rather than a third person. Inside a group she stays herself: group amounts are
+    in the group's currency, which her move did not touch, so nothing she paid there is counted
+    twice.
   - **A backup made after Clear history**, added to a phone that still has the old entries, leaves
-    its opening balance out when every entry it replaced is still here. If only some of them are,
-    the opening balance is added, and with the entries still here that counts some of the debt
-    twice: delete the opening balance or the old entries by hand.
+    its opening balance out when every entry it replaced is still here (or was cleared on this
+    phone too, whose own opening balance already counts it). If only some of them are, the opening
+    balance is added, and with the entries still here that counts some of the debt twice: delete
+    the opening balance or the old entries by hand.
   - **What can still come back:** an entry you deleted since the backup, and a group expense you
     edited since (group expenses match on what they say, and come back beside their edit).
 - **Replace everything** deletes the current ledger, then lays the file down exactly. Right on a

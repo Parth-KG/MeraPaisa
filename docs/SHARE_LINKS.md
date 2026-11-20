@@ -118,4 +118,9 @@ or the file sits at the project path instead of the domain root.
   importing INR onto a USD person is refused rather than converted at a rate the sender never
   agreed to.
 - **It cannot exhaust your phone.** Entry count, note length, amount size and inflated size are all
-  capped, because a link is hostile input that arrives by being tapped.
+  capped, because a link is hostile input that arrives by being tapped. A link longer than any the
+  app accepts is not even held while the lock is up: it is kept as a short one that reads as
+  damaged (v3.7.1).
+- **Yours are never refused for length.** The receiver refuses a note over 500 characters or a
+  name over 100, so from v3.7.1 every note field stops at 500, every name field (and "Your name")
+  at 100, and Move a debt's note at 300, leaving room for the names and conversion in front of it.
