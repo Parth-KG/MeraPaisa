@@ -621,7 +621,9 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
     "walkthrough-5-split" to { WalkthroughCase(4) },
     "walkthrough-5-split-end" to { WalkthroughCase(4, end = true) },
     "walkthrough-6-groups" to { WalkthroughCase(5) },
-    "walkthrough-6-groups-end" to { WalkthroughCase(5, end = true) }
+    "walkthrough-6-groups-end" to { WalkthroughCase(5, end = true) },
+    "walkthrough-7-setup" to { WalkthroughCase(6) },
+    "walkthrough-7-setup-replay" to { WalkthroughCase(6, replay = true) }
 )
 
 /**
@@ -630,11 +632,23 @@ val GalleryCases: List<Pair<String, @Composable () -> Unit>> = listOf(
  * the next starts a fresh pager rather than keeping the last one's page.
  */
 @Composable
-fun WalkthroughCase(page: Int, end: Boolean = false) {
-    androidx.compose.runtime.key(page, end) {
+fun WalkthroughCase(page: Int, end: Boolean = false, replay: Boolean = false) {
+    androidx.compose.runtime.key(page, end, replay) {
         com.kg.merapaisa.ui.walkthrough.WalkthroughScreen(
-            finishLabel = "Start",
+            finishLabel = if (replay) "Back to Settings" else "Start",
             onFinish = {},
+            setUp = {
+                // A first run has nothing set; a replay from Settings, everything.
+                com.kg.merapaisa.ui.walkthrough.WalkthroughSetUp(
+                    appLockEnabled = replay,
+                    appLockAvailable = true,
+                    onAppLockChange = {},
+                    myUpiId = if (replay) "parth@example" else null,
+                    onMyUpiId = {},
+                    backupFolder = if (replay) "Backups" else null,
+                    onPickFolder = {}
+                )
+            },
             initialPage = page,
             scrolledToEnd = end
         )

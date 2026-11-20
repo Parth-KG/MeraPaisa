@@ -249,7 +249,7 @@ private fun SectionHeading(text: String) {
  * stops being toggleable rather than silently doing nothing, and the sentence says what to set.
  */
 @Composable
-private fun AppLockRow(enabled: Boolean, available: Boolean, onChange: (Boolean) -> Unit) {
+internal fun AppLockRow(enabled: Boolean, available: Boolean, onChange: (Boolean) -> Unit) {
     val theme = LocalAppTheme.current
     Row(
         modifier = Modifier
@@ -294,7 +294,7 @@ private fun AppLockRow(enabled: Boolean, available: Boolean, onChange: (Boolean)
  * thumb when the ledger fills up.
  */
 @Composable
-private fun ActionRow(
+internal fun ActionRow(
     title: String,
     subtitle: String? = null,
     enabled: Boolean = true,
@@ -302,7 +302,7 @@ private fun ActionRow(
 ) = ActionRow(AnnotatedString(title), subtitle, enabled, onClick)
 
 @Composable
-private fun ActionRow(
+internal fun ActionRow(
     title: AnnotatedString,
     subtitle: String? = null,
     enabled: Boolean = true,
