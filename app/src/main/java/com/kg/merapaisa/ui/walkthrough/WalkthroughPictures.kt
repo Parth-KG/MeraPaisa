@@ -131,6 +131,7 @@ internal fun PersonPicture(targets: TourTargets) {
             SampleRow(WalkthroughSamples.asha, isSelected = false)
             Box(Modifier.fillMaxWidth().padding(end = Spacing.sm), contentAlignment = Alignment.TopEnd) {
                 Surface(
+                    modifier = Modifier.tourTarget(TourId.PersonMenu),
                     shape = Shapes.medium,
                     color = MenuDefaults.containerColor,
                     tonalElevation = MenuDefaults.TonalElevation,
@@ -185,7 +186,7 @@ private fun Share(id: Long, name: String, amount: Long, locked: Boolean) = Split
     onToggleLock = {}
 )
 
-/** The top of "Goa, October": who pays whom, where you stand, and the group's two buttons. */
+/** The top of "Goa, October": who pays whom, and where you stand. */
 @Composable
 internal fun GroupPicture(targets: TourTargets) {
     val theme = LocalAppTheme.current
@@ -213,6 +214,17 @@ internal fun GroupPicture(targets: TourTargets) {
         MemberBalanceRow(name = "You", isYou = true, amountMinor = WalkthroughSamples.YOUR_POSITION, currency = group.currency)
         Named(targets) {
             MoveToLedgerButton(onClick = {}, modifier = Modifier.tourTarget(TourId.MoveToLedger))
+        }
+        Spacer(Modifier.height(Spacing.sm))
+    }
+}
+
+/** The group's two buttons, which sit at the foot of its screen under everything else. */
+@Composable
+internal fun GroupFootPicture(targets: TourTargets) {
+    val theme = LocalAppTheme.current
+    Column(Modifier.fillMaxWidth().background(theme.background)) {
+        Named(targets) {
             FootActions {
                 PrimaryAction("Add an expense", enabled = true, modifier = Modifier.tourTarget(TourId.AddExpense)) {}
                 SecondaryAction("Settle up", enabled = true) {}

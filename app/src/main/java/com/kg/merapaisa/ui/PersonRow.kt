@@ -215,10 +215,10 @@ internal fun PersonMenuItems(
     if (!person.isEven) {
         MenuRow("Settle up", theme.textPrimary) { onDismiss(); onSettleUp() }
     }
-    MenuRow("Send a reminder", theme.textPrimary, TourId.MenuReminder) { onDismiss(); onSendReminder() }
+    MenuRow("Send a reminder", theme.textPrimary) { onDismiss(); onSendReminder() }
     // For paying you face to face: their UPI app scans it with the amount filled in.
     if (onShowQr != null) {
-        MenuRow("Show QR to pay you", theme.textPrimary, TourId.MenuShowQr) { onDismiss(); onShowQr() }
+        MenuRow("Show QR to pay you", theme.textPrimary) { onDismiss(); onShowQr() }
     } else if (qrOnlyInRupees) {
         DropdownMenuItem(
             text = { Text("Show QR (UPI is rupees only)", style = MeraPaisaType.body, color = theme.textSecondary) },
@@ -244,14 +244,13 @@ internal fun PersonMenuItems(
 }
 
 @Composable
-private fun MenuRow(label: String, colour: Color, target: TourId? = null, onClick: () -> Unit) =
-    MenuRow(AnnotatedString(label), colour, target, onClick)
+private fun MenuRow(label: String, colour: Color, onClick: () -> Unit) =
+    MenuRow(AnnotatedString(label), colour, onClick)
 
 @Composable
-private fun MenuRow(label: AnnotatedString, colour: Color, target: TourId? = null, onClick: () -> Unit) {
+private fun MenuRow(label: AnnotatedString, colour: Color, onClick: () -> Unit) {
     DropdownMenuItem(
         text = { Text(label, style = MeraPaisaType.body, color = colour) },
-        onClick = onClick,
-        modifier = if (target != null) Modifier.tourTarget(target) else Modifier
+        onClick = onClick
     )
 }

@@ -22,7 +22,7 @@ import androidx.compose.ui.platform.InspectorInfo
 enum class TourId {
     Total, PersonFigure, EvenTab, AddPerson,
     KeypadNote, KeypadDirection, KeypadSettleUp,
-    PersonHistory, MenuReminder, MenuShowQr,
+    PersonHistory, PersonMenu,
     ShareFigure, ShareLock, SaveSplit,
     WhoPaysWhom, MoveToLedger, AddExpense
 }

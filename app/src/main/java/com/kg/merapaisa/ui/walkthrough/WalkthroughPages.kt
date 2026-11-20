@@ -18,16 +18,29 @@ internal data class Band(val start: Callout? = null, val end: Callout? = null, v
     val callouts: List<Callout> get() = listOfNotNull(wide, start, end)
 }
 
+/** One part of a page, top to bottom: a band of callouts, or a picture of the app. */
+internal sealed interface Section
+
+internal data class CalloutSection(val band: Band) : Section
+
+internal class PictureSection(
+    /** What TalkBack hears for the picture, which is otherwise one silent image. */
+    val description: String,
+    val content: @Composable (TourTargets) -> Unit
+) : Section
+
+/**
+ * A page: its title and words, then its sections. Usually callouts, a picture, callouts; a page
+ * whose buttons sit apart from the rest, as a group's do at its foot, splits its picture in two
+ * with callouts between, so no arrow has to cross another part to reach its own.
+ */
 internal class TourPage(
     val title: String,
     val paragraphs: List<String>,
-    val above: Band? = null,
-    val below: Band? = null,
-    /** What TalkBack hears for the picture, which is otherwise one silent image. */
-    val pictureDescription: String? = null,
-    val picture: (@Composable (TourTargets) -> Unit)? = null
+    val sections: List<Section> = emptyList()
 ) {
-    val callouts: List<Callout> get() = listOfNotNull(above, below).flatMap { it.callouts }
+    val callouts: List<Callout> get() = sections.filterIsInstance<CalloutSection>().flatMap { it.band.callouts }
+    val pictures: List<PictureSection> get() = sections.filterIsInstance<PictureSection>()
 }
 
 /** The pages before Set up, in order. Every word follows the app's copy rules. */
@@ -47,17 +60,20 @@ internal val TourPages: List<TourPage> = listOf(
             "Everyone you add has a line here. The total at the top is what everyone owes you, " +
                 "less what you owe."
         ),
-        above = Band(wide = Callout(TourId.EvenTab, "Even: everyone at exactly zero moves here, out of the way.")),
-        below = Band(
-            start = Callout(TourId.AddPerson, "Add a person, then tap their line to record an amount."),
-            end = Callout(
-                TourId.PersonFigure,
-                "A − means you owe Bilal. No sign means they owe you.",
-                spoken = "A minus sign means you owe Bilal. No sign means they owe you."
+        sections = listOf(
+            CalloutSection(Band(wide = Callout(TourId.EvenTab, "Even: everyone at exactly zero moves here, out of the way."))),
+            PictureSection("A sample of Balances. Asha owes you 1,200 rupees, and you owe Bilal 40 rupees.") { BalancesPicture(it) },
+            CalloutSection(
+                Band(
+                    start = Callout(TourId.AddPerson, "Add a person, then tap their line to record an amount."),
+                    end = Callout(
+                        TourId.PersonFigure,
+                        "A − means you owe Bilal. No sign means they owe you.",
+                        spoken = "A minus sign means you owe Bilal. No sign means they owe you."
+                    )
+                )
             )
-        ),
-        pictureDescription = "A sample of Balances. Asha owes you 1,200 rupees, and you owe Bilal 40 rupees.",
-        picture = { BalancesPicture(it) }
+        )
     ),
     TourPage(
         title = "Recording an entry",
@@ -65,51 +81,59 @@ internal val TourPages: List<TourPage> = listOf(
             "Tap someone's line and the keypad opens. Type the amount, then pick which way the " +
                 "money went."
         ),
-        above = Band(wide = Callout(TourId.KeypadNote, "Add a note to remember what it was for.")),
-        below = Band(
-            start = Callout(TourId.KeypadDirection, "Tap who paid. The entry is saved at once."),
-            end = Callout(TourId.KeypadSettleUp, "Settle up records what makes you even.")
-        ),
-        pictureDescription = "A sample keypad for Asha, with 250 typed and the note Dinner.",
-        picture = { KeypadPicture(it) }
+        sections = listOf(
+            CalloutSection(Band(wide = Callout(TourId.KeypadNote, "Add a note to remember what it was for."))),
+            PictureSection("A sample keypad for Asha, with 250 typed and the note Dinner.") { KeypadPicture(it) },
+            CalloutSection(
+                Band(
+                    start = Callout(TourId.KeypadDirection, "Tap who paid. The entry is saved at once."),
+                    end = Callout(TourId.KeypadSettleUp, "Settle up records what makes you even.")
+                )
+            )
+        )
     ),
     TourPage(
         title = "One person",
         paragraphs = listOf("Long-press anyone's line for everything you can do with them."),
-        above = Band(end = Callout(TourId.PersonHistory, "Every entry with Asha. Long-press one to edit or delete it.")),
-        below = Band(
-            start = Callout(TourId.MenuReminder, "Send a reminder: a short message with the exact amount."),
-            end = Callout(TourId.MenuShowQr, "Show QR: Asha scans it with their UPI app to pay you.")
-        ),
-        pictureDescription = "A sample of Asha's line with its menu open: Settle up, Send a reminder, " +
-            "Show QR to pay you, and more.",
-        picture = { PersonPicture(it) }
+        sections = listOf(
+            CalloutSection(Band(end = Callout(TourId.PersonHistory, "Every entry with Asha. Long-press one to edit or delete it."))),
+            PictureSection(
+                "A sample of Asha's line with its menu open: Settle up, Send a reminder, Show QR to " +
+                    "pay you, and more."
+            ) { PersonPicture(it) },
+            CalloutSection(
+                Band(end = Callout(TourId.PersonMenu, "Send a reminder, Show QR so Asha can pay you, and more."))
+            )
+        )
     ),
     TourPage(
         title = "Split an expense",
         paragraphs = listOf(
             "On Balances, Split an expense shares one cost between people, each in their own currency."
         ),
-        above = Band(
-            start = Callout(TourId.ShareFigure, "Change a share and the others adjust to keep the total."),
-            end = Callout(TourId.ShareLock, "Lock a share to keep it where it is.")
-        ),
-        below = Band(end = Callout(TourId.SaveSplit, "Each share goes on that person's line.")),
-        pictureDescription = "A sample split of 1,800 rupees three ways, 600 rupees each, with Asha's share locked.",
-        picture = { SplitPicture(it) }
+        sections = listOf(
+            CalloutSection(
+                Band(
+                    start = Callout(TourId.ShareFigure, "Change a share and the others adjust to keep the total."),
+                    end = Callout(TourId.ShareLock, "Lock a share to keep it where it is.")
+                )
+            ),
+            PictureSection("A sample split of 1,800 rupees three ways, 600 rupees each, with Asha's share locked.") { SplitPicture(it) },
+            CalloutSection(Band(end = Callout(TourId.SaveSplit, "Each share goes on that person's line.")))
+        )
     ),
     TourPage(
         title = "Groups",
         paragraphs = listOf(
             "On the Groups tab, a trip or a flat keeps its own expenses, apart from Balances."
         ),
-        above = Band(wide = Callout(TourId.WhoPaysWhom, "Who pays whom: the fewest payments that leave everyone even.")),
-        below = Band(
-            start = Callout(TourId.AddExpense, "Add an expense: who paid, and who shares it."),
-            end = Callout(TourId.MoveToLedger, "Move to your ledger puts your part on Balances.")
-        ),
-        pictureDescription = "A sample group, Goa, October. Bilal pays you 2,500 rupees and Asha pays you 1,000 rupees.",
-        picture = { GroupPicture(it) }
+        sections = listOf(
+            CalloutSection(Band(wide = Callout(TourId.WhoPaysWhom, "Who pays whom: the fewest payments that leave everyone even."))),
+            PictureSection("A sample group, Goa, October. Bilal pays you 2,500 rupees and Asha pays you 1,000 rupees.") { GroupPicture(it) },
+            CalloutSection(Band(start = Callout(TourId.MoveToLedger, "Move to your ledger puts your part on Balances."))),
+            PictureSection("The group's buttons, Add an expense and Settle up, at the foot of its screen.") { GroupFootPicture(it) },
+            CalloutSection(Band(start = Callout(TourId.AddExpense, "Add an expense: who paid, and who shares it.")))
+        )
     )
 )
 

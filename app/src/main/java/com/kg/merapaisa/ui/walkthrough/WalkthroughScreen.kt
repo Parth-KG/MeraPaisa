@@ -163,8 +163,7 @@ private class PagePlace {
 }
 
 /**
- * One page: its title and words, then the callouts above the picture, the picture, and the
- * callouts below it. It scrolls when it is taller than the screen, at large type, and the arrows
+ * One page: its title and words, then its callouts and pictures in order. It scrolls when it is taller than the screen, at large type, and the arrows
  * are drawn in the scrolled content, so they move with it.
  */
 @Composable
@@ -204,17 +203,17 @@ internal fun TourPageContent(
             Spacer(Modifier.height(Spacing.sm))
             Paragraph(it)
         }
-        val picture = page.picture
-        if (picture != null) {
-            Spacer(Modifier.height(Spacing.xl))
-            page.above?.let {
-                CalloutBand(it, targets, above = true)
-                Spacer(Modifier.height(Spacing.xxl))
-            }
-            Picture(page.pictureDescription) { picture(targets) }
-            page.below?.let {
-                Spacer(Modifier.height(Spacing.xxl))
-                CalloutBand(it, targets, above = false)
+        if (page.sections.isNotEmpty()) Spacer(Modifier.height(Spacing.xl))
+        var seenPicture = false
+        page.sections.forEachIndexed { index, section ->
+            if (index > 0) Spacer(Modifier.height(Spacing.xxl))
+            when (section) {
+                // Callouts above the first picture sit on its edge; any later ones hang from the top.
+                is CalloutSection -> CalloutBand(section.band, targets, above = !seenPicture)
+                is PictureSection -> {
+                    seenPicture = true
+                    Picture(section.description) { section.content(targets) }
+                }
             }
         }
     }
@@ -226,12 +225,12 @@ internal fun TourPageContent(
  * sets it apart from the page's own words.
  */
 @Composable
-private fun Picture(description: String?, content: @Composable () -> Unit) {
+private fun Picture(description: String, content: @Composable () -> Unit) {
     val edge = LocalAppTheme.current.border
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clearAndSetSemantics { if (description != null) contentDescription = description }
+            .clearAndSetSemantics { contentDescription = description }
             .focusProperties { onEnter = { cancelFocusChange() } }
             .focusGroup()
     ) {

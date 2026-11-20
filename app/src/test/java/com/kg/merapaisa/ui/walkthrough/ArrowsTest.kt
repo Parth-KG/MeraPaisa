@@ -4,7 +4,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -91,8 +90,8 @@ class ArrowsTest {
                 assertFalse(callout.text.contains('!'))
                 assertFalse("a symbol TalkBack can't say needs words", callout.text.contains('−') && callout.spoken == null)
             }
-            if (page.picture != null) assertNotNull("${page.title} says what its picture shows", page.pictureDescription)
-            else assertTrue(page.callouts.isEmpty())
+            page.pictures.forEach { assertTrue("${page.title} says what its picture shows", it.description.isNotBlank()) }
+            if (page.pictures.isEmpty()) assertTrue(page.callouts.isEmpty())
         }
     }
 }
