@@ -193,8 +193,8 @@ internal fun FootActions(content: @Composable RowScope.() -> Unit) {
 internal fun RowScope.PrimaryAction(
     label: String,
     enabled: Boolean,
-    busyLabel: String? = null,
     modifier: Modifier = Modifier,
+    busyLabel: String? = null,
     onClick: () -> Unit
 ) {
     val theme = LocalAppTheme.current
@@ -237,8 +237,8 @@ internal fun RowScope.PrimaryAction(
 internal fun RowScope.SecondaryAction(
     label: String,
     enabled: Boolean,
-    fill: Color = Color.Transparent,
     modifier: Modifier = Modifier,
+    fill: Color = Color.Transparent,
     onClick: () -> Unit
 ) {
     val theme = LocalAppTheme.current
