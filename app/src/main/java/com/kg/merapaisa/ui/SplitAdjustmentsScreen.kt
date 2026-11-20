@@ -60,6 +60,8 @@ import com.kg.merapaisa.ui.format.PlainAmountText
 import com.kg.merapaisa.ui.format.amountString
 import com.kg.merapaisa.data.parseAmountToMinor
 import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.walkthrough.TourId
+import com.kg.merapaisa.ui.walkthrough.tourTarget
 import com.kg.merapaisa.ui.theme.Motion
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
@@ -488,6 +490,7 @@ internal fun SplitShareRow(
         // editable: locking a share should not cost you a tap to change it.
         Row(
             modifier = modifier
+                .tourTarget(TourId.ShareFigure)
                 .clip(Shapes.small)
                 .then(
                     if (locked) Modifier.border(1.dp, theme.border, Shapes.small)
@@ -550,7 +553,7 @@ internal fun SplitShareRow(
         }
     }
     val lock: @Composable () -> Unit = {
-        IconButton(onClick = onToggleLock, modifier = Modifier.size(48.dp)) {
+        IconButton(onClick = onToggleLock, modifier = Modifier.size(48.dp).tourTarget(TourId.ShareLock)) {
             Icon(
                 if (locked) Icons.Filled.Lock else Icons.Outlined.LockOpen,
                 contentDescription =

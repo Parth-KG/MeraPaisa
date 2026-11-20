@@ -10,6 +10,8 @@ import androidx.compose.ui.unit.Dp
 import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.ui.format.shrinkToFit
 import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.walkthrough.TourId
+import com.kg.merapaisa.ui.walkthrough.tourTarget
 
 /**
  * Active, Even and Groups across the top of Balances.
@@ -42,6 +44,7 @@ internal fun LedgerTabs(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifi
             androidx.compose.material3.Tab(
                 selected = selected == tab,
                 onClick = { onSelect(tab) },
+                modifier = if (tab == Tab.Even) Modifier.tourTarget(TourId.EvenTab) else Modifier,
                 selectedContentColor = theme.textPrimary,
                 unselectedContentColor = theme.textSecondary,
                 // One line, shrinking at large type: at 1.5x the labels broke mid-word,

@@ -40,6 +40,8 @@ import com.kg.merapaisa.LocalAppTheme
 import com.kg.merapaisa.data.PersonWithBalance
 import com.kg.merapaisa.data.isUsableAmount
 import com.kg.merapaisa.ui.theme.MeraPaisaType
+import com.kg.merapaisa.ui.walkthrough.TourId
+import com.kg.merapaisa.ui.walkthrough.tourTarget
 import com.kg.merapaisa.ui.theme.Shapes
 import com.kg.merapaisa.ui.theme.Spacing
 import com.kg.merapaisa.ui.format.TypedAmountText
@@ -119,7 +121,8 @@ fun NumPad(
             modifier = Modifier
                 .fillMaxWidth()
                 .toggleable(value = showNote, onValueChange = { onToggleNote() }, role = Role.Switch)
-                .heightIn(min = 48.dp),
+                .heightIn(min = 48.dp)
+                .tourTarget(TourId.KeypadNote),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -157,7 +160,7 @@ fun NumPad(
         }
 
         Row(
-            modifier = Modifier.height(IntrinsicSize.Min),
+            modifier = Modifier.height(IntrinsicSize.Min).tourTarget(TourId.KeypadDirection),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             DirectionButton(
@@ -186,7 +189,7 @@ fun NumPad(
         // buttons, with no edge or fill, and did not read as something to press. Outlined rather
         // than filled, because the two buttons above it are what the keypad is for.
         if (!person.isEven) {
-            Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).tourTarget(TourId.KeypadSettleUp)) {
                 SecondaryAction("Settle up", enabled = true, onClick = onSettleUp)
             }
         }
