@@ -8,7 +8,6 @@ import com.kg.merapaisa.data.normaliseCurrency
 import com.kg.merapaisa.data.upiPayLink
 import com.kg.merapaisa.ui.dialogs.OwnUpiSheet
 import com.kg.merapaisa.ui.dialogs.ownUpiPrompt
-import com.kg.merapaisa.ui.format.shrinkToFit
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalConfiguration
@@ -71,11 +70,7 @@ import com.kg.merapaisa.data.sidesByCurrency
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.animation.core.tween
-import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.ui.unit.Dp
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Motion
 import com.kg.merapaisa.ui.theme.Spacing
@@ -183,6 +178,36 @@ fun MainScreen(viewModel: MainViewModel) {
     val pendingGroupDelete = (groups + archivedGroups).find { it.group.id == ui.pendingGroupDeleteId }
     val pendingReminder = persons.find { it.id == ui.pendingReminderId }
 
+    // Turning the app lock on or off, asked first. Settings and the walkthrough's last page share it.
+    val changeLock: (Boolean) -> Unit = { enabled ->
+        changeAppLock(
+            enabled,
+            ask = { title, subtitle, onConfirmed ->
+                lock.onAskStarted()
+                // Shown over the activity, which BiometricPrompt needs as a FragmentActivity.
+                askForCredential(
+                    context as FragmentActivity, title, subtitle,
+                    onConfirmed = onConfirmed,
+                    onEnded = lock::onAskEnded
+                )
+            },
+            // In the lock's own scope, which outlives this screen: the prompt's answer
+            // can arrive after the activity was recreated under it (turned sideways
+            // mid-prompt), when this screen's scope is already gone and the change
+            // would quietly not be written.
+            store = { on ->
+                val appContext = context.applicationContext
+                lock.viewModelScope.launch {
+                    SecurityStore.setAppLockEnabled(appContext, on)
+                    // The widget reads the lock too. Without this it kept showing names
+                    // and amounts on the home screen after the lock went on, until the
+                    // next entry.
+                    WidgetLedgerNotifier(appContext).onLedgerChanged()
+                }
+            }
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
     // True while a full screen is laid over the ledger. The ledger stays composed underneath, so
     // its scroll position survives, but TalkBack must not read or reach it: it was still offering
@@ -195,11 +220,7 @@ fun MainScreen(viewModel: MainViewModel) {
             modifier = Modifier.fillMaxSize()
                 .then(if (covered) Modifier.clearAndSetSemantics { } else Modifier)
         ) {
-            // A real tab row. These were pill buttons, which look like three things you can
-            // press rather than one place you are currently in, and gave no sense of which of
-            // the three you were looking at beyond a fill colour.
-            //
-            // Settings sits at the end of it. It had a row of its own below the tabs, holding
+            // The tabs, with Settings at the end of them. It had a row of its own below the tabs, holding
             // nothing but the gear, which left an empty band across the top of every tab.
             // Exporting a CSV used to sit beside it as an unlabelled share icon; that is a filing
             // job, not something you reach for while looking at a balance, so it lives in Settings.
@@ -209,40 +230,11 @@ fun MainScreen(viewModel: MainViewModel) {
                 ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                PrimaryTabRow(
-                    selectedTabIndex = Tab.entries.indexOf(ui.tab),
-                    containerColor = theme.background,
-                    contentColor = theme.primary,
-                    modifier = Modifier.weight(1f),
-                    divider = {},
-                    indicator = {
-                        TabRowDefaults.PrimaryIndicator(
-                            modifier = Modifier.tabIndicatorOffset(Tab.entries.indexOf(ui.tab)),
-                            width = Dp.Unspecified,
-                            color = theme.primary
-                        )
-                    }
-                ) {
-                    Tab.entries.forEach { tab ->
-                        androidx.compose.material3.Tab(
-                            selected = ui.tab == tab,
-                            onClick = { viewModel.selectTab(tab) },
-                            selectedContentColor = theme.textPrimary,
-                            unselectedContentColor = theme.textSecondary,
-                            // One line, shrinking at large type: at 1.5x the labels broke mid-word,
-                            // "Settle / d".
-                            text = {
-                                Text(
-                                    tab.name,
-                                    style = MeraPaisaType.action,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                    autoSize = shrinkToFit(MeraPaisaType.action)
-                                )
-                            }
-                        )
-                    }
-                }
+                LedgerTabs(
+                    selected = ui.tab,
+                    onSelect = viewModel::selectTab,
+                    modifier = Modifier.weight(1f)
+                )
                 IconButton(
                     onClick = { viewModel.showSettingsDialog(true) },
                     modifier = Modifier.padding(end = Spacing.xs)
@@ -494,34 +486,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 onBackupRestore = viewModel::openBackupScreen,
                 onCheckUpdates = viewModel::checkForUpdatesNow,
                 appVersion = BuildConfig.VERSION_NAME,
-                onAppLockChange = { enabled ->
-                    changeAppLock(
-                        enabled,
-                        ask = { title, subtitle, onConfirmed ->
-                            lock.onAskStarted()
-                            // Shown over the activity, which BiometricPrompt needs as a FragmentActivity.
-                            askForCredential(
-                                context as FragmentActivity, title, subtitle,
-                                onConfirmed = onConfirmed,
-                                onEnded = lock::onAskEnded
-                            )
-                        },
-                        // In the lock's own scope, which outlives this screen: the prompt's answer
-                        // can arrive after the activity was recreated under it (turned sideways
-                        // mid-prompt), when this screen's scope is already gone and the change
-                        // would quietly not be written.
-                        store = { on ->
-                            val appContext = context.applicationContext
-                            lock.viewModelScope.launch {
-                                SecurityStore.setAppLockEnabled(appContext, on)
-                                // The widget reads the lock too. Without this it kept showing names
-                                // and amounts on the home screen after the lock went on, until the
-                                // next entry.
-                                WidgetLedgerNotifier(appContext).onLedgerChanged()
-                            }
-                        }
-                    )
-                },
+                onAppLockChange = changeLock,
                 myUpiId = myUpiId,
                 onMyUpiId = { showOwnUpi = true },
                 onDismiss = { viewModel.showSettingsDialog(false) },

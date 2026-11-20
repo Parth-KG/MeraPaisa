@@ -276,15 +276,7 @@ fun GroupDetailScreen(
                             modifier = Modifier.padding(horizontal = Spacing.lg)
                         )
                     }
-                    if (onMoveToLedger != null) {
-                        // 4dp outside plus the button's own 12dp inside puts its words on the gutter.
-                        TextButton(
-                            onClick = onMoveToLedger,
-                            modifier = Modifier.padding(horizontal = Spacing.xs).heightIn(min = 48.dp)
-                        ) {
-                            Text("Move to your ledger", style = MeraPaisaType.bodyStrong, color = theme.primary)
-                        }
-                    }
+                    if (onMoveToLedger != null) MoveToLedgerButton(onClick = onMoveToLedger)
                 }
             }
 
@@ -370,6 +362,19 @@ fun GroupDetailScreen(
     }
 }
 
+/** Under your row in "Where everyone stands": takes what Settle up lists for you to Balances. */
+@Composable
+internal fun MoveToLedgerButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val theme = LocalAppTheme.current
+    // 4dp outside plus the button's own 12dp inside puts its words on the gutter.
+    TextButton(
+        onClick = onClick,
+        modifier = modifier.padding(horizontal = Spacing.xs).heightIn(min = 48.dp)
+    ) {
+        Text("Move to your ledger", style = MeraPaisaType.bodyStrong, color = theme.primary)
+    }
+}
+
 /** A heading inside the list. Sentence case, quiet, with air above it and none below. */
 @Composable
 private fun SectionHeading(text: String) {
@@ -395,7 +400,7 @@ private fun SectionHeading(text: String) {
  * whatever the number says.
  */
 @Composable
-private fun MemberBalanceRow(
+internal fun MemberBalanceRow(
     name: String,
     isYou: Boolean,
     amountMinor: Long,

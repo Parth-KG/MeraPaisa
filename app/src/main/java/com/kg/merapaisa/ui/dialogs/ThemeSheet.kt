@@ -22,10 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -51,7 +47,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kg.merapaisa.AppTheme
 import com.kg.merapaisa.LocalAppTheme
@@ -61,6 +56,7 @@ import com.kg.merapaisa.data.sidesByCurrency
 import com.kg.merapaisa.getThemeByName
 import com.kg.merapaisa.themes
 import com.kg.merapaisa.ui.EmptyState
+import com.kg.merapaisa.ui.LedgerTabs
 import com.kg.merapaisa.ui.NetPosition
 import com.kg.merapaisa.ui.PersonRow
 import com.kg.merapaisa.ui.PrimaryAction
@@ -68,7 +64,6 @@ import com.kg.merapaisa.ui.RowDivider
 import com.kg.merapaisa.ui.SecondaryAction
 import com.kg.merapaisa.ui.SheetFoot
 import com.kg.merapaisa.ui.SheetFrame
-import com.kg.merapaisa.ui.format.shrinkToFit
 import com.kg.merapaisa.ui.theme.MeraPaisaTheme
 import com.kg.merapaisa.ui.theme.MeraPaisaType
 import com.kg.merapaisa.ui.theme.Shapes
@@ -242,7 +237,7 @@ private fun LedgerPreview(tried: AppTheme, people: List<PersonWithBalance>, modi
                         .background(tried.background)
                         .padding(bottom = Spacing.sm)
                 ) {
-                    PreviewTabs(tried)
+                    LedgerTabs(selected = LedgerTab.Active, onSelect = {})
                     Spacer(Modifier.height(Spacing.lg))
                     NetPosition(totals = netTotalsByCurrency(people), sides = sidesByCurrency(people))
                     Spacer(Modifier.height(Spacing.md))
@@ -285,43 +280,6 @@ private fun Modifier.miniatureOf(fullWidth: Int): Modifier = layout { measurable
             scaleX = scale
             scaleY = scale
             transformOrigin = TransformOrigin(0f, 0f)
-        }
-    }
-}
-
-/** The Balances tabs as they look with Active open. Only a picture: the preview takes no taps. */
-@Composable
-private fun PreviewTabs(tried: AppTheme) {
-    PrimaryTabRow(
-        selectedTabIndex = 0,
-        containerColor = tried.background,
-        contentColor = tried.primary,
-        divider = {},
-        indicator = {
-            TabRowDefaults.PrimaryIndicator(
-                modifier = Modifier.tabIndicatorOffset(0),
-                width = Dp.Unspecified,
-                color = tried.primary
-            )
-        }
-    ) {
-        LedgerTab.entries.forEach { tab ->
-            Tab(
-                selected = tab == LedgerTab.Active,
-                onClick = {},
-                selectedContentColor = tried.textPrimary,
-                unselectedContentColor = tried.textSecondary,
-                // Shrinking at large type, as the real tabs do, rather than cut to "Settle".
-                text = {
-                    Text(
-                        tab.name,
-                        style = MeraPaisaType.action,
-                        maxLines = 1,
-                        softWrap = false,
-                        autoSize = shrinkToFit(MeraPaisaType.action)
-                    )
-                }
-            )
         }
     }
 }

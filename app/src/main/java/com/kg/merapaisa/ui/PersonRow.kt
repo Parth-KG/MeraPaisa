@@ -172,39 +172,72 @@ private fun PersonMenu(
     onShowQr: (() -> Unit)?,
     qrOnlyInRupees: Boolean
 ) {
-    val theme = LocalAppTheme.current
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss, shape = Shapes.medium) {
-        // Only with a balance to square. At zero the person is already on Even.
-        if (!person.isEven) {
-            MenuRow("Settle up", theme.textPrimary) { onDismiss(); onSettleUp() }
-        }
-        MenuRow("Send a reminder", theme.textPrimary) { onDismiss(); onSendReminder() }
-        // For paying you face to face: their UPI app scans it with the amount filled in.
-        if (onShowQr != null) {
-            MenuRow("Show QR to pay you", theme.textPrimary) { onDismiss(); onShowQr() }
-        } else if (qrOnlyInRupees) {
-            DropdownMenuItem(
-                text = { Text("Show QR (UPI is rupees only)", style = MeraPaisaType.body, color = theme.textSecondary) },
-                enabled = false,
-                onClick = {}
-            )
-        }
-        MenuRow("Share a summary", theme.textPrimary) { onDismiss(); onShareSummary() }
-        // Distinct from a summary: that sends text a human reads, this sends a link their app
-        // records, so both ledgers end up agreeing. Marked (beta) wherever it is named: a long
-        // history makes a link that chat apps cut or the other phone refuses, and a debt both
-        // people record themselves counts twice. Both are still to be solved.
-        MenuRow(betaLabel("Send an update link"), theme.textPrimary) { onDismiss(); onShareLedger() }
-        // Only when something is owed, named for which way it runs. At zero there is nothing to
-        // hand on, and an always-visible item that always refuses is worse than no item.
-        if (person.balanceMinor > 0) {
-            MenuRow("Move this debt", theme.textPrimary) { onDismiss(); onMoveDebt() }
-        } else if (person.balanceMinor < 0) {
-            MenuRow("Move what you owe", theme.textPrimary) { onDismiss(); onMoveDebt() }
-        }
-        MenuRow("Edit", theme.textPrimary) { onDismiss(); onEditClick() }
-        MenuRow("Delete", theme.textPrimary) { onDismiss(); onDelete() }
+        PersonMenuItems(
+            person = person,
+            onDismiss = onDismiss,
+            onSettleUp = onSettleUp,
+            onSendReminder = onSendReminder,
+            onShareSummary = onShareSummary,
+            onShareLedger = onShareLedger,
+            onMoveDebt = onMoveDebt,
+            onEditClick = onEditClick,
+            onDelete = onDelete,
+            onShowQr = onShowQr,
+            qrOnlyInRupees = qrOnlyInRupees
+        )
     }
+}
+
+/**
+ * The rows of a person's menu, in order. Apart from the popup so the walkthrough can draw the menu
+ * open without a window of its own.
+ */
+@Composable
+internal fun PersonMenuItems(
+    person: PersonWithBalance,
+    onDismiss: () -> Unit,
+    onSettleUp: () -> Unit,
+    onSendReminder: () -> Unit,
+    onShareSummary: () -> Unit,
+    onShareLedger: () -> Unit,
+    onMoveDebt: () -> Unit,
+    onEditClick: () -> Unit,
+    onDelete: () -> Unit,
+    onShowQr: (() -> Unit)?,
+    qrOnlyInRupees: Boolean
+) {
+    val theme = LocalAppTheme.current
+    // Only with a balance to square. At zero the person is already on Even.
+    if (!person.isEven) {
+        MenuRow("Settle up", theme.textPrimary) { onDismiss(); onSettleUp() }
+    }
+    MenuRow("Send a reminder", theme.textPrimary) { onDismiss(); onSendReminder() }
+    // For paying you face to face: their UPI app scans it with the amount filled in.
+    if (onShowQr != null) {
+        MenuRow("Show QR to pay you", theme.textPrimary) { onDismiss(); onShowQr() }
+    } else if (qrOnlyInRupees) {
+        DropdownMenuItem(
+            text = { Text("Show QR (UPI is rupees only)", style = MeraPaisaType.body, color = theme.textSecondary) },
+            enabled = false,
+            onClick = {}
+        )
+    }
+    MenuRow("Share a summary", theme.textPrimary) { onDismiss(); onShareSummary() }
+    // Distinct from a summary: that sends text a human reads, this sends a link their app
+    // records, so both ledgers end up agreeing. Marked (beta) wherever it is named: a long
+    // history makes a link that chat apps cut or the other phone refuses, and a debt both
+    // people record themselves counts twice. Both are still to be solved.
+    MenuRow(betaLabel("Send an update link"), theme.textPrimary) { onDismiss(); onShareLedger() }
+    // Only when something is owed, named for which way it runs. At zero there is nothing to
+    // hand on, and an always-visible item that always refuses is worse than no item.
+    if (person.balanceMinor > 0) {
+        MenuRow("Move this debt", theme.textPrimary) { onDismiss(); onMoveDebt() }
+    } else if (person.balanceMinor < 0) {
+        MenuRow("Move what you owe", theme.textPrimary) { onDismiss(); onMoveDebt() }
+    }
+    MenuRow("Edit", theme.textPrimary) { onDismiss(); onEditClick() }
+    MenuRow("Delete", theme.textPrimary) { onDismiss(); onDelete() }
 }
 
 @Composable

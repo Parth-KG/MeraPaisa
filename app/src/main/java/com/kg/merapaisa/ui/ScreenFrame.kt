@@ -194,6 +194,7 @@ internal fun RowScope.PrimaryAction(
     label: String,
     enabled: Boolean,
     busyLabel: String? = null,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val theme = LocalAppTheme.current
@@ -203,7 +204,7 @@ internal fun RowScope.PrimaryAction(
         onClick = onClick,
         enabled = enabled && !busy,
         shape = Shapes.small,
-        modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
+        modifier = Modifier.weight(1f).then(modifier).heightIn(min = 52.dp).fillMaxHeight(),
         contentPadding = FootButtonPadding,
         colors = ButtonDefaults.buttonColors(
             containerColor = theme.primary,
@@ -237,6 +238,7 @@ internal fun RowScope.SecondaryAction(
     label: String,
     enabled: Boolean,
     fill: Color = Color.Transparent,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val theme = LocalAppTheme.current
@@ -244,7 +246,7 @@ internal fun RowScope.SecondaryAction(
         onClick = onClick,
         enabled = enabled,
         shape = Shapes.small,
-        modifier = Modifier.weight(1f).heightIn(min = 52.dp).fillMaxHeight(),
+        modifier = Modifier.weight(1f).then(modifier).heightIn(min = 52.dp).fillMaxHeight(),
         contentPadding = FootButtonPadding,
         border = BorderStroke(1.dp, theme.border),
         colors = ButtonDefaults.outlinedButtonColors(containerColor = fill, contentColor = theme.textPrimary)
