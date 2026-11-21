@@ -271,7 +271,7 @@ private fun LedgerPreview(tried: AppTheme, people: List<PersonWithBalance>, modi
 }
 
 /** Measures the content [fullWidth] wide, then draws it scaled down to the width it is given. */
-private fun Modifier.miniatureOf(fullWidth: Int): Modifier = layout { measurable, constraints ->
+internal fun Modifier.miniatureOf(fullWidth: Int): Modifier = layout { measurable, constraints ->
     val width = constraints.maxWidth
     val placeable = measurable.measure(Constraints.fixedWidth(maxOf(fullWidth, width)))
     val scale = width.toFloat() / placeable.width

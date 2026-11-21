@@ -87,6 +87,7 @@ import com.kg.merapaisa.widget.WidgetLedgerNotifier
 import com.kg.merapaisa.BackupStore
 import com.kg.merapaisa.ui.walkthrough.WalkthroughScreen
 import com.kg.merapaisa.ui.walkthrough.WalkthroughSetUp
+import com.kg.merapaisa.ui.walkthrough.WalkthroughThemes
 import com.kg.merapaisa.ui.whatsnew.WhatsNewSheet
 
 @Composable
@@ -195,6 +196,16 @@ fun MainScreen(viewModel: MainViewModel) {
             )
         }
         viewModel.setBackupFolder(uri?.toString())
+    }
+
+    // Using a theme: from Settings' Theme sheet, or a first run's first page. Saved where the app reads
+    // it, so everything changes at once, and the widget told, since it wears the theme too and
+    // otherwise kept the old one until the ledger next changed.
+    val applyTheme: (String) -> Unit = { selectedTheme ->
+        scope.launch {
+            ThemeStore.setTheme(context, selectedTheme)
+            WidgetLedgerNotifier(context.applicationContext).onLedgerChanged()
+        }
     }
 
     // Turning the app lock on or off, asked first. Settings and the walkthrough's last page share it.
@@ -514,14 +525,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 onDismiss = { viewModel.showSettingsDialog(false) },
                 // Settings stays open, now in the theme just chosen, so you see it at once on a
                 // screen you know and can try another without finding your way back.
-                onApply = { selectedTheme ->
-                    scope.launch {
-                        ThemeStore.setTheme(context, selectedTheme)
-                        // The widget wears the chosen theme, and otherwise kept the old one until
-                        // the ledger next changed.
-                        WidgetLedgerNotifier(context.applicationContext).onLedgerChanged()
-                    }
-                }
+                onApply = applyTheme
             )
             }
         }
@@ -539,6 +543,9 @@ fun MainScreen(viewModel: MainViewModel) {
                 WalkthroughOrigin.WhatsNew -> "Back to your ledger"
             },
             onFinish = viewModel::closeWalkthrough,
+            chooseTheme = if (walkthrough.offersThemes) {
+                { WalkthroughThemes(inUse = theme, onChoose = applyTheme) }
+            } else null,
             setUp = {
                 WalkthroughSetUp(
                     appLockEnabled = lockOn,

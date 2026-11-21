@@ -69,19 +69,23 @@ import kotlin.math.sin
  * at the foot; Skip at the top leaves at any page but the last, and system back goes back a page
  * (leaving from the first). Nothing on these pages is saved but what the last page sets.
  *
- * [setUp] is the last page's own rows; without it the pages end with Groups. [initialPage] and
- * [scrolledToEnd] are for the gallery, which photographs each page and the foot of the tall ones.
+ * [chooseTheme] is a first run's own first page, the themes (`WalkthroughThemes`); a replay has
+ * Settings' Theme instead, so goes without. [setUp] is the last page's own rows; without it the
+ * pages end with Groups. [initialPage] and [scrolledToEnd] are for the gallery, which photographs
+ * each page and the foot of the tall ones.
  */
 @Composable
 fun WalkthroughScreen(
     finishLabel: String,
     onFinish: () -> Unit,
+    chooseTheme: (@Composable () -> Unit)? = null,
     setUp: (@Composable () -> Unit)? = null,
     initialPage: Int = 0,
     scrolledToEnd: Boolean = false
 ) {
     val theme = LocalAppTheme.current
-    val count = TourPages.size + if (setUp != null) 1 else 0
+    val first = if (chooseTheme != null) 1 else 0
+    val count = first + TourPages.size + if (setUp != null) 1 else 0
     val pager = rememberPagerState(initialPage = initialPage) { count }
     val scope = rememberCoroutineScope()
     val page = pager.currentPage
@@ -119,10 +123,11 @@ fun WalkthroughScreen(
             modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.Top
         ) { index ->
-            if (index < TourPages.size) {
-                TourPageContent(TourPages[index], scrolledToEnd)
-            } else {
-                setUp?.invoke()
+            val tour = index - first
+            when {
+                index < first -> chooseTheme?.invoke()
+                tour < TourPages.size -> TourPageContent(TourPages[tour], scrolledToEnd)
+                else -> setUp?.invoke()
             }
         }
 

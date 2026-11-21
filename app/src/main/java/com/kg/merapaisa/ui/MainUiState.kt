@@ -70,6 +70,12 @@ data class MainUiState(
 /** Where the walkthrough was opened from, which decides the words on its last button. */
 enum class WalkthroughOrigin { FirstRun, WhatsNew, Settings }
 
+/**
+ * Only a first run starts with the themes (Parth, 20 Nov 2026): a replay from Settings has Theme
+ * there already, and an existing user, who comes by What's new, has chosen one.
+ */
+val WalkthroughOrigin.offersThemes: Boolean get() = this == WalkthroughOrigin.FirstRun
+
 /** One person in the move's confirm sheet. */
 data class MoveLineState(
     val personId: Long,
